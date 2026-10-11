@@ -1,0 +1,43 @@
+{
+  "app": {
+    "nom": "Mon cours",
+    "nomLong": "Mon cours — apprendre en jouant",
+    "description": "Apprendre le cours en jouant : leçons courtes, exercices interactifs, défi du jour et révisions espacées.",
+    "cle": "mon-cours",
+    "langue": "fr",
+    "accroche": "On part de zéro et on va jusqu'aux exercices de ton cours.",
+    "mascotte": { "nom": "Coco", "cadre": ["{", "}"], "corps": "#FFF6E4", "bord": "#E3C98F" },
+    "couleurs": {},
+    "textes": { "jeuReussi": "tu as l'œil !" },
+    "modules": ["code-js", "dom"]
+  },
+  "seuilValidation": 0.8,
+  "unites": [
+    "content/unites/u01-apprendre.json",
+    "content/unites/u02-catalogue.json"
+  ],
+  "aVenir": [],
+  "rangs": [
+    { "xp": 0, "nom": "Débutant" },
+    { "xp": 100, "nom": "Apprenti" },
+    { "xp": 300, "nom": "Initié" },
+    { "xp": 700, "nom": "Confirmé" },
+    { "xp": 1500, "nom": "Expert" },
+    { "xp": 3000, "nom": "Maître" },
+    { "xp": 6000, "nom": "Légende" }
+  ],
+  "badges": [
+    { "id": "premier-pas", "nom": "Premier pas", "desc": "Terminer ta première leçon", "icone": "etoile" },
+    { "id": "theoricien", "nom": "Théoricien", "desc": "Ouvrir 10 fiches de théorie", "icone": "livre" },
+    { "id": "sans-faute", "nom": "Sans faute", "desc": "100 % à un quiz de validation", "icone": "etoile" },
+    { "id": "defi", "nom": "Défi relevé", "desc": "Terminer un défi du jour", "icone": "etoile" },
+    { "id": "sans-indice", "nom": "Sans filet", "desc": "Vaincre un boss sans aucun indice", "icone": "boss" },
+    { "id": "serie-3", "nom": "Trois jours de suite", "desc": "Une série de 3 jours", "icone": "flamme" },
+    { "id": "serie-7", "nom": "Une semaine", "desc": "Une série de 7 jours", "icone": "flamme" },
+    { "id": "serie-30", "nom": "Un mois", "desc": "Une série de 30 jours", "icone": "flamme" },
+    { "id": "premier-coup", "nom": "Du premier coup", "desc": "Réussir 10 exercices de code au premier essai (module code-js)", "icone": "cible" },
+    { "id": "codeur", "nom": "Ça compile", "desc": "Réussir 25 exercices de code (module code-js)", "icone": "accolades" },
+    { "id": "chasseur-bugs", "nom": "Chasseur de bugs", "desc": "Trouver 10 bugs (ligne et explication)", "icone": "bug" },
+    { "id": "memoire", "nom": "Mémoire d'éléphant", "desc": "8/10 ou plus au jeu « Vrai ou faux ? » de l'unité 1", "icone": "cible" }
+  ]
+}

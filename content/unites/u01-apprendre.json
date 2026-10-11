@@ -1,0 +1,673 @@
+{
+  "id": "u01",
+  "titre": "Bien apprendre",
+  "sousTitre": "Exemple : une unité sans code",
+  "objectif": "Comprendre pourquoi l'appli te fait répondre plutôt que relire, revenir sur une notion après quelques jours, et mélanger les sujets. À remplacer par la première unité de ton cours.",
+  "icone": "🧠",
+  "fiches": [
+    {
+      "id": "recuperation",
+      "titre": "Se tester plutôt que relire",
+      "icone": "?",
+      "resume": "Chercher une réponse dans sa mémoire la renforce bien plus que relire le cours : c'est la **récupération active** (l'« effet test »).",
+      "analogie": "Un **chemin dans l'herbe** : chaque fois que tu le parcours pour aller chercher une réponse, il se marque un peu plus. Relire, c'est regarder le chemin sur une carte : agréable, mais il ne se creuse pas.",
+      "texte": "- Relire donne une impression de maîtrise (« je connais, je l'ai déjà vu ») qui est souvent trompeuse.\n- Répondre à une question, même en se trompant, oblige à aller chercher l'information : c'est cet effort qui la fixe.\n- Une erreur suivie de la bonne réponse est utile : on retient mieux ce qu'on a d'abord raté.\n\nC'est pour ça que chaque leçon de l'appli est faite de questions, et que la théorie est courte.",
+      "pieges": [
+        "Relire ses notes trois fois : rassurant, peu efficace.",
+        "Regarder la réponse avant d'avoir vraiment cherché."
+      ]
+    },
+    {
+      "id": "repetition-espacee",
+      "titre": "La répétition espacée",
+      "icone": "📅",
+      "resume": "On oublie vite après avoir appris. Revoir une notion **juste avant de l'oublier**, à des intervalles de plus en plus longs, la fait tenir des mois.",
+      "texte": "- La **courbe de l'oubli** (décrite par Hermann Ebbinghaus à la fin du XIXe siècle) : sans révision, une grande partie de ce qu'on vient d'apprendre disparaît en quelques jours.\n- Chaque révision réussie ralentit l'oubli : on peut attendre plus longtemps avant la suivante.\n- La **boîte de Leitner** organise cela avec des fiches rangées dans des boîtes : une fiche réussie avance d'une boîte (révisée moins souvent), une fiche ratée revient dans la première (révisée tout de suite).\n\nDans l'appli : chaque notion a sa boîte (1 à 5) ; elle revient après 1, 2, 4, 8 puis 16 jours. Le **défi du jour** commence par les notions à revoir.",
+      "pieges": [
+        "Tout réviser la veille de l'examen : ça marche pour l'examen, ça s'oublie juste après."
+      ]
+    },
+    {
+      "id": "entrelacement",
+      "titre": "Mélanger les sujets",
+      "icone": "🔀",
+      "resume": "Alterner les types de problèmes (l'**entrelacement**) oblige à reconnaître **quelle** méthode utiliser, et pas seulement à l'appliquer.",
+      "texte": "- En faisant dix exercices identiques à la suite, on applique la même recette sans réfléchir au choix de la recette.\n- À l'examen, les questions arrivent mélangées : il faut d'abord reconnaître le type de problème.\n- C'est plus difficile sur le moment, et c'est voulu : ces **difficultés désirables** rendent l'apprentissage plus solide.\n\nDans l'appli : les quiz, les jeux et le défi du jour mélangent les notions des unités précédentes."
+    }
+  ],
+  "lecons": [
+    {
+      "id": "u01-l1",
+      "titre": "Se tester plutôt que relire",
+      "duree": 5,
+      "notions": [
+        "recuperation"
+      ],
+      "cartes": [
+        {
+          "titre": "L'illusion de la relecture",
+          "texte": "Relire son cours donne l'impression de le connaître : tout semble familier. Mais reconnaître une information n'est pas la même chose que savoir la **retrouver** seul.",
+          "fiche": "recuperation"
+        },
+        {
+          "titre": "Le chemin dans l'herbe",
+          "texte": "Chaque fois que tu vas chercher une réponse dans ta mémoire, tu renforces le chemin qui y mène.",
+          "analogie": "Un **chemin dans l'herbe** se marque à force d'être parcouru. Relire, c'est regarder la carte ; répondre, c'est marcher."
+        },
+        {
+          "titre": "Se tromper, c'est utile",
+          "texte": "Une erreur suivie de la bonne réponse et d'une explication se retient bien. C'est pour ça que l'appli montre toujours l'explication après une réponse.",
+          "piege": "Regarder la réponse avant d'avoir cherché supprime l'effort qui fait retenir."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u01-l1-e1",
+          "type": "qcm",
+          "notions": [
+            "recuperation"
+          ],
+          "question": "Quelle méthode fait le mieux retenir une notion ?",
+          "choix": [
+            "Répondre à des questions sur la notion",
+            "Relire la fiche trois fois",
+            "Surligner le cours en couleur",
+            "Recopier la fiche au propre"
+          ],
+          "bonne": 0,
+          "explication": "Aller chercher la réponse dans sa mémoire (récupération active) la renforce ; relire ou recopier donne surtout une impression de maîtrise."
+        },
+        {
+          "id": "u01-l1-e2",
+          "type": "vf",
+          "notions": [
+            "recuperation"
+          ],
+          "question": "Se tromper à une question puis lire l'explication aide à retenir.",
+          "bonne": true,
+          "explication": "L'erreur suivie de la correction est un des moments où l'on retient le mieux."
+        },
+        {
+          "id": "u01-l1-e3",
+          "type": "tri",
+          "notions": [
+            "recuperation"
+          ],
+          "question": "Range chaque façon de réviser.",
+          "categories": [
+            "active (je cherche)",
+            "passive (je regarde)"
+          ],
+          "items": [
+            [
+              "Répondre à un quiz",
+              0
+            ],
+            [
+              "Relire ses notes",
+              1
+            ],
+            [
+              "Expliquer à quelqu'un sans ses notes",
+              0
+            ],
+            [
+              "Surligner le cours",
+              1
+            ],
+            [
+              "Refaire un exercice sans la correction",
+              0
+            ]
+          ],
+          "explication": "Est active toute méthode où il faut produire la réponse soi-même."
+        },
+        {
+          "id": "u01-l1-e4",
+          "type": "pointer-code",
+          "notions": [
+            "recuperation"
+          ],
+          "question": "Touche le passage qui décrit une **récupération active**.",
+          "code": [
+            "Lundi : je relis le chapitre 2.",
+            "Mardi : ⟦je ferme le cours et j'écris tout ce dont je me souviens⟧.",
+            "Mercredi : je surligne les définitions."
+          ],
+          "explication": "Écrire de mémoire oblige à aller chercher l'information."
+        },
+        {
+          "id": "u01-l1-e5",
+          "type": "bug",
+          "notions": [
+            "recuperation"
+          ],
+          "question": "Ce plan de révision a une étape inefficace. Laquelle ?",
+          "code": [
+            "1. Faire le quiz de l'unité sans regarder le cours.",
+            "2. Lire l'explication de chaque erreur.",
+            "3. Avant de répondre, lire la réponse pour être sûr.",
+            "4. Refaire les questions ratées le lendemain."
+          ],
+          "ligne": 3,
+          "choix": [
+            "Lire la réponse avant d'avoir cherché supprime l'effort qui fait retenir",
+            "Il faut relire le cours avant le quiz",
+            "Refaire les questions ratées est inutile",
+            "Il ne faut pas lire les explications"
+          ],
+          "bonne": 0,
+          "explication": "Chercher d'abord, vérifier ensuite."
+        }
+      ]
+    },
+    {
+      "id": "u01-l2",
+      "titre": "Revenir au bon moment",
+      "duree": 6,
+      "notions": [
+        "repetition-espacee",
+        "entrelacement"
+      ],
+      "cartes": [
+        {
+          "titre": "On oublie vite",
+          "texte": "Sans révision, une grande partie de ce qu'on vient d'apprendre disparaît en quelques jours : c'est la courbe de l'oubli.",
+          "fiche": "repetition-espacee"
+        },
+        {
+          "titre": "De plus en plus espacé",
+          "texte": "Chaque révision réussie ralentit l'oubli. La suivante peut donc attendre plus longtemps : 1 jour, puis 2, 4, 8, 16…",
+          "analogie": "Une **plante** : on l'arrose souvent quand elle vient d'être plantée, puis de moins en moins à mesure que ses racines s'installent."
+        },
+        {
+          "titre": "Les boîtes de Leitner",
+          "texte": "Une fiche réussie avance d'une boîte et revient moins souvent ; une fiche ratée retourne dans la boîte 1 et revient tout de suite. L'appli fait la même chose pour chaque notion."
+        },
+        {
+          "titre": "Mélanger les sujets",
+          "texte": "Alterner les types de problèmes oblige à choisir la bonne méthode, comme à l'examen. C'est plus difficile sur le moment, et c'est ce qui rend l'apprentissage solide.",
+          "fiche": "entrelacement"
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u01-l2-e1",
+          "type": "ordre",
+          "notions": [
+            "repetition-espacee"
+          ],
+          "question": "Remets dans l'ordre les intervalles de révision d'une notion bien réussie.",
+          "items": [
+            "1 jour",
+            "2 jours",
+            "4 jours",
+            "8 jours",
+            "16 jours"
+          ],
+          "explication": "L'intervalle double à chaque révision réussie."
+        },
+        {
+          "id": "u01-l2-e2",
+          "type": "qcm",
+          "notions": [
+            "repetition-espacee"
+          ],
+          "question": "Une notion ratée dans la boîte 4 de Leitner…",
+          "choix": [
+            "revient dans la boîte 1 et sera revue tout de suite",
+            "passe dans la boîte 5",
+            "reste dans la boîte 4",
+            "disparaît des révisions"
+          ],
+          "bonne": 0,
+          "explication": "Une erreur ramène la notion au début du cycle."
+        },
+        {
+          "id": "u01-l2-e3",
+          "type": "assoc",
+          "notions": [
+            "repetition-espacee",
+            "entrelacement",
+            "recuperation"
+          ],
+          "question": "Associe chaque principe à ce que fait l'appli.",
+          "paires": [
+            [
+              "Récupération active",
+              "les leçons sont faites de questions"
+            ],
+            [
+              "Répétition espacée",
+              "le défi du jour reprend les notions à revoir"
+            ],
+            [
+              "Entrelacement",
+              "les quiz mélangent les unités précédentes"
+            ],
+            [
+              "Apprendre de ses erreurs",
+              "une explication après chaque réponse"
+            ]
+          ],
+          "explication": "Chaque mécanique de l'appli s'appuie sur un de ces principes."
+        },
+        {
+          "id": "u01-l2-e4",
+          "type": "vf",
+          "notions": [
+            "entrelacement"
+          ],
+          "question": "Faire dix exercices identiques à la suite prépare mieux à l'examen que des exercices mélangés.",
+          "bonne": false,
+          "explication": "À l'examen, les questions arrivent mélangées : il faut s'entraîner à reconnaître le type de problème."
+        },
+        {
+          "id": "u01-l2-e5",
+          "type": "parsons",
+          "notions": [
+            "repetition-espacee",
+            "recuperation"
+          ],
+          "question": "Reconstitue une semaine de révision efficace.",
+          "lignes": [
+            "Lundi : leçon + quiz sans regarder le cours",
+            "Mardi : défi du jour (les notions de lundi reviennent)",
+            "Jeudi : défi du jour, avec d'autres notions mélangées",
+            "Lundi suivant : refaire le quiz de l'unité"
+          ],
+          "distracteurs": [
+            "Mardi : relire la leçon de lundi trois fois"
+          ],
+          "explication": "Des questions, des retours espacés, des sujets mélangés."
+        }
+      ]
+    }
+  ],
+  "jeux": [
+    {
+      "id": "u01-memoire",
+      "titre": "Vrai ou faux ?",
+      "description": "Dix idées reçues sur la mémoire : vrai ou faux ?",
+      "tours": 10,
+      "badge": "memoire",
+      "seuilBadge": 8,
+      "questions": [
+        {
+          "id": "u01-j1-1",
+          "type": "vf",
+          "notions": [
+            "recuperation"
+          ],
+          "question": "Relire son cours plusieurs fois est la méthode la plus efficace.",
+          "bonne": false,
+          "explication": "Se tester est bien plus efficace que relire."
+        },
+        {
+          "id": "u01-j1-2",
+          "type": "vf",
+          "notions": [
+            "repetition-espacee"
+          ],
+          "question": "Réviser en plusieurs petites séances espacées vaut mieux qu'une longue séance la veille.",
+          "bonne": true,
+          "explication": "C'est l'effet d'espacement."
+        },
+        {
+          "id": "u01-j1-3",
+          "type": "vf",
+          "notions": [
+            "recuperation"
+          ],
+          "question": "Avoir l'impression de « connaître » une page en la relisant prouve qu'on la sait.",
+          "bonne": false,
+          "explication": "Reconnaître n'est pas retrouver seul."
+        },
+        {
+          "id": "u01-j1-4",
+          "type": "vf",
+          "notions": [
+            "entrelacement"
+          ],
+          "question": "Mélanger les sujets rend l'entraînement plus difficile sur le moment.",
+          "bonne": true,
+          "explication": "C'est une difficulté désirable : plus dur maintenant, plus solide ensuite."
+        },
+        {
+          "id": "u01-j1-5",
+          "type": "vf",
+          "notions": [
+            "repetition-espacee"
+          ],
+          "question": "Une notion bien réussie doit être revue chaque jour.",
+          "bonne": false,
+          "explication": "On peut espacer de plus en plus : 1, 2, 4, 8, 16 jours."
+        },
+        {
+          "id": "u01-j1-6",
+          "type": "vf",
+          "notions": [
+            "recuperation"
+          ],
+          "question": "Une erreur suivie de la correction aide à retenir.",
+          "bonne": true,
+          "explication": "On retient bien ce qu'on a d'abord raté puis compris."
+        },
+        {
+          "id": "u01-j1-7",
+          "type": "vf",
+          "notions": [
+            "repetition-espacee"
+          ],
+          "question": "Sans révision, on oublie une grande partie d'une leçon en quelques jours.",
+          "bonne": true,
+          "explication": "C'est la courbe de l'oubli."
+        },
+        {
+          "id": "u01-j1-8",
+          "type": "vf",
+          "notions": [
+            "recuperation"
+          ],
+          "question": "Regarder la réponse avant de chercher fait gagner du temps sans rien perdre.",
+          "bonne": false,
+          "explication": "On perd l'effort de récupération, qui est ce qui fait retenir."
+        },
+        {
+          "id": "u01-j1-9",
+          "type": "vf",
+          "notions": [
+            "repetition-espacee"
+          ],
+          "question": "Dans une boîte de Leitner, une fiche ratée retourne dans la première boîte.",
+          "bonne": true,
+          "explication": "Elle sera revue tout de suite."
+        },
+        {
+          "id": "u01-j1-10",
+          "type": "vf",
+          "notions": [
+            "entrelacement"
+          ],
+          "question": "Pour un examen où tout est mélangé, il vaut mieux s'entraîner sur des questions mélangées.",
+          "bonne": true,
+          "explication": "On s'entraîne comme on sera évalué."
+        }
+      ]
+    }
+  ],
+  "quiz": {
+    "titre": "Quiz : bien apprendre",
+    "questions": [
+      {
+        "id": "u01-q1",
+        "type": "qcm",
+        "notions": [
+          "recuperation"
+        ],
+        "question": "Qu'est-ce que la récupération active ?",
+        "choix": [
+          "Aller chercher une information dans sa mémoire, par exemple en répondant à une question",
+          "Relire le cours à voix haute",
+          "Recopier ses notes au propre",
+          "Écouter le cours une deuxième fois"
+        ],
+        "bonne": 0,
+        "explication": "C'est l'effort de retrouver l'information qui la renforce."
+      },
+      {
+        "id": "u01-q2",
+        "type": "qcm",
+        "notions": [
+          "repetition-espacee"
+        ],
+        "question": "Qui a décrit la courbe de l'oubli ?",
+        "choix": [
+          "Hermann Ebbinghaus",
+          "Sebastian Leitner",
+          "Jean Piaget",
+          "Sigmund Freud"
+        ],
+        "bonne": 0,
+        "explication": "Ebbinghaus, à la fin du XIXe siècle. Leitner a inventé la boîte à fiches."
+      },
+      {
+        "id": "u01-q3",
+        "type": "vf",
+        "notions": [
+          "repetition-espacee"
+        ],
+        "question": "Dans l'appli, une notion réussie revient de plus en plus tard.",
+        "bonne": true,
+        "explication": "1, 2, 4, 8 puis 16 jours."
+      },
+      {
+        "id": "u01-q4",
+        "type": "ordre",
+        "notions": [
+          "recuperation"
+        ],
+        "question": "Remets dans l'ordre une bonne façon de répondre à une question.",
+        "items": [
+          "Lire la question",
+          "Chercher la réponse de mémoire",
+          "Répondre",
+          "Lire l'explication"
+        ],
+        "explication": "Chercher avant de vérifier."
+      },
+      {
+        "id": "u01-q5",
+        "type": "tri",
+        "notions": [
+          "recuperation",
+          "entrelacement"
+        ],
+        "question": "Efficace ou pas ?",
+        "categories": [
+          "efficace",
+          "peu efficace"
+        ],
+        "items": [
+          [
+            "Quiz sans le cours",
+            0
+          ],
+          [
+            "Tout réviser la veille",
+            1
+          ],
+          [
+            "Questions mélangées",
+            0
+          ],
+          [
+            "Relire en boucle",
+            1
+          ]
+        ],
+        "explication": "Se tester, espacer, mélanger."
+      },
+      {
+        "id": "u01-q6",
+        "type": "qcm",
+        "notions": [
+          "entrelacement"
+        ],
+        "question": "Pourquoi mélanger les sujets en révisant ?",
+        "choix": [
+          "Pour s'entraîner à reconnaître quelle méthode utiliser",
+          "Pour finir plus vite",
+          "Parce que c'est plus facile",
+          "Pour éviter les erreurs"
+        ],
+        "bonne": 0,
+        "explication": "Comme à l'examen, il faut d'abord identifier le type de problème."
+      },
+      {
+        "id": "u01-q7",
+        "type": "vf",
+        "notions": [
+          "recuperation"
+        ],
+        "question": "Se tromper pendant l'entraînement est mauvais signe.",
+        "bonne": false,
+        "explication": "Les erreurs suivies d'une correction font partie de l'apprentissage."
+      },
+      {
+        "id": "u01-q8",
+        "type": "assoc",
+        "notions": [
+          "repetition-espacee",
+          "entrelacement"
+        ],
+        "question": "Associe chaque terme à sa définition.",
+        "paires": [
+          [
+            "Courbe de l'oubli",
+            "on oublie vite après avoir appris"
+          ],
+          [
+            "Boîte de Leitner",
+            "des fiches qui avancent quand on les réussit"
+          ],
+          [
+            "Entrelacement",
+            "alterner les types de problèmes"
+          ]
+        ],
+        "explication": "Trois idées, trois mécaniques de l'appli."
+      },
+      {
+        "id": "u01-q9",
+        "type": "qcm",
+        "notions": [
+          "repetition-espacee"
+        ],
+        "question": "Que propose d'abord le défi du jour ?",
+        "choix": [
+          "Les notions qu'il est temps de revoir",
+          "Les questions les plus faciles",
+          "Uniquement la dernière leçon",
+          "Des questions au hasard"
+        ],
+        "bonne": 0,
+        "explication": "Les notions dues passent en premier, puis les erreurs récentes."
+      },
+      {
+        "id": "u01-q10",
+        "type": "vf",
+        "notions": [
+          "entrelacement"
+        ],
+        "question": "Une « difficulté désirable » rend l'entraînement plus dur maintenant mais l'apprentissage plus solide.",
+        "bonne": true,
+        "explication": "Mélanger, espacer et se tester en sont des exemples."
+      }
+    ]
+  },
+  "boss": [
+    {
+      "id": "u01-b1",
+      "titre": "Le plan de révision de Léa",
+      "source": "Exemple d'étude de cas (boss d'un cours sans code)",
+      "notions": [
+        "recuperation",
+        "repetition-espacee",
+        "entrelacement"
+      ],
+      "enonce": "Léa a un examen dans deux semaines sur quatre chapitres. Son plan : relire un chapitre par jour pendant quatre jours, puis tout relire la veille de l'examen en surlignant.\n\nAide-la à améliorer son plan avec ce que tu as appris.",
+      "questions": [
+        {
+          "id": "u01-b1-q1",
+          "type": "qcm",
+          "notions": [
+            "recuperation"
+          ],
+          "question": "Quel est le principal défaut de son plan ?",
+          "choix": [
+            "Elle ne se teste jamais : elle ne fait que relire",
+            "Quatre chapitres, c'est trop",
+            "Elle commence trop tôt",
+            "Elle devrait surligner davantage"
+          ],
+          "bonne": 0,
+          "explication": "Relire et surligner sont passifs."
+        },
+        {
+          "id": "u01-b1-q2",
+          "type": "qcm",
+          "notions": [
+            "repetition-espacee"
+          ],
+          "question": "Que faire de la grande relecture de la veille ?",
+          "choix": [
+            "La remplacer par plusieurs courtes séances de questions réparties sur les deux semaines",
+            "La garder, c'est le plus efficace",
+            "La faire deux fois",
+            "La faire le matin de l'examen"
+          ],
+          "bonne": 0,
+          "explication": "Espacer les révisions fait tenir plus longtemps."
+        },
+        {
+          "id": "u01-b1-q3",
+          "type": "tri",
+          "notions": [
+            "recuperation",
+            "entrelacement"
+          ],
+          "question": "Que garder dans son nouveau plan ?",
+          "categories": [
+            "à garder",
+            "à éviter"
+          ],
+          "items": [
+            [
+              "Quiz de chaque chapitre sans le cours",
+              0
+            ],
+            [
+              "Questions mélangées des 4 chapitres",
+              0
+            ],
+            [
+              "Relire en surlignant",
+              1
+            ],
+            [
+              "Refaire ses erreurs deux jours après",
+              0
+            ]
+          ],
+          "explication": "Se tester, mélanger, revenir sur ses erreurs."
+        },
+        {
+          "id": "u01-b1-q4",
+          "type": "ordre",
+          "notions": [
+            "repetition-espacee"
+          ],
+          "question": "Remets dans l'ordre les révisions du chapitre 1, appris le jour 1.",
+          "items": [
+            "Jour 2 : quiz du chapitre 1",
+            "Jour 4 : questions du chapitre 1 mélangées au chapitre 2",
+            "Jour 8 : quiz de révision",
+            "Jour 13 : quiz mélangé des 4 chapitres"
+          ],
+          "explication": "Des intervalles qui s'allongent : 1, 2, 4, 5 jours environ."
+        },
+        {
+          "id": "u01-b1-q5",
+          "type": "vf",
+          "notions": [
+            "entrelacement"
+          ],
+          "question": "Dans la deuxième semaine, Léa devrait réviser les chapitres un par un, chacun à son tour, sans les mélanger.",
+          "bonne": false,
+          "explication": "À l'examen, tout est mélangé : mieux vaut mélanger aussi en révisant."
+        }
+      ]
+    }
+  ]
+}
