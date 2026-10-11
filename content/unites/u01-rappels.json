@@ -1,0 +1,2483 @@
+{
+  "id": "u01",
+  "titre": "Rappels sur PHP",
+  "sousTitre": "Séance 1 · client-serveur, variables, conditions, fonctions, tableaux",
+  "objectif": "Revoir les bases de ProgServ1 : savoir où s'exécute le PHP, manipuler variables et constantes, décider, écrire des fonctions qui retournent un résultat, parcourir des tableaux.",
+  "icone": "<?",
+  "fiches": [
+    {
+      "id": "client-serveur",
+      "titre": "Le client, le serveur et PHP",
+      "icone": "⇄",
+      "resume": "Le navigateur (client) envoie une requête HTTP ; le serveur web la reçoit, fait exécuter le PHP par l'interpréteur, puis renvoie le résultat : du HTML (avec CSS et JavaScript).",
+      "analogie": "**Le restaurant.** Tu es le client : ton **navigateur** passe commande (la requête HTTP). Le **serveur** (le serveur web : Apache, Nginx) prend la commande et la transmet au **cuisinier** (l'interpréteur PHP), qui prépare le plat avec les ingrédients du **garde-manger** (la base de données). Tu ne vois jamais la cuisine : tu reçois le plat fini, c'est-à-dire le HTML.",
+      "texte": "Les pièces d'une application web PHP :\n\n- **Navigateur web (client)** : envoie les requêtes HTTP et affiche les réponses. Il ne comprend pas le PHP : il ne reçoit que le résultat de son exécution (HTML, CSS, JavaScript).\n- **Serveur web** : gère les requêtes HTTP et distribue les fichiers (HTML, CSS, images…). Exemples : Apache, Nginx. En local, tu as utilisé le serveur intégré de PHP : `php -S 0.0.0.0:8080`.\n- **Interpréteur PHP** : lit et exécute le code PHP, puis rend le résultat au serveur web.\n- **Base de données** : stocke les données (utilisateurs, produits…). Exemples : MySQL, PostgreSQL.\n- **Espace de stockage** : les fichiers de l'application, transférés par FTP (non sécurisé) ou SFTP (sécurisé, via SSH), avec un client comme FileZilla ou Cyberduck.\n- **Hébergement** : rend l'application accessible sur Internet (partagé, VPS ou dédié). Dans le cours : Infomaniak, avec un programme étudiant gratuit pendant une année.",
+      "exemples": [
+        {
+          "titre": "Le PHP s'exécute, le navigateur reçoit du HTML",
+          "code": [
+            "<?php $plat = \"lasagnes\"; ?>",
+            "<h1>Plat du jour : <?= $plat ?></h1>",
+            ""
+          ],
+          "note": "Le navigateur reçoit seulement `<h1>Plat du jour : lasagnes</h1>` : jamais le code PHP."
+        }
+      ],
+      "pieges": [
+        "« Afficher le code source » dans le navigateur ne montre jamais le PHP, seulement le HTML produit.",
+        "FTP n'est pas sécurisé : préfère SFTP."
+      ]
+    },
+    {
+      "id": "variables-constantes",
+      "titre": "Variables, textes et constantes",
+      "icone": "$",
+      "resume": "Une variable commence par `$` et PHP devine son type (string, int, float, bool, array, null). On colle du texte avec le point `.`. Une constante (`define` ou `const`) s'écrit sans `$` et ne change jamais.",
+      "texte": "PHP est à **typage dynamique** : le type d'une variable est décidé au moment de l'exécution.\n\n- `string` : du texte, `\"Hello\"` ou `'World'`\n- `int` : un entier, `42`\n- `float` : un nombre à virgule, `3.14`\n- `bool` : `true` ou `false`\n- `array` : un tableau, `[1, 2, 3]`\n- `null` : pas de valeur\n\n**Coller du texte** (concaténer) : l'opérateur `.`, et `.=` pour ajouter au bout d'une variable.\n\n**Entre guillemets doubles**, PHP remplace les variables par leur valeur : `\"Pages : $pages\"`, et pour une case de tableau `\"Nom : {$user['name']}\"`. Entre guillemets simples, le texte reste tel quel.\n\n**Constantes** : `define(\"PI\", 3.14159);` ou `const EULER = 2.71828;`. En majuscules par convention, utilisées **sans** `$`, et impossibles à modifier.",
+      "exemples": [
+        {
+          "titre": "Variables et concaténation",
+          "code": [
+            "$title = \"Le Petit Prince\";",
+            "$pages = 96;",
+            "echo \"Titre : \" . $title . \"<br>\";",
+            "echo \"Pages : $pages<br>\";",
+            "$title .= \" (poche)\";",
+            "echo $title;",
+            ""
+          ]
+        },
+        {
+          "titre": "Constantes",
+          "code": [
+            "define(\"MAX_PLACES\", 30);",
+            "const VAT = 0.081;",
+            "echo MAX_PLACES . \"<br>\";",
+            "echo 200 * VAT;",
+            ""
+          ]
+        }
+      ],
+      "pieges": [
+        "`+` additionne des nombres : pour coller du texte, c'est le point `.`.",
+        "Une constante s'utilise sans `$` : `echo PI;`.",
+        "On ne réaffecte pas une constante : `EULER = 3.14;` est une erreur de syntaxe."
+      ]
+    },
+    {
+      "id": "operateurs-conditions",
+      "titre": "Opérateurs et conditions",
+      "icone": "?:",
+      "resume": "`=` range une valeur ; `===` compare la valeur ET le type (à préférer) ; `==` compare seulement la valeur. `if / elseif / else` et `switch` choisissent ce qui s'exécute.",
+      "texte": "- Arithmétiques : `+`, `-`, `*`, `/`, `%`\n- Comparaison : `==`, `===`, `!=`, `!==`, `<`, `>`, `<=`, `>=`\n- Logiques : `&&` (et), `||` (ou), `!` (non)\n- Affectation : `=`, `+=`, `-=`, `*=`, `/=`, `.=`\n- Concaténation : `.`\n\nPréfère toujours `===` et `!==` : `==` convertit les types automatiquement, ce qui donne des surprises (`\"5\" == 5` vaut `true`).\n\n**`switch`** compare une valeur à plusieurs `case`. Chaque `case` se termine par `break` ; plusieurs `case` peuvent partager le même code ; `default` traite les cas non prévus.",
+      "exemples": [
+        {
+          "titre": "== et ===",
+          "code": [
+            "var_dump(\"5\" == 5);",
+            "var_dump(\"5\" === 5);",
+            ""
+          ]
+        },
+        {
+          "titre": "switch avec default",
+          "code": [
+            "$day = \"Sunday\";",
+            "switch ($day) {",
+            "    case \"Saturday\":",
+            "    case \"Sunday\":",
+            "        echo \"Week-end !\";",
+            "        break;",
+            "    default:",
+            "        echo \"Jour de semaine\";",
+            "        break;",
+            "}",
+            ""
+          ]
+        }
+      ],
+      "pieges": [
+        "`if ($a = 5)` range 5 dans `$a` (et c'est toujours vrai) : pour comparer, `===`.",
+        "Sans `break`, le `switch` continue dans le `case` suivant.",
+        "`\"5\" == 5` vaut `true`, mais `\"5\" === 5` vaut `false`."
+      ]
+    },
+    {
+      "id": "fonctions",
+      "titre": "Fonctions, return et inclusion",
+      "icone": "ƒ",
+      "resume": "`function nom(type $param = défaut): typeRetour { … return …; }` : une fonction reçoit des paramètres, **retourne** son résultat avec `return`, et peut typer ses paramètres et son retour. `require_once` inclut un fichier de fonctions.",
+      "analogie": "**Le cuisinier du restaurant.** On lui donne des ingrédients (les paramètres), il **tend** le plat avec `return` : celui qui a passé commande le reçoit dans son assiette (une variable). S'il fait `echo`, il crie le plat dans la salle : tout le monde l'entend, mais l'assiette reste vide.",
+      "texte": "Les paramètres n'existent **que dans le corps** de la fonction (entre les accolades). On les passe à l'appel, dans le même ordre que la déclaration. Un paramètre peut avoir une **valeur par défaut**, utilisée si l'argument manque.\n\n**Typage** (depuis PHP 7) : `int`, `float`, `string`, `bool`, `array`, `object`… Sans type, c'est `mixed` (tout est accepté). Un mauvais type provoque une erreur : `Argument #2 ($b) must be of type int, string given`.\n\n**Inclure un fichier** : `require_once \"functions.php\";` (recommandé : si le fichier manque, erreur fatale et le reste ne s'exécute pas) ; `include_once` émet seulement une alerte et continue (non recommandé).\n\n**Fonctions prédéfinies** : `strlen($texte)` (longueur), `count($tableau)` (nombre d'éléments), `array_merge($a, $b)` (fusion de deux tableaux)… La liste complète est sur php.net.",
+      "exemples": [
+        {
+          "titre": "Paramètre par défaut et typage",
+          "code": [
+            "function welcome(string $city = \"Yverdon\"): string {",
+            "    return \"Bienvenue à \" . $city . \" !\";",
+            "}",
+            "",
+            "function add(int $a, int $b): int {",
+            "    return $a + $b;",
+            "}",
+            "",
+            "echo welcome() . \"<br>\";",
+            "echo welcome(\"Lausanne\") . \"<br>\";",
+            "echo add(2, 3);",
+            ""
+          ]
+        },
+        {
+          "titre": "Une erreur de type (erreur voulue)",
+          "code": [
+            "function add(int $a, int $b): int {",
+            "    return $a + $b;",
+            "}",
+            "",
+            "echo add(2, \"trois\");",
+            ""
+          ]
+        }
+      ],
+      "pieges": [
+        "`echo` dans une fonction affiche, mais ne rend rien : celui qui appelle reçoit `null`. Pour rendre le résultat : `return`.",
+        "Une variable créée hors de la fonction n'existe pas dedans : passe-la en paramètre.",
+        "Après `return`, la fonction s'arrête : les lignes suivantes ne s'exécutent pas."
+      ]
+    },
+    {
+      "id": "tableaux-boucles",
+      "titre": "Tableaux et boucles",
+      "icone": "[ ]",
+      "resume": "Un tableau est indexé (`$fruits[0]`) ou associatif (`$person['name']`). `foreach ($tab as $cle => $valeur)` parcourt chaque élément ; `for`, `while` et `do…while` répètent tant qu'une condition est vraie.",
+      "texte": "**Tableau indexé** : les cases sont numérotées à partir de **0** : `$colors[0]`.\n\n**Tableau associatif** : chaque valeur a une clé : `$city['name']`.\n\n**Boucles** :\n\n- `foreach ($items as $item)` : chaque élément ; `foreach ($items as $key => $item)` : la clé ET la valeur (nouveauté de ProgServ2) ;\n- `for ($i = 0; $i < 10; $i++)` : un compteur ;\n- `while (condition)` : tant que la condition est vraie ;\n- `do { … } while (condition);` : comme while, mais s'exécute au moins une fois.\n\nUn tableau peut contenir d'autres tableaux : `$users['jane']['age']`.",
+      "exemples": [
+        {
+          "titre": "foreach avec la clé",
+          "code": [
+            "$capitals = ['VD' => 'Lausanne', 'GE' => 'Genève', 'NE' => 'Neuchâtel'];",
+            "foreach ($capitals as $canton => $capital) {",
+            "    echo \"$canton : $capital<br>\";",
+            "}",
+            "echo count($capitals) . \" cantons\";",
+            ""
+          ]
+        },
+        {
+          "titre": "Un tableau de tableaux",
+          "code": [
+            "$books = [",
+            "    ['title' => 'Dune', 'year' => 1965],",
+            "    ['title' => 'Neuromancer', 'year' => 1984],",
+            "];",
+            "foreach ($books as $book) {",
+            "    echo \"{$book['title']} ({$book['year']})<br>\";",
+            "}",
+            ""
+          ]
+        }
+      ],
+      "pieges": [
+        "Le premier indice est 0, le dernier `count($tab) - 1`.",
+        "`echo $tableau;` affiche « Array » (et un avertissement) : affiche un élément ou parcours le tableau.",
+        "Un `while` dont le compteur n'avance pas tourne sans fin."
+      ]
+    }
+  ],
+  "lecons": [
+    {
+      "id": "u01-l1",
+      "titre": "Le restaurant du web",
+      "duree": 5,
+      "notions": [
+        "client-serveur"
+      ],
+      "cartes": [
+        {
+          "titre": "Qui fait quoi ?",
+          "texte": "Une application web PHP, c'est une équipe : le **navigateur** (client) demande une page, le **serveur web** reçoit la demande, l'**interpréteur PHP** exécute le code, la **base de données** garde les données. Tout est posé chez un **hébergeur**.",
+          "analogie": "Au restaurant : le client commande (navigateur), le serveur transmet (serveur web), le cuisinier prépare (PHP) avec le garde-manger (base de données). Le client ne voit jamais la cuisine.",
+          "fiche": "client-serveur"
+        },
+        {
+          "titre": "Le navigateur ne lit pas le PHP",
+          "texte": "Le code PHP s'exécute sur le serveur. Le navigateur reçoit seulement le **résultat** : du HTML (avec CSS et JavaScript). Exécute l'exemple : regarde ce qui est réellement envoyé.",
+          "code": [
+            "<?php $plat = \"lasagnes\"; ?>",
+            "<h1>Plat du jour : <?= $plat ?></h1>",
+            ""
+          ],
+          "apres": "`<?= $plat ?>` est un raccourci pour `<?php echo $plat; ?>`."
+        },
+        {
+          "titre": "Le serveur web et l'interpréteur",
+          "texte": "Le **serveur web** (Apache, Nginx) gère les requêtes HTTP et distribue les fichiers. Pour un fichier `.php`, il passe la main à l'**interpréteur PHP**, qui exécute le code et lui rend le résultat.",
+          "astuce": "En local, tu as lancé le serveur intégré de PHP avec `php -S 0.0.0.0:8080`. En production, on utilise un serveur dédié, par exemple chez Infomaniak."
+        },
+        {
+          "titre": "Stocker, transférer, héberger",
+          "texte": "Les fichiers de l'application se transfèrent sur le serveur par **FTP** (non sécurisé) ou **SFTP** (sécurisé, via SSH), avec un client comme FileZilla ou Cyberduck. L'**hébergement** rend l'application accessible sur Internet : partagé, VPS ou dédié.",
+          "astuce": "Infomaniak, l'hébergeur suisse du cours, propose un programme étudiant : un hébergement gratuit pendant une année."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u01-l1-e1",
+          "type": "tri",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Où se passe chaque étape ?",
+          "categories": [
+            "Côté client (navigateur)",
+            "Côté serveur"
+          ],
+          "items": [
+            [
+              "Envoyer la requête HTTP",
+              0
+            ],
+            [
+              "Exécuter le code PHP",
+              1
+            ],
+            [
+              "Lire la base de données",
+              1
+            ],
+            [
+              "Afficher la page HTML",
+              0
+            ],
+            [
+              "Générer le HTML",
+              1
+            ],
+            [
+              "Exécuter le JavaScript de la page",
+              0
+            ]
+          ],
+          "explication": "Le PHP et la base de données restent sur le serveur (la cuisine). Le navigateur envoie la commande et affiche le plat : le HTML, le CSS et le JavaScript reçus."
+        },
+        {
+          "id": "u01-l1-e2",
+          "type": "ordre",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Remets dans l'ordre le trajet d'une page PHP.",
+          "items": [
+            "Le navigateur envoie une requête HTTP",
+            "Le serveur web reçoit la requête",
+            "L'interpréteur PHP exécute le code (et interroge la base de données si besoin)",
+            "Le serveur web renvoie le HTML produit",
+            "Le navigateur affiche la page"
+          ],
+          "explication": "Commande, transmission, cuisine, service, dégustation : le client ne reçoit que le plat fini."
+        },
+        {
+          "id": "u01-l1-e3",
+          "type": "qcm",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Sur une page PHP, tu fais « Afficher le code source » dans le navigateur. Que vois-tu ?",
+          "choix": [
+            "Le HTML produit par PHP",
+            "Le code PHP du fichier",
+            "Le code PHP, puis le HTML",
+            "Rien : le code est caché"
+          ],
+          "bonne": 0,
+          "explication": "Le navigateur ne reçoit jamais le PHP : seulement le résultat de son exécution, du HTML."
+        },
+        {
+          "id": "u01-l1-e4",
+          "type": "assoc",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Associe chaque outil à son rôle.",
+          "paires": [
+            [
+              "Apache, Nginx",
+              "Serveur web"
+            ],
+            [
+              "MySQL, PostgreSQL",
+              "Base de données"
+            ],
+            [
+              "FileZilla, Cyberduck",
+              "Client FTP / SFTP"
+            ],
+            [
+              "Infomaniak",
+              "Hébergeur"
+            ]
+          ],
+          "explication": "Apache et Nginx servent les pages ; MySQL et PostgreSQL gardent les données ; FileZilla et Cyberduck transfèrent les fichiers ; Infomaniak héberge l'application."
+        },
+        {
+          "id": "u01-l1-e5",
+          "type": "qcm",
+          "notions": [
+            "client-serveur"
+          ],
+          "mono": true,
+          "question": "Quelle commande lance le serveur web intégré de PHP, comme en ProgServ1 ?",
+          "choix": [
+            "php -S 0.0.0.0:8080",
+            "php -r 0.0.0.0:8080",
+            "php serve 8080",
+            "apache -S 8080"
+          ],
+          "bonne": 0,
+          "explication": "`php -S adresse:port` démarre le serveur intégré de PHP : pratique en local, pas pour la production."
+        },
+        {
+          "id": "u01-l1-e6",
+          "type": "vf",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "FTP et SFTP sont aussi sûrs l'un que l'autre.",
+          "bonne": false,
+          "explication": "FTP n'est pas sécurisé (tout passe en clair) ; SFTP passe par une connexion SSH sécurisée."
+        },
+        {
+          "id": "u01-l1-e7",
+          "type": "predire",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Que reçoit le navigateur ?",
+          "code": [
+            "$plat = \"risotto\";",
+            "echo \"<p>Plat : \" . $plat . \"</p>\";",
+            ""
+          ],
+          "choix": [
+            "<p>Plat : risotto</p>",
+            "<p>Plat : $plat</p>",
+            "echo \"<p>Plat : \" . $plat . \"</p>\";",
+            "Plat : risotto (sans balise)"
+          ],
+          "bonne": 0,
+          "explication": "Le serveur exécute le PHP et n'envoie que le résultat : la balise `<p>` avec la valeur de `$plat`. Le navigateur, lui, affichera « Plat : risotto » en paragraphe."
+        }
+      ]
+    },
+    {
+      "id": "u01-l2",
+      "titre": "Variables, textes et constantes",
+      "duree": 6,
+      "notions": [
+        "variables-constantes"
+      ],
+      "cartes": [
+        {
+          "titre": "Le $ de la variable",
+          "texte": "En PHP, une variable commence toujours par `$`. PHP devine son type tout seul (typage dynamique).",
+          "code": [
+            "$title = \"Le Petit Prince\";      // string",
+            "$pages = 96;                     // int",
+            "$price = 12.90;                  // float",
+            "$available = true;               // bool",
+            "$tags = [\"conte\", \"classique\"];  // array",
+            "$author = null;                  // null",
+            "echo $title;",
+            ""
+          ],
+          "fiche": "variables-constantes"
+        },
+        {
+          "titre": "Coller du texte : le point",
+          "texte": "Pour concaténer, PHP utilise le **point** `.` ; `.=` ajoute au bout d'une variable.",
+          "code": [
+            "$firstName = \"Ada\";",
+            "$message = \"Bonjour \" . $firstName;",
+            "$message .= \", bienvenue !\";",
+            "echo $message;",
+            ""
+          ],
+          "piege": "Le `+` additionne des nombres. `\"Bonjour \" + $firstName` provoque une erreur : `Unsupported operand types: string + string`."
+        },
+        {
+          "titre": "Les guillemets doubles remplacent les variables",
+          "texte": "Entre guillemets **doubles**, PHP remplace `$pages` par sa valeur. Pour une case de tableau, on l'entoure d'accolades : `{$book['title']}`.",
+          "code": [
+            "$pages = 96;",
+            "$book = ['title' => 'Dune'];",
+            "echo \"Pages : $pages<br>\";",
+            "echo \"Titre : {$book['title']}<br>\";",
+            "echo 'Pages : $pages';",
+            ""
+          ],
+          "apres": "Entre guillemets **simples**, rien n'est remplacé : la dernière ligne affiche `$pages` tel quel."
+        },
+        {
+          "titre": "Les constantes",
+          "texte": "Une constante ne change jamais. On la crée avec `define(\"NOM\", valeur)` ou `const NOM = valeur;`, en majuscules, et on l'utilise **sans** `$`.",
+          "code": [
+            "define(\"MAX_PLACES\", 30);",
+            "const VAT = 0.081;",
+            "$registered = 28;",
+            "echo MAX_PLACES - $registered . \" places libres<br>\";",
+            "echo 200 * VAT;",
+            ""
+          ],
+          "piege": "`VAT = 0.1;` après coup est une erreur de syntaxe : une constante ne se réaffecte pas."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u01-l2-e1",
+          "type": "predire",
+          "notions": [
+            "variables-constantes"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "$city = \"Lausanne\";",
+            "$canton = \"VD\";",
+            "echo $city . \" (\" . $canton . \")\";",
+            ""
+          ],
+          "explication": "Le point colle les morceaux dans l'ordre : `Lausanne`, ` (`, `VD`, `)`."
+        },
+        {
+          "id": "u01-l2-e2",
+          "type": "bug",
+          "notions": [
+            "variables-constantes"
+          ],
+          "question": "Ce code plante. Touche la ligne fautive, puis choisis l'explication.",
+          "code": [
+            "$firstName = \"Ada\";",
+            "$lastName = \"Lovelace\";",
+            "$fullName = $firstName + \" \" + $lastName;",
+            "echo $fullName;",
+            ""
+          ],
+          "ligne": 3,
+          "choix": [
+            "En PHP, on colle du texte avec le point `.`, pas avec `+`",
+            "Il manque des parenthèses autour du calcul",
+            "Une variable ne peut pas contenir d'espace",
+            "Il faut `echo` sur cette ligne"
+          ],
+          "bonne": 0,
+          "explication": "`+` est réservé aux nombres. On écrit `$firstName . \" \" . $lastName`."
+        },
+        {
+          "id": "u01-l2-e3",
+          "type": "qcm",
+          "notions": [
+            "variables-constantes"
+          ],
+          "mono": true,
+          "question": "Quel est le type de `$price` après `$price = 12.90;` ?",
+          "choix": [
+            "float",
+            "int",
+            "string",
+            "bool"
+          ],
+          "bonne": 0,
+          "explication": "Un nombre à virgule est un `float`. Avec des guillemets (`\"12.90\"`), ce serait une `string`."
+        },
+        {
+          "id": "u01-l2-e4",
+          "type": "trous",
+          "notions": [
+            "variables-constantes"
+          ],
+          "question": "Complète : crée la constante `VAT` (taux de TVA), puis affiche la TVA sur 100 francs.",
+          "code": [
+            "___ VAT = 0.081;",
+            "$price = 100;",
+            "echo $price * ___;",
+            ""
+          ],
+          "solution": [
+            "const",
+            "VAT"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "8.1"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le mot-clé qui crée une constante commence par « con… ».",
+            "Une constante s'utilise sans `$`."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "const",
+                "$VAT"
+              ],
+              "attendu": "echec",
+              "diagnostic": "variable-inconnue"
+            },
+            {
+              "trous": [
+                "define",
+                "VAT"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "`const VAT = 0.081;` crée la constante ; on l'utilise ensuite par son nom, sans `$`."
+        },
+        {
+          "id": "u01-l2-e5",
+          "type": "ecrire",
+          "notions": [
+            "variables-constantes"
+          ],
+          "question": "Crée la variable `$greeting` qui contient « Bonjour Ada, tu as 36 ans », en collant `$name` et `$age` (pas de texte écrit à la main pour le nom ni l'âge), puis affiche-la.",
+          "donnees": {
+            "name": "Ada",
+            "age": 36
+          },
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Ada, 36 ans",
+                "variables": {
+                  "greeting": "Bonjour Ada, tu as 36 ans"
+                },
+                "sortie": [
+                  "Bonjour Ada, tu as 36 ans"
+                ]
+              },
+              {
+                "titre": "Autres données : Linus, 54 ans",
+                "donnees": {
+                  "name": "Linus",
+                  "age": 54
+                },
+                "variables": {
+                  "greeting": "Bonjour Linus, tu as 54 ans"
+                }
+              }
+            ]
+          },
+          "indices": [
+            "Colle les morceaux avec le point : `\"Bonjour \" . $name . …`",
+            "N'oublie pas la virgule après le nom, et les espaces dans les morceaux de texte.",
+            {
+              "texte": "La structure :",
+              "code": "$greeting = \"Bonjour \" . ___ . \", tu as \" . ___ . \" ans\";\necho $greeting;"
+            }
+          ],
+          "solution": [
+            "$greeting = \"Bonjour \" . $name . \", tu as \" . $age . \" ans\";",
+            "echo $greeting;",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "$greeting = \"Bonjour \" + $name + \", tu as \" + $age + \" ans\";\necho $greeting;",
+              "attendu": "erreur",
+              "diagnostic": "concat-plus"
+            },
+            {
+              "code": "$greeting = \"Bonjour Ada, tu as 36 ans\";\necho $greeting;",
+              "attendu": "echec"
+            },
+            {
+              "code": "$greeting = \"Bonjour \" . $nom . \", tu as \" . $age . \" ans\";\necho $greeting;",
+              "attendu": "echec",
+              "diagnostic": "variable-inconnue"
+            }
+          ],
+          "explication": "Avec `.`, le texte suit les données : si `$name` change, la phrase change aussi."
+        },
+        {
+          "id": "u01-l2-e6",
+          "type": "pointer-code",
+          "notions": [
+            "variables-constantes"
+          ],
+          "question": "Touche la constante.",
+          "code": [
+            "define(\"MAX_PLACES\", 30);",
+            "$registered = 28;",
+            "echo ⟦MAX_PLACES⟧ - $registered;",
+            ""
+          ],
+          "explication": "Une constante s'utilise sans `$` ; `$registered` est une variable."
+        },
+        {
+          "id": "u01-l2-e7",
+          "type": "vf",
+          "notions": [
+            "variables-constantes"
+          ],
+          "question": "`echo 'Pages : $pages';` (guillemets simples) affiche la valeur de `$pages`.",
+          "bonne": false,
+          "explication": "Seuls les guillemets doubles remplacent les variables. Entre guillemets simples, `$pages` s'affiche tel quel."
+        },
+        {
+          "id": "u01-l2-e8",
+          "type": "qcm",
+          "notions": [
+            "variables-constantes"
+          ],
+          "question": "Après `const EULER = 2.71828;`, que fait la ligne `EULER = 3.14;` ?",
+          "choix": [
+            "Une erreur : une constante ne se modifie pas",
+            "EULER vaut maintenant 3.14",
+            "La ligne est ignorée en silence",
+            "Un avertissement, puis EULER vaut 3.14"
+          ],
+          "bonne": 0,
+          "explication": "Le cours le montre : `syntax error, unexpected token \"=\"`. Une constante garde sa valeur pour toujours."
+        }
+      ]
+    },
+    {
+      "id": "u01-l3",
+      "titre": "Comparer et décider",
+      "duree": 6,
+      "notions": [
+        "operateurs-conditions"
+      ],
+      "cartes": [
+        {
+          "titre": "= range, === compare",
+          "texte": "Un seul `=` **range** une valeur dans une variable. Pour **comparer**, on utilise `===` (même valeur ET même type) ou `!==`.",
+          "code": [
+            "$stock = 3;",
+            "if ($stock === 0) {",
+            "    echo \"Rupture\";",
+            "} else {",
+            "    echo \"En stock : $stock\";",
+            "}",
+            ""
+          ],
+          "fiche": "operateurs-conditions"
+        },
+        {
+          "titre": "== ou === ?",
+          "texte": "`==` compare seulement la valeur, après avoir converti les types. `===` compare aussi le type. Préfère toujours `===`.",
+          "code": [
+            "var_dump(\"5\" == 5);",
+            "var_dump(\"5\" === 5);",
+            ""
+          ],
+          "apres": "`var_dump` affiche le type et la valeur : `bool(true)`, puis `bool(false)`."
+        },
+        {
+          "titre": "if, elseif, else",
+          "texte": "Les conditions sont testées dans l'ordre ; seul le premier bloc vrai s'exécute. `&&` (et), `||` (ou) et `!` (non) combinent des conditions.",
+          "code": [
+            "$temperature = 24;",
+            "if ($temperature < 5) {",
+            "    echo \"Il gèle presque.\";",
+            "} elseif ($temperature >= 5 && $temperature < 20) {",
+            "    echo \"Il fait doux.\";",
+            "} else {",
+            "    echo \"Il fait chaud.\";",
+            "}",
+            ""
+          ]
+        },
+        {
+          "titre": "switch, break et default",
+          "texte": "`switch` compare une valeur à plusieurs `case`. Chaque `case` finit par `break`. Plusieurs `case` peuvent partager le même code, et `default` attrape le reste.",
+          "code": [
+            "$size = \"M\";",
+            "switch ($size) {",
+            "    case \"S\":",
+            "    case \"M\":",
+            "        echo \"Petite taille\";",
+            "        break;",
+            "    case \"L\":",
+            "        echo \"Grande taille\";",
+            "        break;",
+            "    default:",
+            "        echo \"Taille inconnue\";",
+            "        break;",
+            "}",
+            ""
+          ],
+          "piege": "Sans `break`, PHP continue dans le `case` suivant et exécute aussi son code."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u01-l3-e1",
+          "type": "predire",
+          "notions": [
+            "operateurs-conditions"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "$a = \"10\";",
+            "$b = 10;",
+            "if ($a === $b) {",
+            "    echo \"identiques\";",
+            "} elseif ($a == $b) {",
+            "    echo \"même valeur\";",
+            "} else {",
+            "    echo \"différents\";",
+            "}",
+            ""
+          ],
+          "explication": "`\"10\"` est une chaîne, `10` un entier : `===` est faux (types différents), mais `==` est vrai (même valeur après conversion)."
+        },
+        {
+          "id": "u01-l3-e2",
+          "type": "ecrire",
+          "notions": [
+            "operateurs-conditions",
+            "fonctions"
+          ],
+          "question": "Écris `getTicketPrice(int $age): int` qui retourne le prix d'un billet de musée : **0** avant 6 ans, **8** de 6 à 15 ans, **10** dès 65 ans, **15** sinon.",
+          "depart": [
+            "function getTicketPrice(int $age): int {",
+            "",
+            "}",
+            ""
+          ],
+          "tests": {
+            "fonction": "getTicketPrice",
+            "cas": [
+              {
+                "titre": "5 ans",
+                "args": [
+                  5
+                ],
+                "attendu": 0
+              },
+              {
+                "titre": "6 ans (limite)",
+                "args": [
+                  6
+                ],
+                "attendu": 8
+              },
+              {
+                "titre": "15 ans",
+                "args": [
+                  15
+                ],
+                "attendu": 8
+              },
+              {
+                "titre": "16 ans",
+                "args": [
+                  16
+                ],
+                "attendu": 15
+              },
+              {
+                "titre": "64 ans",
+                "args": [
+                  64
+                ],
+                "attendu": 15
+              },
+              {
+                "titre": "65 ans (limite)",
+                "args": [
+                  65
+                ],
+                "attendu": 10
+              },
+              {
+                "titre": "90 ans",
+                "args": [
+                  90
+                ],
+                "attendu": 10
+              }
+            ]
+          },
+          "indices": [
+            "Teste les âges du plus petit au plus grand, avec `if`, `elseif`, `else`.",
+            "« Avant 6 ans » : `$age < 6` ; « dès 65 ans » : `$age >= 65`. Attention aux limites.",
+            {
+              "texte": "La structure :",
+              "code": "if ($age < 6) {\n    return 0;\n} elseif (___) {\n    return 8;\n} elseif (___) {\n    return 10;\n}\nreturn 15;"
+            }
+          ],
+          "solution": [
+            "function getTicketPrice(int $age): int {",
+            "    if ($age < 6) {",
+            "        return 0;",
+            "    } elseif ($age < 16) {",
+            "        return 8;",
+            "    } elseif ($age >= 65) {",
+            "        return 10;",
+            "    }",
+            "    return 15;",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function getTicketPrice(int $age): int {\n    if ($age < 6) {\n        return 0;\n    } elseif ($age < 16) {\n        return 8;\n    } elseif ($age > 65) {\n        return 10;\n    }\n    return 15;\n}\n",
+              "attendu": "echec"
+            },
+            {
+              "code": "function getTicketPrice(int $age) {\n    if ($age < 6) {\n        echo 0;\n    } elseif ($age < 16) {\n        echo 8;\n    } elseif ($age >= 65) {\n        echo 10;\n    } else {\n        echo 15;\n    }\n}\n",
+              "attendu": "echec",
+              "diagnostic": "echo-vs-return"
+            }
+          ],
+          "explication": "Les conditions sont testées dans l'ordre : dès qu'un `return` s'exécute, la fonction s'arrête. Les limites (6 ans, 65 ans) sont les cas qui piègent."
+        },
+        {
+          "id": "u01-l3-e3",
+          "type": "bug",
+          "notions": [
+            "operateurs-conditions"
+          ],
+          "question": "Ce code affiche « Week-endSemaine » au lieu de « Week-end ». Touche la ligne après laquelle il manque quelque chose.",
+          "code": [
+            "$day = \"Saturday\";",
+            "switch ($day) {",
+            "    case \"Saturday\":",
+            "        echo \"Week-end\";",
+            "    case \"Monday\":",
+            "        echo \"Semaine\";",
+            "        break;",
+            "}",
+            ""
+          ],
+          "ligne": 4,
+          "choix": [
+            "Il manque `break;` après cet `echo` : sans lui, le switch continue dans le case suivant",
+            "Il faut `===` dans un `case`",
+            "Les guillemets doivent être simples",
+            "`case` doit s'écrire `elseif`"
+          ],
+          "bonne": 0,
+          "explication": "Sans `break`, PHP « tombe » dans le `case` suivant et exécute aussi son code."
+        },
+        {
+          "id": "u01-l3-e4",
+          "type": "trous",
+          "notions": [
+            "operateurs-conditions"
+          ],
+          "question": "Complète : affiche « Rupture » si le stock vaut 0, sinon « En stock ».",
+          "donnees": {
+            "stock": 0
+          },
+          "code": [
+            "if ($stock ___ 0) {",
+            "    echo \"Rupture\";",
+            "} ___ {",
+            "    echo \"En stock\";",
+            "}",
+            ""
+          ],
+          "solution": [
+            "===",
+            "else"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Stock 0",
+                "sortie": [
+                  "Rupture"
+                ]
+              },
+              {
+                "titre": "Stock 3",
+                "donnees": {
+                  "stock": 3
+                },
+                "sortie": [
+                  "En stock"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "On compare (trois signes), on ne range pas.",
+            "Le dernier bloc, sans condition, s'appelle…"
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "=",
+                "else"
+              ],
+              "attendu": "echec"
+            },
+            {
+              "trous": [
+                "===",
+                "elseif"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "`===` compare ; `=` rangerait 0 dans `$stock` (et la condition serait fausse). `else` n'a pas de condition."
+        },
+        {
+          "id": "u01-l3-e5",
+          "type": "tri",
+          "notions": [
+            "operateurs-conditions"
+          ],
+          "mono": true,
+          "question": "Range chaque expression selon sa valeur.",
+          "categories": [
+            "true",
+            "false"
+          ],
+          "items": [
+            [
+              "5 === 5",
+              0
+            ],
+            [
+              "\"5\" === 5",
+              1
+            ],
+            [
+              "\"5\" == 5",
+              0
+            ],
+            [
+              "3 > 2 && 1 > 2",
+              1
+            ],
+            [
+              "3 > 2 || 1 > 2",
+              0
+            ],
+            [
+              "!true",
+              1
+            ]
+          ],
+          "explication": "`===` exige le même type ; `&&` demande que les deux côtés soient vrais, `||` qu'au moins un le soit ; `!` inverse."
+        },
+        {
+          "id": "u01-l3-e6",
+          "type": "vf",
+          "notions": [
+            "operateurs-conditions"
+          ],
+          "question": "Dans un `switch`, `default` s'exécute quand aucun `case` ne correspond.",
+          "bonne": true,
+          "explication": "`default` traite les cas non prévus, comme le `else` d'un `if`."
+        },
+        {
+          "id": "u01-l3-e7",
+          "type": "ecrire",
+          "notions": [
+            "operateurs-conditions",
+            "fonctions"
+          ],
+          "question": "Écris `isWeekend(string $day): bool` qui retourne `true` pour `\"Saturday\"` et `\"Sunday\"`, `false` sinon.",
+          "depart": [
+            "function isWeekend(string $day): bool {",
+            "",
+            "}",
+            ""
+          ],
+          "tests": {
+            "fonction": "isWeekend",
+            "cas": [
+              {
+                "args": [
+                  "Saturday"
+                ],
+                "attendu": true
+              },
+              {
+                "args": [
+                  "Sunday"
+                ],
+                "attendu": true
+              },
+              {
+                "args": [
+                  "Monday"
+                ],
+                "attendu": false
+              },
+              {
+                "titre": "Jour inconnu",
+                "args": [
+                  "Holiday"
+                ],
+                "attendu": false
+              }
+            ]
+          },
+          "indices": [
+            "Deux jours donnent `true` : relie deux comparaisons avec `||`.",
+            "Une comparaison donne déjà `true` ou `false` : tu peux la retourner directement.",
+            {
+              "texte": "Presque :",
+              "code": "return $day === ___ || $day === ___;"
+            }
+          ],
+          "solution": [
+            "function isWeekend(string $day): bool {",
+            "    return $day === \"Saturday\" || $day === \"Sunday\";",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function isWeekend(string $day) {\n    if ($day === \"Saturday\" || $day === \"Sunday\") {\n        return \"true\";\n    }\n    return \"false\";\n}",
+              "attendu": "echec",
+              "diagnostic": "texte-vs-booleen"
+            },
+            {
+              "code": "function isWeekend(string $day): bool {\n    return $day === \"Saturday\";\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`$day === \"Saturday\" || $day === \"Sunday\"` vaut déjà `true` ou `false` : pas besoin de `if`."
+        }
+      ]
+    },
+    {
+      "id": "u01-l4",
+      "titre": "Fonctions : le cuisinier tend le plat",
+      "duree": 7,
+      "notions": [
+        "fonctions"
+      ],
+      "cartes": [
+        {
+          "titre": "Déclarer et appeler",
+          "texte": "`function` déclare une fonction ; ses paramètres sont entre parenthèses et n'existent que dans son corps. On l'appelle avec les arguments dans le même ordre.",
+          "code": [
+            "function describe($name, $price) {",
+            "    return $name . \" : \" . $price . \" CHF\";",
+            "}",
+            "",
+            "echo describe(\"Croissant\", 1.8);",
+            ""
+          ],
+          "fiche": "fonctions"
+        },
+        {
+          "titre": "return tend le plat, echo le crie",
+          "texte": "`return` rend le résultat à celui qui appelle : on peut le ranger dans une variable. `echo` l'affiche tout de suite, mais la fonction ne rend rien (`null`).",
+          "code": [
+            "function withReturn() {",
+            "    return \"plat servi\";",
+            "}",
+            "function withEcho() {",
+            "    echo \"plat crié<br>\";",
+            "}",
+            "",
+            "$a = withReturn();",
+            "$b = withEcho();",
+            "var_dump($a);",
+            "var_dump($b);",
+            ""
+          ],
+          "analogie": "Le cuisinier qui fait `return` pose le plat dans ton assiette. Celui qui fait `echo` le crie dans la salle : tu l'entends, mais ton assiette (`$b`) reste vide (`NULL`)."
+        },
+        {
+          "titre": "Une valeur par défaut",
+          "texte": "Un paramètre peut avoir une valeur par défaut : elle sert si l'argument manque à l'appel.",
+          "code": [
+            "function welcome(string $city = \"Yverdon\"): string {",
+            "    return \"Bienvenue à \" . $city;",
+            "}",
+            "",
+            "echo welcome() . \"<br>\";",
+            "echo welcome(\"Lausanne\");",
+            ""
+          ]
+        },
+        {
+          "titre": "Typer paramètres et retour",
+          "texte": "Les types (`int`, `float`, `string`, `bool`, `array`, `object`) protègent la fonction : un mauvais argument provoque une erreur claire. Le type après `):` est celui du résultat. Sans type, c'est `mixed`.",
+          "code": [
+            "function add(int $a, int $b): int {",
+            "    return $a + $b;",
+            "}",
+            "",
+            "echo add(2, 3);",
+            ""
+          ],
+          "piege": "`add(2, \"Hello\")` → `Argument #2 ($b) must be of type int, string given`."
+        },
+        {
+          "titre": "Fonctions prédéfinies et fichiers",
+          "texte": "PHP fournit des centaines de fonctions : `strlen` (longueur d'un texte), `count` (éléments d'un tableau), `array_merge` (fusionner deux tableaux)… Tes propres fonctions vont dans un fichier, inclus avec `require_once \"functions.php\";`.",
+          "code": [
+            "$word = \"serveur\";",
+            "$days = [\"lundi\", \"mardi\"];",
+            "echo strlen($word) . \"<br>\";",
+            "echo count(array_merge($days, [\"mercredi\"]));",
+            ""
+          ],
+          "astuce": "`require_once` : si le fichier manque, erreur fatale et arrêt (recommandé). `include_once` : une alerte, et le code continue (non recommandé)."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u01-l4-e1",
+          "type": "predire",
+          "notions": [
+            "fonctions"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "function welcome(string $city = \"Yverdon\"): string {",
+            "    return \"Bienvenue à \" . $city;",
+            "}",
+            "",
+            "echo welcome() . \"<br>\";",
+            "echo welcome(\"Lausanne\");",
+            ""
+          ],
+          "explication": "Sans argument, `$city` prend sa valeur par défaut ; avec `\"Lausanne\"`, c'est l'argument qui compte."
+        },
+        {
+          "id": "u01-l4-e2",
+          "type": "corriger",
+          "notions": [
+            "fonctions"
+          ],
+          "question": "Cette fonction doit **retourner** les initiales (« AL » pour Ada Lovelace), mais elle plante. Corrige-la.",
+          "depart": [
+            "function getInitials(string $firstName, string $lastName): string {",
+            "    echo $firstName[0] . $lastName[0];",
+            "}",
+            ""
+          ],
+          "tests": {
+            "fonction": "getInitials",
+            "cas": [
+              {
+                "args": [
+                  "Ada",
+                  "Lovelace"
+                ],
+                "attendu": "AL"
+              },
+              {
+                "args": [
+                  "Grace",
+                  "Hopper"
+                ],
+                "attendu": "GH"
+              }
+            ]
+          },
+          "indices": [
+            "Lis le message : la fonction promet une `string`… et ne rend rien.",
+            "Remplace l'affichage par un retour."
+          ],
+          "solution": [
+            "function getInitials(string $firstName, string $lastName): string {",
+            "    return $firstName[0] . $lastName[0];",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function getInitials(string $firstName, string $lastName): string {\n    echo $firstName[0] . $lastName[0];\n}",
+              "attendu": "erreur",
+              "diagnostic": "sans-return"
+            }
+          ],
+          "explication": "`$texte[0]` est le premier caractère. Le cuisinier doit **tendre** le plat (`return`), pas le crier (`echo`)."
+        },
+        {
+          "id": "u01-l4-e3",
+          "type": "ecrire",
+          "notions": [
+            "fonctions"
+          ],
+          "question": "Écris `describeBook(string $title, int $pages = 100): string` qui retourne par exemple « Dune (412 pages) ». Sans nombre de pages, on compte 100 pages.",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Dune, 412 pages",
+                "code": "return describeBook(\"Dune\", 412);",
+                "attendu": "Dune (412 pages)"
+              },
+              {
+                "titre": "Valeur par défaut",
+                "code": "return describeBook(\"Carnet\");",
+                "attendu": "Carnet (100 pages)"
+              },
+              {
+                "titre": "Autre livre",
+                "code": "return describeBook(\"Neuromancer\", 271);",
+                "attendu": "Neuromancer (271 pages)"
+              }
+            ]
+          },
+          "indices": [
+            "Commence par `function describeBook(string $title, int $pages = 100): string {`.",
+            "Colle le titre, ` (`, le nombre et ` pages)` avec des points.",
+            {
+              "texte": "Presque :",
+              "code": "return $title . \" (\" . ___ . \" pages)\";"
+            }
+          ],
+          "solution": [
+            "function describeBook(string $title, int $pages = 100): string {",
+            "    return $title . \" (\" . $pages . \" pages)\";",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function describeBook(string $title, int $pages): string {\n    return $title . \" (\" . $pages . \" pages)\";\n}",
+              "attendu": "erreur",
+              "diagnostic": "arguments"
+            },
+            {
+              "code": "function describeBook(string $title, int $pages = 100): string {\n    return $title + \" (\" + $pages + \" pages)\";\n}",
+              "attendu": "erreur",
+              "diagnostic": "concat-plus"
+            }
+          ],
+          "explication": "`int $pages = 100` : l'argument devient facultatif. Les morceaux se collent avec `.`."
+        },
+        {
+          "id": "u01-l4-e4",
+          "type": "erreurs",
+          "notions": [
+            "fonctions"
+          ],
+          "question": "Traduis chaque message d'erreur de PHP.",
+          "paires": [
+            [
+              "Undefined variable $nom",
+              "La variable n'existe pas à cet endroit"
+            ],
+            [
+              "Call to undefined function gret()",
+              "Le nom de la fonction est mal écrit"
+            ],
+            [
+              "Too few arguments to function add(), 1 passed",
+              "Il manque un argument à l'appel"
+            ],
+            [
+              "Argument #2 ($b) must be of type int, string given",
+              "L'argument n'a pas le type annoncé"
+            ],
+            [
+              "syntax error, unexpected end of file",
+              "Une accolade n'est pas refermée"
+            ]
+          ],
+          "explication": "Les messages de PHP disent presque toujours où chercher : le nom fautif, le numéro d'argument, le type attendu."
+        },
+        {
+          "id": "u01-l4-e5",
+          "type": "qcm",
+          "notions": [
+            "fonctions"
+          ],
+          "question": "Le fichier `functions.php` est introuvable. Avec `require_once \"functions.php\";`, que se passe-t-il ?",
+          "choix": [
+            "Une erreur fatale : le reste du code ne s'exécute pas",
+            "Une alerte, puis le reste du code s'exécute",
+            "Rien : PHP ignore la ligne",
+            "PHP crée un fichier vide"
+          ],
+          "bonne": 0,
+          "explication": "C'est pour ça que le cours recommande `require_once` : on voit tout de suite qu'il manque un fichier. `include_once` continuerait avec une simple alerte."
+        },
+        {
+          "id": "u01-l4-e6",
+          "type": "methode",
+          "notions": [
+            "fonctions",
+            "tableaux-boucles"
+          ],
+          "question": "Quelle fonction prédéfinie donne le nombre d'éléments d'un tableau ?",
+          "choix": [
+            "count",
+            "strlen",
+            "array_merge",
+            "length"
+          ],
+          "bonne": 0,
+          "explication": "`count($tab)` compte les éléments ; `strlen` mesure un texte ; `array_merge` fusionne ; `length` n'existe pas en PHP."
+        },
+        {
+          "id": "u01-l4-e7",
+          "type": "qcm",
+          "notions": [
+            "fonctions"
+          ],
+          "question": "Une variable `$total` est créée à l'intérieur d'une fonction. Où existe-t-elle ?",
+          "choix": [
+            "Seulement dans le corps de la fonction",
+            "Partout, après l'appel de la fonction",
+            "Dans tous les fichiers inclus",
+            "Nulle part : il faut `const`"
+          ],
+          "bonne": 0,
+          "explication": "Les variables (et les paramètres) d'une fonction n'existent qu'entre ses accolades. Pour en sortir une valeur : `return`."
+        }
+      ]
+    },
+    {
+      "id": "u01-l5",
+      "titre": "Tableaux et boucles",
+      "duree": 7,
+      "notions": [
+        "tableaux-boucles"
+      ],
+      "cartes": [
+        {
+          "titre": "Le tableau indexé",
+          "texte": "Les cases sont numérotées à partir de **0**. `count` donne le nombre d'éléments.",
+          "code": [
+            "$colors = [\"rouge\", \"vert\", \"bleu\"];",
+            "echo $colors[0] . \"<br>\";",
+            "echo $colors[2] . \"<br>\";",
+            "echo count($colors);",
+            ""
+          ],
+          "fiche": "tableaux-boucles"
+        },
+        {
+          "titre": "Le tableau associatif",
+          "texte": "Chaque valeur a une **clé** (un nom) : on y accède avec `$tab['cle']`.",
+          "code": [
+            "$city = [",
+            "    'name' => 'Yverdon-les-Bains',",
+            "    'canton' => 'VD',",
+            "    'zip' => 1400,",
+            "];",
+            "echo $city['name'] . \" (\" . $city['canton'] . \")\";",
+            ""
+          ]
+        },
+        {
+          "titre": "foreach, avec ou sans la clé",
+          "texte": "`foreach ($tab as $valeur)` passe sur chaque élément. Avec `$cle => $valeur`, tu as aussi la clé : c'est la nouveauté de ProgServ2.",
+          "code": [
+            "$scores = ['Ana' => 12, 'Léo' => 9];",
+            "foreach ($scores as $score) {",
+            "    echo \"$score<br>\";",
+            "}",
+            "foreach ($scores as $name => $score) {",
+            "    echo \"$name : $score<br>\";",
+            "}",
+            ""
+          ]
+        },
+        {
+          "titre": "for, while, do…while",
+          "texte": "`for` compte, `while` répète tant qu'une condition est vraie, `do…while` s'exécute au moins une fois avant de tester.",
+          "code": [
+            "for ($i = 1; $i <= 3; $i++) {",
+            "    echo \"for $i<br>\";",
+            "}",
+            "$n = 3;",
+            "while ($n > 0) {",
+            "    echo \"while $n<br>\";",
+            "    $n--;",
+            "}",
+            ""
+          ],
+          "piege": "Un `while` dont la condition ne devient jamais fausse tourne sans fin (oublier `$n--`)."
+        },
+        {
+          "titre": "Des tableaux dans un tableau",
+          "texte": "Une liste d'utilisateurs est souvent un tableau de tableaux associatifs. Dans une chaîne, une case s'écrit entre accolades : `{$user['name']}`.",
+          "code": [
+            "$users = [",
+            "    ['name' => 'Ana', 'city' => 'Sion'],",
+            "    ['name' => 'Léo', 'city' => 'Bienne'],",
+            "];",
+            "foreach ($users as $user) {",
+            "    echo \"{$user['name']} habite à {$user['city']}<br>\";",
+            "}",
+            ""
+          ]
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u01-l5-e1",
+          "type": "predire",
+          "notions": [
+            "tableaux-boucles"
+          ],
+          "question": "Qu'affiche ce code ? (une ligne par `<br>`)",
+          "code": [
+            "$stock = ['pommes' => 12, 'poires' => 0];",
+            "foreach ($stock as $fruit => $quantity) {",
+            "    echo \"$fruit : $quantity<br>\";",
+            "}",
+            ""
+          ],
+          "explication": "`$fruit` reçoit la clé, `$quantity` la valeur, pour chaque élément dans l'ordre."
+        },
+        {
+          "id": "u01-l5-e2",
+          "type": "ecrire",
+          "notions": [
+            "tableaux-boucles",
+            "fonctions"
+          ],
+          "question": "Écris `countLongWords(array $words, int $min): int` qui compte les mots d'au moins `$min` lettres (utilise `strlen`).",
+          "depart": [
+            "function countLongWords(array $words, int $min): int {",
+            "",
+            "}",
+            ""
+          ],
+          "tests": {
+            "fonction": "countLongWords",
+            "cas": [
+              {
+                "args": [
+                  [
+                    "php",
+                    "serveur",
+                    "web",
+                    "session"
+                  ],
+                  4
+                ],
+                "attendu": 2
+              },
+              {
+                "titre": "Limite comprise",
+                "args": [
+                  [
+                    "chat",
+                    "lion",
+                    "ours"
+                  ],
+                  4
+                ],
+                "attendu": 3
+              },
+              {
+                "titre": "Tableau vide",
+                "args": [
+                  [],
+                  3
+                ],
+                "attendu": 0
+              }
+            ]
+          },
+          "indices": [
+            "Un compteur à 0, puis un `foreach` sur `$words`.",
+            "Pour chaque mot : si `strlen($word) >= $min`, ajoute 1 au compteur.",
+            {
+              "texte": "La structure :",
+              "code": "$count = 0;\nforeach ($words as $word) {\n    if (___) {\n        $count++;\n    }\n}\nreturn $count;"
+            }
+          ],
+          "solution": [
+            "function countLongWords(array $words, int $min): int {",
+            "    $count = 0;",
+            "    foreach ($words as $word) {",
+            "        if (strlen($word) >= $min) {",
+            "            $count++;",
+            "        }",
+            "    }",
+            "    return $count;",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function countLongWords(array $words, int $min): int {\n    $count = 0;\n    foreach ($words as $word) {\n        if (strlen($word) > $min) {\n            $count++;\n        }\n    }\n    return $count;\n}",
+              "attendu": "echec"
+            },
+            {
+              "code": "function countLongWords(array $words, int $min): int {\n    return count($words);\n}",
+              "attendu": "echec"
+            },
+            {
+              "code": "function countLongWords(array $words, int $min): int {\n    if (strlen($words) >= $min) {\n        return 1;\n    }\n    return 0;\n}",
+              "attendu": "erreur",
+              "diagnostic": "type-argument"
+            }
+          ],
+          "explication": "« Au moins » se traduit par `>=`. Le tableau vide donne 0 : la boucle ne tourne pas, le compteur reste à 0."
+        },
+        {
+          "id": "u01-l5-e3",
+          "type": "parsons",
+          "notions": [
+            "tableaux-boucles"
+          ],
+          "question": "Remets les lignes dans l'ordre pour afficher « VD : Lausanne » puis « GE : Genève ».",
+          "lignes": [
+            "$capitals = ['VD' => 'Lausanne', 'GE' => 'Genève'];",
+            "foreach ($capitals as $canton => $capital) {",
+            "    echo \"$canton : $capital<br>\";",
+            "}"
+          ],
+          "distracteurs": [
+            "foreach ($capital as $canton => $capitals) {",
+            "    echo $capitals;"
+          ],
+          "explication": "On parcourt le tableau `$capitals` ; la clé va dans `$canton`, la valeur dans `$capital`."
+        },
+        {
+          "id": "u01-l5-e4",
+          "type": "trous",
+          "notions": [
+            "tableaux-boucles"
+          ],
+          "question": "Complète pour afficher la moyenne des températures.",
+          "code": [
+            "$temperatures = [12, 15, 9];",
+            "$sum = 0;",
+            "foreach ($temperatures ___ $t) {",
+            "    $sum ___ $t;",
+            "}",
+            "echo $sum / count($temperatures);",
+            ""
+          ],
+          "solution": [
+            "as",
+            "+="
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "12"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le mot entre le tableau et la variable de boucle.",
+            "Il faut **ajouter** chaque température à la somme."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "as",
+                "="
+              ],
+              "attendu": "echec"
+            },
+            {
+              "trous": [
+                "in",
+                "+="
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "`foreach ($tab as $t)` ; `$sum += $t` ajoute (alors que `=` remplacerait la somme à chaque tour)."
+        },
+        {
+          "id": "u01-l5-e5",
+          "type": "ecrire",
+          "notions": [
+            "tableaux-boucles"
+          ],
+          "question": "Avec une boucle `for`, affiche les nombres de 1 à 5, un par ligne (`<br>` après chaque nombre).",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5"
+                ]
+              }
+            ],
+            "obligatoire": [
+              "for"
+            ]
+          },
+          "indices": [
+            "`for (départ; condition; pas)`.",
+            "Départ à 1, et on continue tant que `$i <= 5`.",
+            {
+              "texte": "Presque :",
+              "code": "for ($i = ___; $i <= ___; $i++) {\n    echo $i . \"<br>\";\n}"
+            }
+          ],
+          "solution": [
+            "for ($i = 1; $i <= 5; $i++) {",
+            "    echo $i . \"<br>\";",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "for ($i = 0; $i < 5; $i++) {\n    echo $i . \"<br>\";\n}",
+              "attendu": "echec"
+            },
+            {
+              "code": "for ($i = 1; $i <= 5; $i++) {\n    echo $i;\n}",
+              "attendu": "echec",
+              "diagnostic": "lignes-collees"
+            }
+          ],
+          "explication": "Départ 1, condition `$i <= 5`, pas `$i++` : la boucle tourne 5 fois."
+        },
+        {
+          "id": "u01-l5-e6",
+          "type": "qcm",
+          "notions": [
+            "tableaux-boucles"
+          ],
+          "question": "`$colors` est un tableau. Qu'affiche `echo $colors;` ?",
+          "choix": [
+            "« Array », avec un avertissement",
+            "Tous les éléments, séparés par des virgules",
+            "Le premier élément",
+            "Rien du tout"
+          ],
+          "bonne": 0,
+          "explication": "echo ne sait pas afficher un tableau entier : il écrit « Array ». Affiche un élément, parcours le tableau, ou utilise `print_r` pour déboguer."
+        },
+        {
+          "id": "u01-l5-e7",
+          "type": "vf",
+          "notions": [
+            "tableaux-boucles"
+          ],
+          "question": "Un `do…while` s'exécute au moins une fois, même si la condition est fausse dès le départ.",
+          "bonne": true,
+          "explication": "La condition est testée à la fin de chaque tour : le premier tour a toujours lieu."
+        },
+        {
+          "id": "u01-l5-e8",
+          "type": "ecrire",
+          "notions": [
+            "tableaux-boucles",
+            "fonctions"
+          ],
+          "question": "Écris `getUserNames(array $users): array` qui retourne la liste des noms (`'name'`) de chaque utilisateur.",
+          "depart": [
+            "function getUserNames(array $users): array {",
+            "",
+            "}",
+            ""
+          ],
+          "tests": {
+            "fonction": "getUserNames",
+            "cas": [
+              {
+                "args": [
+                  [
+                    {
+                      "name": "Ana",
+                      "age": 20
+                    },
+                    {
+                      "name": "Léo",
+                      "age": 31
+                    }
+                  ]
+                ],
+                "attendu": [
+                  "Ana",
+                  "Léo"
+                ]
+              },
+              {
+                "titre": "Un seul",
+                "args": [
+                  [
+                    {
+                      "name": "Mia",
+                      "age": 7
+                    }
+                  ]
+                ],
+                "attendu": [
+                  "Mia"
+                ]
+              },
+              {
+                "titre": "Tableau vide",
+                "args": [
+                  []
+                ],
+                "attendu": []
+              }
+            ]
+          },
+          "indices": [
+            "Commence avec un tableau vide `$names = [];`.",
+            "Dans un `foreach`, ajoute `$user['name']` au bout du tableau : `$names[] = …;`.",
+            {
+              "texte": "La structure :",
+              "code": "$names = [];\nforeach ($users as $user) {\n    $names[] = ___;\n}\nreturn $names;"
+            }
+          ],
+          "solution": [
+            "function getUserNames(array $users): array {",
+            "    $names = [];",
+            "    foreach ($users as $user) {",
+            "        $names[] = $user['name'];",
+            "    }",
+            "    return $names;",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function getUserNames(array $users): array {\n    $names = [];\n    foreach ($users as $user) {\n        $names = $user['name'];\n    }\n    return $names;\n}",
+              "attendu": "erreur",
+              "diagnostic": "type-retour"
+            },
+            {
+              "code": "function getUserNames(array $users): array {\n    $names = [];\n    foreach ($users as $user) {\n        $names[] = $user;\n    }\n    return $names;\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`$names[] = …` ajoute une case au bout du tableau ; `$names = …` remplacerait tout le tableau par une seule valeur."
+        }
+      ]
+    }
+  ],
+  "jeux": [
+    {
+      "id": "u01-vrai-faux",
+      "titre": "Vrai ou faux ?",
+      "description": "Dix affirmations sur les bases de PHP. Mémoire d'éléphant à partir de 8.",
+      "tours": 10,
+      "badge": "memoire",
+      "seuilBadge": 8,
+      "questions": [
+        {
+          "id": "u01-j1",
+          "type": "vf",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Le navigateur exécute le code PHP de la page.",
+          "bonne": false,
+          "explication": "Le PHP s'exécute sur le serveur ; le navigateur ne reçoit que le résultat (HTML)."
+        },
+        {
+          "id": "u01-j2",
+          "type": "vf",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Apache et Nginx sont des serveurs web.",
+          "bonne": true,
+          "explication": "Ils gèrent les requêtes HTTP et distribuent les fichiers ; ils passent le PHP à l'interpréteur."
+        },
+        {
+          "id": "u01-j3",
+          "type": "vf",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "SFTP transfère les fichiers par une connexion SSH sécurisée.",
+          "bonne": true,
+          "explication": "Contrairement à FTP, qui n'est pas sécurisé."
+        },
+        {
+          "id": "u01-j4",
+          "type": "vf",
+          "notions": [
+            "variables-constantes"
+          ],
+          "question": "Une constante s'utilise avec un `$` : `echo $PI;`.",
+          "bonne": false,
+          "explication": "Les constantes s'utilisent sans `$` : `echo PI;`."
+        },
+        {
+          "id": "u01-j5",
+          "type": "vf",
+          "notions": [
+            "variables-constantes"
+          ],
+          "question": "En PHP, `.` colle deux textes.",
+          "bonne": true,
+          "explication": "C'est l'opérateur de concaténation ; `.=` ajoute au bout d'une variable."
+        },
+        {
+          "id": "u01-j6",
+          "type": "vf",
+          "notions": [
+            "variables-constantes"
+          ],
+          "question": "`$x = \"42\";` range un entier dans `$x`.",
+          "bonne": false,
+          "explication": "Avec des guillemets, c'est une chaîne (`string`). Sans : `$x = 42;` (int)."
+        },
+        {
+          "id": "u01-j7",
+          "type": "vf",
+          "notions": [
+            "operateurs-conditions"
+          ],
+          "question": "`\"5\" === 5` vaut `true`.",
+          "bonne": false,
+          "explication": "`===` compare aussi le type : string ≠ int, donc `false`."
+        },
+        {
+          "id": "u01-j8",
+          "type": "vf",
+          "notions": [
+            "operateurs-conditions"
+          ],
+          "question": "Un seul `=` compare deux valeurs.",
+          "bonne": false,
+          "explication": "Un seul `=` range une valeur ; on compare avec `===`."
+        },
+        {
+          "id": "u01-j9",
+          "type": "vf",
+          "notions": [
+            "operateurs-conditions"
+          ],
+          "question": "Sans `break`, un `case` de `switch` continue dans le suivant.",
+          "bonne": true,
+          "explication": "D'où le `break` à la fin de chaque `case`."
+        },
+        {
+          "id": "u01-j10",
+          "type": "vf",
+          "notions": [
+            "fonctions"
+          ],
+          "question": "Une fonction qui fait `echo` au lieu de `return` rend `null` à celui qui l'appelle.",
+          "bonne": true,
+          "explication": "Le résultat est affiché, mais pas rendu : la variable qui reçoit l'appel vaut `null`."
+        },
+        {
+          "id": "u01-j11",
+          "type": "vf",
+          "notions": [
+            "fonctions"
+          ],
+          "question": "`include_once` arrête tout si le fichier est introuvable.",
+          "bonne": false,
+          "explication": "C'est `require_once` qui arrête (erreur fatale) ; `include_once` émet une alerte et continue."
+        },
+        {
+          "id": "u01-j12",
+          "type": "vf",
+          "notions": [
+            "fonctions"
+          ],
+          "question": "Sans type déclaré, un paramètre accepte n'importe quel type (`mixed`).",
+          "bonne": true,
+          "explication": "Le type par défaut est `mixed`."
+        },
+        {
+          "id": "u01-j13",
+          "type": "vf",
+          "notions": [
+            "tableaux-boucles"
+          ],
+          "question": "Le premier élément de `$tab` est `$tab[1]`.",
+          "bonne": false,
+          "explication": "Les indices commencent à 0 : `$tab[0]`."
+        },
+        {
+          "id": "u01-j14",
+          "type": "vf",
+          "notions": [
+            "tableaux-boucles"
+          ],
+          "question": "`foreach ($users as $key => $user)` donne la clé et la valeur de chaque élément.",
+          "bonne": true,
+          "explication": "La clé va dans `$key`, la valeur dans `$user`."
+        },
+        {
+          "id": "u01-j15",
+          "type": "vf",
+          "notions": [
+            "tableaux-boucles"
+          ],
+          "question": "`count(\"bonjour\")` donne 7.",
+          "bonne": false,
+          "explication": "`count` compte les éléments d'un tableau ; la longueur d'un texte, c'est `strlen`."
+        }
+      ]
+    }
+  ],
+  "quiz": {
+    "titre": "Quiz : rappels sur PHP",
+    "questions": [
+      {
+        "id": "u01-q1",
+        "type": "qcm",
+        "notions": [
+          "client-serveur"
+        ],
+        "question": "Qui exécute le code PHP ?",
+        "choix": [
+          "L'interpréteur PHP, sur le serveur",
+          "Le navigateur du visiteur",
+          "La base de données",
+          "Le client FTP"
+        ],
+        "bonne": 0,
+        "explication": "Le serveur web confie le fichier `.php` à l'interpréteur PHP, qui l'exécute."
+      },
+      {
+        "id": "u01-q2",
+        "type": "assoc",
+        "notions": [
+          "client-serveur"
+        ],
+        "question": "Associe chaque pièce à son rôle.",
+        "paires": [
+          [
+            "Navigateur",
+            "Envoie la requête, affiche la page"
+          ],
+          [
+            "Serveur web",
+            "Reçoit les requêtes, distribue les fichiers"
+          ],
+          [
+            "Interpréteur PHP",
+            "Exécute le code, produit le HTML"
+          ],
+          [
+            "Base de données",
+            "Stocke les données"
+          ]
+        ],
+        "explication": "Client, serveur, cuisinier, garde-manger."
+      },
+      {
+        "id": "u01-q3",
+        "type": "predire",
+        "notions": [
+          "variables-constantes"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "$item = \"café\";",
+          "$qty = 2;",
+          "echo \"$qty x $item\";",
+          ""
+        ],
+        "explication": "Entre guillemets doubles, les variables sont remplacées par leur valeur."
+      },
+      {
+        "id": "u01-q4",
+        "type": "qcm",
+        "notions": [
+          "variables-constantes"
+        ],
+        "mono": true,
+        "question": "Quelle ligne colle correctement le prénom et le nom ?",
+        "choix": [
+          "$full = $first . \" \" . $last;",
+          "$full = $first + \" \" + $last;",
+          "$full = $first , \" \" , $last;",
+          "$full = \"$first\" & \"$last\";"
+        ],
+        "bonne": 0,
+        "explication": "La concaténation se fait avec le point."
+      },
+      {
+        "id": "u01-q5",
+        "type": "vf",
+        "notions": [
+          "variables-constantes"
+        ],
+        "question": "`define(\"MAX\", 10);` et `const MAX = 10;` créent toutes deux une constante.",
+        "bonne": true,
+        "explication": "Les deux syntaxes sont dans le cours."
+      },
+      {
+        "id": "u01-q6",
+        "type": "predire",
+        "notions": [
+          "operateurs-conditions"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "$level = \"B\";",
+          "switch ($level) {",
+          "    case \"A\":",
+          "        echo \"Débutant\";",
+          "        break;",
+          "    case \"B\":",
+          "    case \"C\":",
+          "        echo \"Intermédiaire\";",
+          "        break;",
+          "    default:",
+          "        echo \"Inconnu\";",
+          "}",
+          ""
+        ],
+        "explication": "`\"B\"` tombe dans le `case \"B\"`, qui partage le code de `case \"C\"`, jusqu'au `break`."
+      },
+      {
+        "id": "u01-q7",
+        "type": "qcm",
+        "notions": [
+          "operateurs-conditions"
+        ],
+        "question": "Pourquoi le cours conseille-t-il `===` plutôt que `==` ?",
+        "choix": [
+          "`===` compare aussi le type, sans conversion automatique",
+          "`===` est plus rapide à taper",
+          "`==` n'existe plus en PHP 8",
+          "`===` compare seulement la valeur"
+        ],
+        "bonne": 0,
+        "explication": "`==` convertit les types et donne des surprises : `\"5\" == 5` est vrai."
+      },
+      {
+        "id": "u01-q8",
+        "type": "trous",
+        "notions": [
+          "operateurs-conditions"
+        ],
+        "question": "Complète : « majeur » à partir de 18 ans, sinon « mineur ».",
+        "donnees": {
+          "age": 18
+        },
+        "code": [
+          "if ($age ___ 18) {",
+          "    echo \"majeur\";",
+          "} else {",
+          "    echo \"mineur\";",
+          "}",
+          ""
+        ],
+        "solution": [
+          ">="
+        ],
+        "tests": {
+          "cas": [
+            {
+              "titre": "18 ans",
+              "sortie": [
+                "majeur"
+              ]
+            },
+            {
+              "titre": "17 ans",
+              "donnees": {
+                "age": 17
+              },
+              "sortie": [
+                "mineur"
+              ]
+            }
+          ]
+        },
+        "indices": [
+          "« À partir de 18 » : 18 compris."
+        ],
+        "erreursTypiques": [
+          {
+            "trous": [
+              ">"
+            ],
+            "attendu": "echec"
+          }
+        ],
+        "explication": "`>=` inclut 18 ; avec `>`, une personne de 18 ans serait « mineure »."
+      },
+      {
+        "id": "u01-q9",
+        "type": "qcm",
+        "notions": [
+          "fonctions"
+        ],
+        "question": "`$r = greet();` alors que `greet()` fait `echo \"Salut\";` sans `return`. Que vaut `$r` ?",
+        "choix": [
+          "null",
+          "\"Salut\"",
+          "true",
+          "Une erreur"
+        ],
+        "bonne": 0,
+        "mono": false,
+        "explication": "La fonction affiche « Salut » mais ne rend rien : `$r` vaut `null`."
+      },
+      {
+        "id": "u01-q10",
+        "type": "predire",
+        "notions": [
+          "fonctions"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "function area(int $width, int $height = 2): int {",
+          "    return $width * $height;",
+          "}",
+          "echo area(5) . \"<br>\";",
+          "echo area(5, 3);",
+          ""
+        ],
+        "explication": "`area(5)` utilise `$height = 2` (10) ; `area(5, 3)` donne 15."
+      },
+      {
+        "id": "u01-q11",
+        "type": "qcm",
+        "notions": [
+          "fonctions"
+        ],
+        "question": "Que dit cette erreur : `Argument #1 ($age) must be of type int, string given` ?",
+        "choix": [
+          "La fonction attend un entier, elle reçoit une chaîne",
+          "La fonction n'existe pas",
+          "Il manque un argument",
+          "La fonction ne retourne rien"
+        ],
+        "bonne": 0,
+        "explication": "Le typage du paramètre (`int $age`) n'est pas respecté."
+      },
+      {
+        "id": "u01-q12",
+        "type": "vf",
+        "notions": [
+          "fonctions"
+        ],
+        "question": "Le cours recommande `require_once` plutôt que `include_once`.",
+        "bonne": true,
+        "explication": "Si le fichier manque, `require_once` arrête tout : on voit l'erreur tout de suite."
+      },
+      {
+        "id": "u01-q13",
+        "type": "predire",
+        "notions": [
+          "tableaux-boucles"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "$menu = ['entrée' => 'soupe', 'plat' => 'rösti'];",
+          "echo $menu['plat'] . \"<br>\";",
+          "echo count($menu);",
+          ""
+        ],
+        "explication": "On lit la case de clé `'plat'` ; le tableau contient 2 éléments."
+      },
+      {
+        "id": "u01-q14",
+        "type": "qcm",
+        "notions": [
+          "tableaux-boucles"
+        ],
+        "mono": true,
+        "question": "Quelle boucle s'exécute au moins une fois ?",
+        "choix": [
+          "do { … } while (…);",
+          "while (…) { … }",
+          "for (…; …; …) { … }",
+          "foreach (… as …) { … }"
+        ],
+        "bonne": 0,
+        "explication": "`do…while` teste la condition après le premier tour."
+      },
+      {
+        "id": "u01-q15",
+        "type": "ecrire",
+        "notions": [
+          "tableaux-boucles",
+          "fonctions"
+        ],
+        "question": "Écris `sumPositive(array $numbers): int` qui additionne seulement les nombres strictement positifs.",
+        "depart": [
+          "function sumPositive(array $numbers): int {",
+          "",
+          "}",
+          ""
+        ],
+        "tests": {
+          "fonction": "sumPositive",
+          "cas": [
+            {
+              "args": [
+                [
+                  3,
+                  -2,
+                  5,
+                  0
+                ]
+              ],
+              "attendu": 8
+            },
+            {
+              "titre": "Que des négatifs",
+              "args": [
+                [
+                  -1,
+                  -7
+                ]
+              ],
+              "attendu": 0
+            },
+            {
+              "titre": "Tableau vide",
+              "args": [
+                []
+              ],
+              "attendu": 0
+            }
+          ]
+        },
+        "indices": [
+          "Une somme à 0, un `foreach`.",
+          "N'ajoute que si `$n > 0`.",
+          {
+            "texte": "La structure :",
+            "code": "$sum = 0;\nforeach ($numbers as $n) {\n    if (___) {\n        $sum += $n;\n    }\n}\nreturn $sum;"
+          }
+        ],
+        "solution": [
+          "function sumPositive(array $numbers): int {",
+          "    $sum = 0;",
+          "    foreach ($numbers as $n) {",
+          "        if ($n > 0) {",
+          "            $sum += $n;",
+          "        }",
+          "    }",
+          "    return $sum;",
+          "}",
+          ""
+        ],
+        "erreursTypiques": [
+          {
+            "code": "function sumPositive(array $numbers): int {\n    $sum = 0;\n    foreach ($numbers as $n) {\n        $sum += $n;\n    }\n    return $sum;\n}",
+            "attendu": "echec"
+          }
+        ],
+        "explication": "Une condition dans la boucle trie ce qu'on ajoute. Le tableau vide donne 0."
+      },
+      {
+        "id": "u01-q16",
+        "type": "tri",
+        "notions": [
+          "variables-constantes"
+        ],
+        "mono": true,
+        "question": "Range chaque valeur selon son type.",
+        "categories": [
+          "string",
+          "int",
+          "float",
+          "bool"
+        ],
+        "items": [
+          [
+            "\"42\"",
+            0
+          ],
+          [
+            "42",
+            1
+          ],
+          [
+            "4.2",
+            2
+          ],
+          [
+            "true",
+            3
+          ],
+          [
+            "'false'",
+            0
+          ],
+          [
+            "-7",
+            1
+          ]
+        ],
+        "explication": "Entre guillemets, c'est toujours une chaîne, même `'false'` ou `\"42\"`."
+      }
+    ]
+  },
+  "boss": [
+    {
+      "id": "u01-b1",
+      "titre": "Ton environnement de développement",
+      "source": "Séance 1, exercice 1 : mettre en place un environnement de développement PHP pour le projet libre",
+      "notions": [
+        "client-serveur",
+        "fonctions"
+      ],
+      "enonce": "**L'exercice du cours** : « Mettez en place un environnement de développement PHP pour le projet libre pour votre équipe. »\n\nTon équipe démarre son projet libre : une application web en PHP, avec une base de données MySQL/MariaDB, qui sera déployée chez Infomaniak. Avant d'écrire la première ligne, vous préparez votre environnement. Réponds aux questions de l'équipe.",
+      "questions": [
+        {
+          "id": "u01-b1-q1",
+          "type": "qcm",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Le cours met un **template de projet** à disposition. Que faut-il faire en premier ?",
+          "choix": [
+            "Lire son `README.md` avant de l'utiliser",
+            "Supprimer son `README.md`",
+            "Le déployer tel quel chez Infomaniak",
+            "Le convertir en JavaScript"
+          ],
+          "bonne": 0,
+          "explication": "« Prenez le temps de lire le README.md du template avant de l'utiliser ! » : il explique comment l'utiliser et ce qu'il contient."
+        },
+        {
+          "id": "u01-b1-q2",
+          "type": "qcm",
+          "notions": [
+            "client-serveur"
+          ],
+          "mono": true,
+          "question": "Pour tester en local, sans serveur Apache, quelle commande lance le serveur intégré de PHP ?",
+          "choix": [
+            "php -S 0.0.0.0:8080",
+            "php -i 8080",
+            "php run index.php",
+            "npm start"
+          ],
+          "bonne": 0,
+          "explication": "`php -S adresse:port` : le serveur web intégré de PHP."
+        },
+        {
+          "id": "u01-b1-q3",
+          "type": "assoc",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Associe chaque besoin de l'équipe à la bonne pièce.",
+          "paires": [
+            [
+              "Afficher l'application",
+              "Navigateur web"
+            ],
+            [
+              "Exécuter le PHP",
+              "Interpréteur PHP"
+            ],
+            [
+              "Garder les utilisateurs et leurs données",
+              "Base de données MySQL/MariaDB"
+            ],
+            [
+              "Rendre l'application accessible sur Internet",
+              "Hébergement (Infomaniak)"
+            ]
+          ],
+          "explication": "Chaque pièce de l'architecture client-serveur a son rôle."
+        },
+        {
+          "id": "u01-b1-q4",
+          "type": "qcm",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Pour envoyer vos fichiers chez l'hébergeur, quel protocole choisir ?",
+          "choix": [
+            "SFTP, sécurisé par SSH",
+            "FTP, plus simple et aussi sûr",
+            "HTTP, par le navigateur",
+            "SMTP, par e-mail"
+          ],
+          "bonne": 0,
+          "explication": "FTP n'est pas sécurisé ; SFTP passe par une connexion SSH."
+        },
+        {
+          "id": "u01-b1-q5",
+          "type": "qcm",
+          "notions": [
+            "fonctions"
+          ],
+          "mono": true,
+          "question": "`index.php` utilise les fonctions de `functions.php`. Quelle ligne le cours recommande-t-il en haut de `index.php` ?",
+          "choix": [
+            "require_once \"functions.php\";",
+            "include_once \"functions.php\";",
+            "import \"functions.php\";",
+            "use functions.php;"
+          ],
+          "bonne": 0,
+          "explication": "`require_once` : si le fichier manque, erreur fatale (on le voit tout de suite) ; jamais inclus deux fois."
+        },
+        {
+          "id": "u01-b1-q6",
+          "type": "ordre",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Une visiteuse ouvre votre page d'accueil. Remets les étapes dans l'ordre.",
+          "items": [
+            "Son navigateur envoie une requête HTTP",
+            "Le serveur web d'Infomaniak reçoit la requête",
+            "L'interpréteur PHP exécute index.php et lit la base de données",
+            "Le serveur renvoie le HTML produit",
+            "Le navigateur affiche la page"
+          ],
+          "explication": "Le trajet client → serveur → PHP → serveur → client."
+        },
+        {
+          "id": "u01-b1-q7",
+          "type": "vf",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Infomaniak propose un programme étudiant : un hébergement web gratuit pendant une année.",
+          "bonne": true,
+          "explication": "C'est l'hébergeur utilisé dans le cours, avec son programme étudiant."
+        },
+        {
+          "id": "u01-b1-q8",
+          "type": "qcm",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Lequel n'est PAS un type d'hébergement cité dans le cours ?",
+          "choix": [
+            "Hébergement « navigateur »",
+            "Hébergement partagé",
+            "VPS (serveur privé virtuel)",
+            "Hébergement dédié"
+          ],
+          "bonne": 0,
+          "explication": "Le cours cite l'hébergement partagé, le VPS et l'hébergement dédié."
+        }
+      ]
+    }
+  ],
+  "parcours": [
+    "u01-l1",
+    "u01-l2",
+    "u01-l3",
+    "jeu:u01-vrai-faux",
+    "u01-l4",
+    "u01-l5",
+    "quiz",
+    "boss:u01-b1"
+  ]
+}

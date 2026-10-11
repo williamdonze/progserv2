@@ -13,6 +13,7 @@ const LITTERAUX = new Set(["true","false","null","undefined","NaN","Infinity"]);
 const RE_JETON = /(\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$))|("(?:[^"\\\n]|\\.)*"?|'(?:[^'\\\n]|\\.)*'?|`(?:[^`\\]|\\[\s\S])*`?)|(\d[\d_]*(?:\.\d+)?(?:e[+-]?\d+)?|\.\d+)|([A-Za-z_$À-ÿ][\w$À-ÿ]*)|(\s+)|(=>|\.\.\.|===|!==|==|!=|<=|>=|&&|\|\||\?\?|\+\+|--|\+=|-=|\*=|\/=|%=|\*\*|[-+*/%<>=!?:&|^~])|([()[\]{};,.])|([\s\S])/g;
 /* jetons(code) → [{t, v}] ; t ∈ com, str, num, kw, lit, fn (nom suivi de « ( »), prop (après « . »), id, ws, op, ponct, autre */
 function jetons(code){
+  if (typeof LANGAGE_CODE !== "undefined" && LANGAGE_CODE === "php") return jetonsPhp(code);   // module code-php (js/php.js)
   const out = []; let m; RE_JETON.lastIndex = 0;
   while ((m = RE_JETON.exec(code))) {
     const v = m[0];

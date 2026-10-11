@@ -1,43 +1,152 @@
 {
   "app": {
-    "nom": "Mon cours",
-    "nomLong": "Mon cours — apprendre en jouant",
-    "description": "Apprendre le cours en jouant : leçons courtes, exercices interactifs, défi du jour et révisions espacées.",
-    "cle": "mon-cours",
+    "nom": "ProgServ2",
+    "nomLong": "ProgServ2 — la programmation serveur en PHP",
+    "description": "Réviser le cours Programmation serveur 2 (HEIG-VD) en jouant : leçons courtes, vrai PHP exécuté dans le navigateur, défi du jour et révisions espacées.",
+    "cle": "progserv2",
     "langue": "fr",
-    "accroche": "On part de zéro et on va jusqu'aux exercices de ton cours.",
-    "mascotte": { "nom": "Coco", "cadre": ["{", "}"], "corps": "#FFF6E4", "bord": "#E3C98F" },
-    "couleurs": {},
-    "textes": { "jeuReussi": "tu as l'œil !" },
-    "modules": ["code-js", "dom"]
+    "accroche": "On révise le PHP ensemble, des rappels jusqu'aux sessions et aux e-mails.",
+    "mascotte": {
+      "nom": "Elly",
+      "forme": "elephant",
+      "cadre": [
+        "<?",
+        "?>"
+      ],
+      "corps": "#B3B8E3",
+      "oreilles": "#9EA4D6",
+      "bord": "#5F64A8"
+    },
+    "couleurs": {
+      "clair": {
+        "--prim": "#5F64A8",
+        "--prim-btn": "#555A9E",
+        "--prim-deep": "#3B3F7A",
+        "--prim-ink": "#474C93",
+        "--prim-soft": "#E9EAF6"
+      },
+      "sombre": {
+        "--prim": "#A3A7E0",
+        "--prim-btn": "#5D62AA",
+        "--prim-deep": "#363A72",
+        "--prim-ink": "#C2C5F0",
+        "--prim-soft": "#24264A"
+      }
+    },
+    "textes": {
+      "jeuReussi": "tu lis le PHP comme un livre."
+    },
+    "modules": [
+      "code-php"
+    ]
   },
   "seuilValidation": 0.8,
   "unites": [
-    "content/unites/u01-apprendre.json",
-    "content/unites/u02-catalogue.json"
+    "content/unites/u01-rappels.json"
   ],
   "aVenir": [],
   "rangs": [
-    { "xp": 0, "nom": "Débutant" },
-    { "xp": 100, "nom": "Apprenti" },
-    { "xp": 300, "nom": "Initié" },
-    { "xp": 700, "nom": "Confirmé" },
-    { "xp": 1500, "nom": "Expert" },
-    { "xp": 3000, "nom": "Maître" },
-    { "xp": 6000, "nom": "Légende" }
+    {
+      "xp": 0,
+      "nom": "Hello, World!"
+    },
+    {
+      "xp": 100,
+      "nom": "Stagiaire"
+    },
+    {
+      "xp": 300,
+      "nom": "Dév junior"
+    },
+    {
+      "xp": 700,
+      "nom": "Dév back-end"
+    },
+    {
+      "xp": 1500,
+      "nom": "Dév confirmé·e"
+    },
+    {
+      "xp": 3000,
+      "nom": "Architecte"
+    },
+    {
+      "xp": 6000,
+      "nom": "Éléphant légendaire"
+    }
   ],
   "badges": [
-    { "id": "premier-pas", "nom": "Premier pas", "desc": "Terminer ta première leçon", "icone": "etoile" },
-    { "id": "theoricien", "nom": "Théoricien", "desc": "Ouvrir 10 fiches de théorie", "icone": "livre" },
-    { "id": "sans-faute", "nom": "Sans faute", "desc": "100 % à un quiz de validation", "icone": "etoile" },
-    { "id": "defi", "nom": "Défi relevé", "desc": "Terminer un défi du jour", "icone": "etoile" },
-    { "id": "sans-indice", "nom": "Sans filet", "desc": "Vaincre un boss sans aucun indice", "icone": "boss" },
-    { "id": "serie-3", "nom": "Trois jours de suite", "desc": "Une série de 3 jours", "icone": "flamme" },
-    { "id": "serie-7", "nom": "Une semaine", "desc": "Une série de 7 jours", "icone": "flamme" },
-    { "id": "serie-30", "nom": "Un mois", "desc": "Une série de 30 jours", "icone": "flamme" },
-    { "id": "premier-coup", "nom": "Du premier coup", "desc": "Réussir 10 exercices de code au premier essai (module code-js)", "icone": "cible" },
-    { "id": "codeur", "nom": "Ça compile", "desc": "Réussir 25 exercices de code (module code-js)", "icone": "accolades" },
-    { "id": "chasseur-bugs", "nom": "Chasseur de bugs", "desc": "Trouver 10 bugs (ligne et explication)", "icone": "bug" },
-    { "id": "memoire", "nom": "Mémoire d'éléphant", "desc": "8/10 ou plus au jeu « Vrai ou faux ? » de l'unité 1", "icone": "cible" }
+    {
+      "id": "premier-pas",
+      "nom": "Hello, World!",
+      "desc": "Terminer ta première leçon",
+      "icone": "etoile"
+    },
+    {
+      "id": "theoricien",
+      "nom": "Lecteur·rice de php.net",
+      "desc": "Ouvrir 10 fiches de théorie",
+      "icone": "livre"
+    },
+    {
+      "id": "sans-faute",
+      "nom": "200 OK",
+      "desc": "100 % à un quiz de validation",
+      "icone": "etoile"
+    },
+    {
+      "id": "defi",
+      "nom": "Défi relevé",
+      "desc": "Terminer un défi du jour",
+      "icone": "etoile"
+    },
+    {
+      "id": "sans-indice",
+      "nom": "Sans filet",
+      "desc": "Vaincre un boss sans aucun indice",
+      "icone": "boss"
+    },
+    {
+      "id": "serie-3",
+      "nom": "Trois jours de suite",
+      "desc": "Une série de 3 jours",
+      "icone": "flamme"
+    },
+    {
+      "id": "serie-7",
+      "nom": "Une semaine",
+      "desc": "Une série de 7 jours",
+      "icone": "flamme"
+    },
+    {
+      "id": "serie-30",
+      "nom": "Un mois",
+      "desc": "Une série de 30 jours",
+      "icone": "flamme"
+    },
+    {
+      "id": "premier-coup",
+      "nom": "Du premier coup",
+      "desc": "Réussir 10 exercices de PHP au premier essai",
+      "icone": "cible"
+    },
+    {
+      "id": "codeur",
+      "nom": "Ça tourne !",
+      "desc": "Réussir 25 exercices de PHP",
+      "icone": "accolades"
+    },
+    {
+      "id": "chasseur-bugs",
+      "nom": "Chasseur de bugs",
+      "desc": "Trouver 10 bugs (ligne et explication)",
+      "icone": "bug"
+    },
+    {
+      "id": "memoire",
+      "nom": "Mémoire d'éléphant",
+      "desc": "8/10 ou plus au jeu « Vrai ou faux ? » de l'unité 1",
+      "icone": "cible"
+    }
   ]
 }

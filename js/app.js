@@ -40,7 +40,7 @@ function runSession(steps, opts){
     if (st.kind === "carte") {
       const c = st.carte;
       const art = h(`<article class="lcard">${c.illu ? `<div class="illu">${illu(c.illu, c)}</div>` : ""}<h2>${richInline(c.titre)}</h2><div class="rich">${rich(c.texte || "")}</div></article>`);
-      if (c.code) art.appendChild(c.executable === false || !aModule("code-js") ? h(`<div>${codeHTML(lignes(c.code))}</div>`) : blocExecutable(lignes(c.code), { donnees:c.donnees, dom:c.dom }));
+      if (c.code) art.appendChild(c.executable === false || !aCode() ? h(`<div>${codeHTML(lignes(c.code))}</div>`) : blocExecutable(lignes(c.code), { donnees:c.donnees, dom:c.dom, requete:c.requete, fichiers:c.fichiers, fichier:c.fichier }));
       if (c.apres) art.appendChild(h(`<div class="rich">${rich(c.apres)}</div>`));
       if (c.analogie) art.appendChild(h(`<div class="aside analogie">${I.egg.replace("<svg", '<svg style="color:var(--gold-deep)"')}<div><b class="t">L'image à retenir</b><div class="rich">${rich(c.analogie)}</div></div></div>`));
       if (c.astuce) art.appendChild(h(`<div class="aside tip">${I.bulb.replace("<svg", '<svg style="color:var(--teal)"')}<div><b class="t">Bon à savoir</b><div class="rich">${rich(c.astuce)}</div></div></div>`));
@@ -248,7 +248,7 @@ function shell(){
     <button class="tab" data-go="home">${I.home}Parcours</button>
     <button class="tab" data-go="defi">${I.star}Défi</button>
     <button class="tab" data-go="theorie">${I.book}Théorie</button>
-    ${aModule("code-js") ? `<button class="tab" data-go="console">${I.terminal}Console</button>` : ""}
+    ${aCode() ? `<button class="tab" data-go="console">${I.terminal}Console</button>` : ""}
     <button class="tab" data-go="profil">${I.user}Profil</button></div></nav>`));
   document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go); });
 }
@@ -261,7 +261,7 @@ function renderTop(){
 function render(){
   shell(); renderTop();
   $app.innerHTML = "";
-  const v = { home:viewHome, defi:viewDefi, theorie:viewTheorie, console: aModule("code-js") ? viewConsole : null, profil:viewProfil }[VIEW] || viewHome;
+  const v = { home:viewHome, defi:viewDefi, theorie:viewTheorie, console: aCode() ? viewConsole : null, profil:viewProfil }[VIEW] || viewHome;
   $app.appendChild(v());
 }
 
@@ -358,8 +358,8 @@ function viewTheorie(){
 
 /* ---------------- vue : console libre (bac à sable) ---------------- */
 function viewConsole(){
-  const el = h(`<main class="wrap"><h1 style="font-size:32px">Console</h1><p class="muted" style="margin:4px 0 6px">Ton bac à sable : écris du JavaScript, exécute, regarde la console. Rien n'est noté. Les erreurs sont expliquées en français.</p><div class="zone"></div><div class="ed-actions"><button type="button" class="btn small" data-run>${I.play}Exécuter</button><button type="button" class="btn small ghost" data-clear>${I.reset}Effacer</button></div><div class="sortie"></div></main>`);
-  const depart = ['const fruits = ["pomme", "kiwi", "mangue"];', "", "fruits.forEach((fruit) => console.log(fruit));", ""].join("\n");
+  const el = h(`<main class="wrap"><h1 style="font-size:32px">Console</h1><p class="muted" style="margin:4px 0 6px">Ton bac à sable : écris du ${estPhp() ? "PHP" : "JavaScript"}, exécute, regarde ${estPhp() ? "ce qui s'affiche" : "la console"}. Rien n'est noté. Les erreurs sont expliquées en français.</p><div class="zone"></div><div class="ed-actions"><button type="button" class="btn small" data-run>${I.play}Exécuter</button><button type="button" class="btn small ghost" data-clear>${I.reset}Effacer</button></div><div class="sortie"></div></main>`);
+  const depart = (estPhp() ? ["<?php", '$fruits = ["pomme", "kiwi", "mangue"];', "", "foreach ($fruits as $fruit) {", '    echo $fruit . "<br>";', "}", ""] : ['const fruits = ["pomme", "kiwi", "mangue"];', "", "fruits.forEach((fruit) => console.log(fruit));", ""]).join("\n");
   let t = null;
   const ed = Editeur({ code: typeof ST.brouillons.__console === "string" ? ST.brouillons.__console : depart, onChange: v => { clearTimeout(t); t = setTimeout(() => { ST.brouillons.__console = v; save(); }, 400); }, etiquette:"Console libre" });
   el.querySelector(".zone").appendChild(ed.el);
@@ -368,9 +368,10 @@ function viewConsole(){
     const b = e.currentTarget; b.disabled = true;
     const r = await executer({ code: ed.valeur() });
     b.disabled = false; sortie.innerHTML = "";
-    sortie.appendChild(h(consoleHTML(r.console, { vide:"Rien n'a été affiché. Utilise console.log(…)." })));
+    sortie.appendChild(h(consoleHTML(r.console, { vide: estPhp() ? "Rien n'a été affiché. Utilise echo." : "Rien n'a été affiché. Utilise console.log(…)." })));
+    if (r.page) sortie.appendChild(apercuPageHTML(r.page));
     if (r.erreur || r.conseils?.length) sortie.appendChild(resultatHTML({ erreur:r.erreur, conseils:r.conseils }));
-    ed.marquer(r.erreur?.ligne);
+    ed.marquer(r.erreur?.ligne || r.conseils?.find(c => c.avertissement)?.ligne);
   };
   el.querySelector("[data-clear]").onclick = () => confirmBox("Tout effacer ?", "Le code de la console sera effacé.", "Effacer", () => { ed.definir(""); ST.brouillons.__console = ""; save(); sortie.innerHTML = ""; });
   return el;
@@ -456,6 +457,7 @@ async function boot(){
   }
   D.unites.forEach(preparerUnite);
   ST = loadState(); applyTheme();
+  if (estPhp()) setTimeout(prechargerPhp, 800);   // module code-php : PHP démarre en arrière-plan (quelques secondes)
   try { render(); }
   catch(err) {
     console.error(err);

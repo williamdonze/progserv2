@@ -23,9 +23,13 @@ TYPES = {
     "ecrire": ["question", "tests", "solution"], "boss": ["titre", "enonce", "tests", "solution", "indices"],
 }
 CODE = {"trous", "corriger", "ecrire", "boss"}
-# types qui exécutent ou évaluent du JavaScript : ils demandent le module « code-js » ; les pages web, le module « dom »
-MODULES_CONNUS = {"code-js", "dom"}
+# types qui exécutent ou évaluent du JavaScript : ils demandent le module « code-js » ; les pages web, le module « dom » ;
+# les exercices de code (CODE) et « predire » exécutent du PHP avec le module « code-php »
+MODULES_CONNUS = {"code-js", "dom", "code-php"}
 TYPES_CODE_JS = CODE | {"reduce-pas", "filtre-visuel", "map-visuel", "types-chaine", "fisher-yates", "pointer-tableau", "objet"}
+TYPES_JS_SEUL = TYPES_CODE_JS - CODE
+CHAMPS_CAS_PHP = {"titre", "requete", "code", "fonction", "args", "attendu", "sortie", "contient", "neContientPas", "redirection", "cookies", "dureeCookies",
+                  "session", "sessionVide", "statut", "variables", "donnees", "siEchec", "appel"}
 lignes = lambda c: "\n".join(c) if isinstance(c, list) else str(c or "")
 
 try:
@@ -40,6 +44,9 @@ for k in ["nom", "cle", "description"]:
 if APP.get("cle") and not re.fullmatch(r"[a-z0-9-]+", APP["cle"]): E("config.json : app.cle en minuscules, chiffres et tirets (elle nomme la sauvegarde : ne plus la changer ensuite)")
 MODULES = set(APP.get("modules", []))
 for m in MODULES - MODULES_CONNUS: E(f"config.json : module inconnu « {m} » (connus : {', '.join(sorted(MODULES_CONNUS))})")
+PHP = "code-php" in MODULES and "code-js" not in MODULES
+if "code-php" in MODULES and "code-js" in MODULES: E("config.json : un cours exécute UN langage : « code-php » ou « code-js », pas les deux")
+CODE_ACTIF = PHP or "code-js" in MODULES
 
 unites, ids_q, ids_fiche, ids_unite, ids_badge = [], {}, {}, set(), set()
 for b in config.get("badges", []):
@@ -61,10 +68,18 @@ for chemin in config.get("unites", []):
 def verifier_question(q, ou):
     t = q.get("type")
     if t not in TYPES: E(f"{ou} : type inconnu « {t} »"); return
-    if t in TYPES_CODE_JS and "code-js" not in MODULES and not (t == "predire"):
-        E(f"{ou} : le type « {t} » demande le module « code-js » (config.app.modules)")
-    if t == "predire" and q.get("reponse") is None and not q.get("choix") and "code-js" not in MODULES:
-        E(f"{ou} : « predire » sans réponse écrite exécute du JavaScript : module « code-js », ou donne « reponse »")
+    if t in TYPES_JS_SEUL and "code-js" not in MODULES:
+        E(f"{ou} : le type « {t} » évalue du JavaScript : il demande le module « code-js » (config.app.modules)")
+    if t in CODE and not CODE_ACTIF:
+        E(f"{ou} : le type « {t} » exécute du code : module « code-js » ou « code-php » (config.app.modules)")
+    if t == "predire" and q.get("reponse") is None and not q.get("choix") and not CODE_ACTIF:
+        E(f"{ou} : « predire » sans réponse écrite exécute du code : module « code-js » ou « code-php », ou donne « reponse »")
+    if PHP and t in CODE:
+        for c in q.get("tests", {}).get("cas", []):
+            for k in c:
+                if k not in CHAMPS_CAS_PHP: E(f"{ou} : champ de cas PHP inconnu « {k} » (connus : {', '.join(sorted(CHAMPS_CAS_PHP))})")
+            if not any(k in c for k in ("attendu", "sortie", "contient", "neContientPas", "redirection", "cookies", "session", "sessionVide", "statut", "variables")):
+                W(f"{ou} : un cas de test ne vérifie rien ({c.get('titre', '?')})")
     if (t == "selecteur" or q.get("dom")) and "dom" not in MODULES: E(f"{ou} : page web (dom) : il faut le module « dom »")
     qid = q.get("id")
     if not qid: E(f"{ou} : pas d'id (obligatoire : il sert à la sauvegarde)")

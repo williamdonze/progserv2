@@ -13,9 +13,14 @@ const APP = {
 };
 let SAVE_KEY = "mon-cours-sauvegarde-v1";
 const aModule = m => APP.modules.includes(m);
+/* langage du code du cours : "php" avec le module code-php (seul), sinon "js" ; aCode() : le cours exécute du code */
+let LANGAGE_CODE = "js";
+const aCode = () => aModule("code-js") || aModule("code-php");
+const estPhp = () => LANGAGE_CODE === "php";
 function appliquerApp(cfg = {}){
   Object.assign(APP, cfg, { mascotte: { ...APP.mascotte, ...(cfg.mascotte || {}) }, textes: { ...APP.textes, ...(cfg.textes || {}) } });
   SAVE_KEY = `${APP.cle}-sauvegarde-v1`;
+  LANGAGE_CODE = aModule("code-php") && !aModule("code-js") ? "php" : "js";
   document.title = APP.nom;
   document.documentElement.lang = APP.langue || "fr";
   // couleurs : { "clair": { "--prim": "#…" }, "sombre": { … } } ; les jetons non cités gardent leur valeur de css/app.css
@@ -81,15 +86,17 @@ const ICON_BY_NAME = { etoile:I.star, flamme:I.flame, medaille:I.medal, trophee:
 /* mascotte (config.app.mascotte) : un œuf souriant dans un « cadre » propre au cours :
    ["{", "}"] (accolades dessinées, cours de code), deux textes quelconques (["<?", "?>"], ["$", "_"]…), ou [] (pas de cadre) */
 const ACCOLADES = [`M22 18c-9 0-12 5-12 12v18c0 6-3 10-8 12 5 2 8 6 8 12v18c0 7 3 12 12 12`, `M98 18c9 0 12 5 12 12v18c0 6 3 10 8 12-5 2-8 6-8 12v18c0 7-3 12-12 12`];
-function cadreSVG(couleur){
+function cadreSVG(couleur, detoure = false){
   const c = APP.mascotte.cadre || [];
   if (!c.length) return "";
   if (c[0] === "{" && c[1] === "}") return ACCOLADES.map(d => `<path d="${d}" stroke="${couleur}" stroke-width="7" fill="none" stroke-linecap="round"/>`).join("");
-  const t = (x, txt, a) => `<text x="${x}" y="72" text-anchor="${a}" font-family="JetBrains Mono, ui-monospace, monospace" font-weight="800" font-size="${txt.length > 2 ? 22 : txt.length > 1 ? 28 : 40}" fill="${couleur}">${esc(txt)}</text>`;
+  const contour = detoure ? ` stroke="var(--bg, #FAF7F0)" stroke-width="5" paint-order="stroke" stroke-linejoin="round"` : "";
+  const t = (x, txt, a) => `<text x="${x}" y="${detoure ? 108 : 72}" text-anchor="${a}" font-family="JetBrains Mono, ui-monospace, monospace" font-weight="800" font-size="${txt.length > 2 ? 22 : txt.length > 1 ? 28 : 40}" fill="${couleur}"${contour}>${esc(txt)}</text>`;
   return t(14, c[0] || "", "middle") + t(106, c[1] || "", "middle");
 }
 function mascot(mood = "happy", couleur = "var(--prim)"){
   const m = APP.mascotte;
+  if (m.forme === "elephant") return mascotElephant(mood, couleur);
   const mouth = mood === "sad" ? `<path d="M51 84q9-7 18 0" stroke="#2a2340" stroke-width="3.5" fill="none" stroke-linecap="round"/>`
     : mood === "wow" ? `<ellipse cx="60" cy="83" rx="6" ry="7" fill="#2a2340"/>`
     : `<path d="M49 79q11 11 22 0" stroke="#2a2340" stroke-width="3.5" fill="#fff" stroke-linecap="round"/>`;
@@ -101,6 +108,25 @@ function mascot(mood = "happy", couleur = "var(--prim)"){
     <circle cx="50.5" cy="65" r="3.6" fill="#2a2340"/><circle cx="72.5" cy="65" r="3.6" fill="#2a2340"/>
     <circle cx="40" cy="76" r="5" fill="#ff9fb4" opacity=".6"/><circle cx="80" cy="76" r="5" fill="#ff9fb4" opacity=".6"/>
     ${mouth}</svg>`;
+}
+/* "forme": "elephant" (cours de PHP, dont l'emblème est un éléphant) : tête ronde, grandes oreilles, trompe ;
+   le cadre passe devant les oreilles, détouré de la couleur du fond */
+function mascotElephant(mood, couleur){
+  const m = APP.mascotte, ink = "#2a2340";
+  const bouche = mood === "sad" ? `<path d="M41 85q6-5 12 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`
+    : mood === "wow" ? `<ellipse cx="47" cy="84" rx="4.5" ry="5.5" fill="${ink}"/>`
+    : `<path d="M40 80q7 8 14 2" stroke="${ink}" stroke-width="3" fill="#fff" stroke-linecap="round"/>`;
+  const oreille = (cx, sens) => `<path d="M${cx} 40c${sens * 22}-8 ${sens * 30} 14 ${sens * 24} 36c${-sens * 3} 10${" "}${-sens * 12} 14 ${-sens * 20} 8z" fill="${m.oreilles || m.corps}" stroke="${m.bord}" stroke-width="3" stroke-linejoin="round"/>`;
+  return `<svg class="mascot" viewBox="0 0 120 120" aria-hidden="true">
+    ${oreille(40, -1)}${oreille(80, 1)}
+    <circle cx="60" cy="62" r="29" fill="${m.corps}" stroke="${m.bord}" stroke-width="3"/>
+    <ellipse cx="49" cy="42" rx="7" ry="5" fill="#fff" opacity=".45"/>
+    <path d="M60 70c0 14 0 24 9 27c5 1.5 8-1 7-5" stroke="${m.bord}" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <path d="M60 70c0 14 0 24 9 27c5 1.5 8-1 7-5" stroke="${m.corps}" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+    <circle cx="49" cy="58" r="6.5" fill="#fff" stroke="${ink}" stroke-width="1.5"/><circle cx="71" cy="58" r="6.5" fill="#fff" stroke="${ink}" stroke-width="1.5"/>
+    <circle cx="50.3" cy="59" r="3.4" fill="${ink}"/><circle cx="72.3" cy="59" r="3.4" fill="${ink}"/>
+    <circle cx="40" cy="76" r="4.5" fill="#ff9fb4" opacity=".6"/><circle cx="80" cy="76" r="4.5" fill="#ff9fb4" opacity=".6"/>
+    ${bouche}${cadreSVG(couleur, true)}</svg>`;
 }
 /* petit logo de la barre du haut : la mascotte, sans les joues */
 const logoSVG = () => mascot("happy").replace('class="mascot"', 'class="logo"').replace(/<circle cx="(40|80)" cy="76"[^>]*\/>/g, "");
@@ -273,6 +299,7 @@ function consoleHTML(logs, opts = {}){
 /* ---------------- exécution dans le bac à sable (Web Worker) ---------------- */
 const DELAI_MAX = 2000;   // ms : au-delà, on considère que le code tourne en rond
 function executer(payload){
+  if (estPhp()) return executerPhp(payload);   // module code-php : js/php.js
   return new Promise(resolve => {
     let w;
     const vide = { ok:false, console:[], cas:[], diagnostics:[], conseils:[] };
@@ -299,11 +326,13 @@ function blocExecutable(code, opts = {}){
       return;
     }
     b.disabled = true;
-    const r = await executer({ code, donnees: opts.donnees || null });
+    const r = await executer({ code, donnees: opts.donnees || null, requete: opts.requete, fichiers: opts.fichiers, fichier: opts.fichier });
     b.disabled = false;
     const s = el.querySelector(".sortie");
-    s.innerHTML = consoleHTML(r.console.concat(r.erreur ? [`✖ ${r.erreur.titre} : ${r.erreur.message}`] : []), { vide:"Rien n'a été affiché (pas de console.log)." });
+    s.innerHTML = consoleHTML(r.console.concat(r.erreur ? [`✖ ${r.erreur.titre} : ${r.erreur.message}`] : []), { vide: estPhp() ? "Rien n'a été affiché (pas d'echo)." : "Rien n'a été affiché (pas de console.log)." });
     if (r.erreur) s.querySelector(".cl:last-child")?.classList.add("err");
+    for (const c of (r.conseils || []).filter(c => c.avertissement)) s.appendChild(h(`<div class="diag conseil"><b>Avertissement de PHP</b>${richInline(c.message)}</div>`));
+    if (r.page) s.appendChild(apercuPageHTML(r.page));
   };
   return el;
 }
@@ -340,7 +369,7 @@ function ficheHTML(f){
   if (f.texte) el.appendChild(h(`<div class="rich" style="margin-top:14px">${rich(f.texte)}</div>`));
   for (const ex of f.exemples || []) {
     if (ex.titre) el.appendChild(h(`<h3>${richInline(ex.titre)}</h3>`));
-    el.appendChild(aModule("code-js") && ex.executable !== false ? blocExecutable(lignes(ex.code), { dom: ex.dom }) : h(`<div>${codeHTML(lignes(ex.code))}</div>`));
+    el.appendChild(aCode() && ex.executable !== false ? blocExecutable(lignes(ex.code), { dom: ex.dom, requete: ex.requete, fichiers: ex.fichiers, fichier: ex.fichier }) : h(`<div>${codeHTML(lignes(ex.code))}</div>`));
     if (ex.note) el.appendChild(h(`<div class="rich" style="font-size:15px">${rich(ex.note)}</div>`));
   }
   if (f.pieges?.length) el.appendChild(h(`<div class="aside piege">${I.warn.replace("<svg", '<svg style="color:var(--ko)"')}<div><b class="t">Pièges classiques</b><div class="rich">${rich(f.pieges.map(p => "- " + p).join("\n"))}</div></div></div>`));
