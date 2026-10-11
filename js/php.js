@@ -604,9 +604,16 @@ async function executerPhp({ code, donnees, prelude, tests, requete, fichiers, f
   return finir();
 }
 
-/* ---------------- aperçu de la page produite (HTML) : iframe sans JavaScript ---------------- */
-function apercuPageHTML(html){
-  const el = h(`<div class="apercu-php"><div class="eyebrow">Aperçu de la page envoyée au navigateur</div><iframe sandbox="" title="Aperçu de la page"></iframe><p class="note">Les scripts ne s'exécutent pas dans l'aperçu.</p></div>`);
-  el.querySelector("iframe").srcdoc = `<!doctype html><meta charset="utf-8"><style>body{font-family:system-ui,sans-serif;margin:12px;font-size:15px}</style>${html}`;
-  return el;
-}
+/* ---------------- enregistrement du langage (js/langages.js) ---------------- */
+langage("php", {
+  nom:"PHP", module:"code-php", indent:"    ", afficher:"echo …;", ecran:"la page", reAffichage:/\becho\b|\bprint\b/g,
+  jetons: jetonsPhp, executer: executerPhp, precharger: prechargerPhp, enteteDonnees: enteteDonneesPhp,
+  champs: ["requete", "fichiers", "fichier"],   // requête HTTP simulée, fichiers déjà écrits, nom du fichier de l'élève
+  symboles: [["( )", "(", ")"], ["{ }", "{", "}"], ["[ ]", "[", "]"], ["$", "$"], ["->", "->"], ["=>", " => "], [";", ";"], [".", " . "], [",", ", "],
+    ['" "', '"', '"'], ["' '", "'", "'"], ["::", "::"], ["===", " === "], ["!==", " !== "], ["&&", " && "], ["||", " || "], ["!", "!"],
+    ["=", " = "], ["<", " < "], [">", " > "], ["?", " ? "], [":", ": "], ["<br>", '"<br>"'],
+    ["$this->", "$this->"], ["return", "return "], ["echo", "echo "], ["public", "public "], ["private", "private "], ["function", "function "], ["⇥", "    "]],
+  consoleDepart: ["<?php", '$fruits = ["pomme", "kiwi", "mangue"];', "", "foreach ($fruits as $fruit) {", '    echo $fruit . "<br>";', "}", ""],
+  demo: { faux:'echo Bonjour le monde;', juste:'echo "Bonjour le monde";', motAttendu:"guillemets",
+          console:'<?php\n$fruits = ["kiwi"];\nforeach ($fruits as $fruit) {\n    echo $fruits;\n}', consoleAttendu:"Array" },
+});

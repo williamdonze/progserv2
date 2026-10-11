@@ -1,6 +1,6 @@
 # Modèle d'appli de cours façon Duolingo
 
-Ce dépôt est un **modèle** : un moteur d'apprentissage façon **Duolingo** (leçons courtes, exercices interactifs, XP, séries, badges, défi du jour, répétition espacée), sans aucun cours dedans, sauf deux unités d'exemple. On crée l'appli d'un cours avec **« Use this template »** sur GitHub, puis la compétence **`/nouveau-cours`** (`.claude/skills/nouveau-cours/SKILL.md`) la remplit à partir des supports du cours.
+Ce dépôt est un **modèle** : un moteur d'apprentissage façon **Duolingo** (leçons courtes, exercices interactifs, XP, séries, badges, défi du jour, répétition espacée), sans aucun cours dedans, sauf deux unités d'exemple. On crée l'appli d'un cours avec **« Use this template »** sur GitHub, puis la compétence **`/nouveau-cours`** (`.claude/skills/nouveau-cours/SKILL.md`) la remplit à partir des supports du cours ; **`/ajouter-supports`** intègre la suite du cours, **`/mettre-a-jour-moteur`** récupère les améliorations du modèle.
 
 Il descend de **Pampre** (le « Duolingo du vin », https://github.com/williamdonze/pampre) et de **ProgWeb 2** (JavaScript, https://github.com/williamdonze/progweb2), d'où viennent le moteur, le bac à sable de code et l'unité « catalogue ». Public : l'élève, francophone. Langue du site, du contenu et des commentaires : **français**, tutoiement.
 
@@ -41,20 +41,28 @@ Aucune dépendance, aucun build. `fetch()` et les Web Workers exigent un serveur
 ```
 index.html                 Coquille : charge css/app.css et les scripts js/ dans l'ordre (titre et icône écrits par tools/configurer.py)
 css/app.css                Tout le style ; jetons de couleur dans :root, redéfinis en sombre (2 blocs) ; config.app.couleurs les surcharge
-js/base.js                 APP (identité, depuis config.app), utilitaires, icônes, mascotte, sauvegarde, progression, répétition espacée,
-                           toasts, modale, affichage du code, executer() (worker, 2 s), texte enrichi, fiches, illustrations
+js/base.js                 APP (identité, depuis config.app), utilitaires, icônes, mascottes (catalogue, accessoires), sauvegarde, progression, répétition espacée,
+                           toasts, modale, appli sur l'écran d'accueil (iOS / Android), affichage du code, executer() (worker, 2 s), texte enrichi, fiches, illustrations
 js/questions.js            Moteur d'exercices : Q[type] pour les 23 types
 js/app.js                  runSession, leçons / jeux / quiz / boss (code ou étude de cas), défi du jour, vues, démarrage
-js/banc.js, js/worker.js, js/editeur.js     Module code-js : banc d'essai (tests, diagnostics, erreurs traduites), Web Worker, éditeur
+js/langages.js             Les langages du code (JS, PHP, Java, Python, C, C++, C#, SQL, Bash) : coloration, symboles, textes, exécution
+js/banc.js, js/worker.js   Module code-js : banc d'essai JavaScript (tests, diagnostics, erreurs traduites), Web Worker
+js/editeur.js              L'éditeur de code (barre de symboles et indentation du langage du cours)
+js/php.js, js/vendor/php-wasm/   Module code-php : PHP 8.3 en WebAssembly, requête simulée, tests, erreurs traduites (tools/php-wasm/ le reconstruit)
 js/dom.js, js/dom-harnais.js                Module dom : page web dans une iframe isolée, harnais de test
-js/php.js, js/vendor/php-wasm/              Module code-php : PHP 8.3 en WebAssembly, requête simulée, tests, erreurs traduites
-content/config.json        app (nom, clé, mascotte, couleurs, modules), sommaire des unités, rangs, badges
+content/config.json        app (nom, clé, mascotte, couleurs, modules), sommaire des unités, projet (facultatif), rangs, badges
 content/unites/uNN-*.json  Une unité par fichier : fiches, leçons, jeux, quiz, boss
 content/pages/             Pages web des exercices DOM (module dom)
-tools/                     Tests et outils (voir « Tests »), configurer.py, build-icones.py
+tools/                     Tests et outils (voir « Tests »), configurer.py, build-icones.py, generer-readme.py, apercu-mascottes.py,
+                           nouvelle-unite.py (squelette d'unité), mettre-a-jour-moteur.py (moteur du modèle → cours),
+                           exemples/ (une unité de test par langage : php, java ; modèle seulement)
+supports/                  Les supports bruts déposés par l'élève (slides, PDF, énoncés) ; registre dans docs/cours/index.md
 docs/format-contenu.md     LA référence du format du contenu (config, tous les types, tests, diagnostics, boss)
+docs/format-memo.md        Le mémo court du format : de quoi écrire une unité sans lire la référence entière
 docs/modules.md            Les modules, et comment en ajouter un (PHP, terminal…)
-.claude/skills/nouveau-cours/   La procédure « créer l'appli d'un nouveau cours »
+docs/feuille-de-route.md   Les améliorations prévues du modèle, par lots (à cocher)
+.claude/skills/            nouveau-cours (créer l'appli d'un cours), ecrire-unite (une unité, dans son propre contexte),
+                           ajouter-supports (la suite du cours), mettre-a-jour-moteur (récupérer les améliorations du modèle)
 manifest.webmanifest, sw.js, icones/   Appli installable, hors connexion (configurer.py change le nom du cache)
 ```
 
@@ -62,7 +70,8 @@ manifest.webmanifest, sw.js, icones/   Appli installable, hors connexion (config
 
 ## Architecture
 
-- Scripts classiques (pas de modules ES), qui partagent leurs déclarations globales, chargés dans l'ordre : `banc.js`, `base.js`, `editeur.js`, `dom.js`, `php.js`, `questions.js`, `app.js`.
+- Scripts classiques (pas de modules ES), qui partagent leurs déclarations globales, chargés dans l'ordre : `langages.js`, `banc.js`, `base.js`, `editeur.js`, `dom.js`, `php.js`, `questions.js`, `app.js`.
+- **Langage du code** (`config.app.langage`, `js/langages.js`) : `LANG` porte tout ce qui change d'un langage à l'autre (jetons de coloration, symboles, indentation, textes, données du cours, `executer`). `aCode()` dit si le cours exécute son code (le module du langage est actif) ; sinon c'est le mode **code sans exécution** (onglet Console et boutons « Exécuter » masqués, seulement des exercices qui n'exécutent pas). Ne jamais écrire « console.log » ou supposer du JavaScript ailleurs que dans la définition du langage.
 - **Identité** : au démarrage, `boot()` lit `content/config.json` puis `appliquerApp(config.app)` remplit `APP` (nom, clé, mascotte, textes, modules), la clé de sauvegarde (`<cle>-sauvegarde-v1`), les couleurs (balise `<style id="couleurs-app">`) et le logo. `aModule("code-js")` dit si un module est actif (onglet Console, boutons « Exécuter »).
 - **Contrat d'un type d'exercice** (repris de Pampre) : `Q.monType = (q, onChange) => ({ el, ready(), check(), key?, cleanup?, reouvrir?, resoudre? })`.
   - `check()` verrouille, marque juste / faux, renvoie `{ ok, answer?, answerHTML?, detailHTML?, retry? }`, ou une **promesse** (exercices de code).
@@ -70,7 +79,8 @@ manifest.webmanifest, sw.js, icones/   Appli installable, hors connexion (config
   - `resoudre()` : remplit la bonne réponse ; utilisé par `tools/test-parcours.py` (mode `?test`, `window.__q`).
   - Ajouter le libellé dans `KIND_NAME`, les champs dans `TYPES` de `tools/valider-contenu.py`, la doc dans `docs/format-contenu.md`, un exemple dans `u02-catalogue`.
 - **Boss** : un boss de code (type `boss`, module `code-js`) ou une **étude de cas** (`questions` : scénario + questions de tout type, réussie au seuil de validation, `startEtude`).
-- **Bac à sable de code** (module `code-js`) : `executer({ code, donnees, prelude, tests, contexte })` crée un Worker neuf, tué après 2 s ; `executerTout` (banc.js) exécute, teste chaque cas avec des arguments gelés, analyse le code (interdit, obligatoire, conseils), diagnostique le premier cas raté. Détails dans `docs/format-contenu.md` et le CLAUDE.md de ProgWeb 2.
+- **Projet** (facultatif, `config.projet`) : le projet noté du cours en fil rouge, vue « Projet » ouverte depuis l'accueil ; ses critères officiels en liste à cocher (`ST.projet`), reliés aux fiches et aux unités. Jamais de quiz ni de boss sur l'organisation d'un projet.
+- **Bac à sable de code** : `executer({ code, donnees, prelude, tests, contexte, …champsExec(q) })` appelle l'exécution du langage du cours. JavaScript (module `code-js`) : `executerJs` crée un Worker neuf, tué après 2 s ; `executerTout` (banc.js) exécute, teste chaque cas avec des arguments gelés, analyse le code (interdit, obligatoire, conseils), diagnostique le premier cas raté. PHP (module `code-php`, `js/php.js`) : un Worker gardé vivant, PHP en WebAssembly téléchargé au premier exercice de code puis gardé en cache, chaque exécution étant une requête HTTP simulée neuve. Détails dans `docs/format-contenu.md` et `docs/modules.md`.
 - **Bac à sable DOM** (module `dom`) : iframe `sandbox="allow-scripts"` (sans accès à l'appli ni à la sauvegarde), code de l'élève importé comme module, `tests.etapes` (clics, scripts, comptages).
 - **Progression** : unité ouverte si première, déjà ouverte (`ST.ouvertes`) ou quiz précédent validé (seuil 80 %). Les boss ne bloquent pas la suite. Identifiants explicites partout : ajouter du contenu ne casse jamais une sauvegarde. Ne **jamais** changer l'`id` d'un élément existant, ni `app.cle` une fois publié.
 - **Répétition espacée** : `noterNotions(q, ok)` après chaque question ; boîtes 1 à 5, intervalles 1, 2, 4, 8, 16 jours ; une erreur ramène à la boîte 1. Le défi du jour prend d'abord les notions dues, puis les erreurs récentes, puis des révisions.
@@ -87,10 +97,13 @@ manifest.webmanifest, sw.js, icones/   Appli installable, hors connexion (config
 
 ## Procédures
 
-- **Nouveau cours** : la compétence `/nouveau-cours` (supports → identité → programme validé par l'élève → modules → unités → tests → publication).
-- **Nouvelle page de TP** (cours déjà créé) : lire la page et lister les exercices (si le site est bloqué, demander à l'élève de l'autoriser dans les réglages réseau ou d'envoyer la page enregistrée ; ne pas confondre la page d'accueil et les TP) ; repérer les nouvelles notions (`grep '"id"' content/unites/*.json`, `docs/programme.md`) ; créer leçons, fiches et boss ; ajouter l'unité dans `config.json` ; mettre à jour `docs/programme.md` et « Ce cours » ; lancer les trois tests.
+- **Nouveau cours** : `/nouveau-cours` (supports → toutes les questions en une fois → identité → programme validé par l'élève → modules → une unité par sous-agent avec `/ecrire-unite` → tests → README → publication).
+- **Suite du cours** (nouveaux supports, nouvelle page de TP) : `/ajouter-supports` (registre `docs/cours/index.md`, proposition validée par l'élève, nouvelles unités ou compléments sans changer un seul `id`).
+- **Une unité à la fois** (reprendre, étaler le travail sur plusieurs sessions) : `/ecrire-unite uNN`.
+- **Récupérer les améliorations du modèle** dans un cours : `/mettre-a-jour-moteur`.
 - **Nouveau module** (PHP, SQL, terminal…) : `docs/modules.md`.
-- **Amélioration du moteur** faite dans un cours : la reporter ici (mêmes fichiers `js/`, `css/`, `tools/`), relancer les tests du modèle.
+- **Amélioration du moteur** faite dans un cours : la reporter ici (mêmes fichiers `js/`, `css/`, `tools/`), relancer les tests du modèle. Ce qui est propre à un cours va dans `content/` (données), jamais dans les fichiers communs : sinon `/mettre-a-jour-moteur` l'écrase.
+- **Améliorations prévues** : `docs/feuille-de-route.md` (par lots, à cocher).
 
 ## Tests
 
@@ -101,20 +114,24 @@ python3 tools/valider-contenu.py        # structure du contenu, ids, champs, lie
 python3 tools/tester-exercices.py       # dans Chromium : chaque solution passe, chaque erreur typique échoue avec le bon diagnostic,
                                         # chaque « prédire » est juste, chaque exemple tourne (--unite u02, --avertissements)
 python3 tools/test-parcours.py          # tout le parcours par l'interface, défi du jour, vues, sauvegarde (--captures)
-python3 tools/configurer.py             # après un changement de config.app : index.html, manifest, sw.js, icônes
+# dans le modèle, chaque langage a son unité d'exemple : --exemple php (PHP exécuté), --exemple java (sans exécution)
+for x in php java; do python3 tools/valider-contenu.py --exemple $x && python3 tools/tester-exercices.py --exemple $x && python3 tools/test-parcours.py --exemple $x; done
+python3 tools/configurer.py             # après un changement de config.app : index.html, manifest, sw.js, icônes, README (--sans-icones)
+python3 tools/valider-contenu.py --fiches   # + la liste des fiches par unité (pour s'y relier)
+python3 tools/apercu-mascottes.py --catalogue   # docs/mascottes.png ; avec un JSON de propositions : l'aperçu à montrer à l'élève
 ```
 
 GitHub Actions (`.github/workflows/tests.yml`) lance les trois tests à chaque push.
 
 ## Design
 
-- Mode Duolingo de Pampre : boutons « 3D », nœuds ronds en zigzag, feuille de correction verte / rouge qui monte du bas, mascotte (un œuf souriant dans le « cadre » du cours).
+- Mode Duolingo de Pampre : boutons « 3D », nœuds ronds en zigzag, feuille de correction verte / rouge qui monte du bas, mascotte du cours : une forme du catalogue (`MASCOTTES` dans `js/base.js` : œuf, éléphant, chouette, renard, goutte, livre), un accessoire (`ACCESSOIRES`), un « cadre » pour les cours de code, ou un dessin libre (`mascotte.fichier`). Catalogue en image : `docs/mascottes.png`. Ce qui est propre à un cours se décrit dans `config.json`, jamais en code dans `js/base.js`.
 - Jetons CSS dans `:root`, redéfinis pour le sombre dans `@media (prefers-color-scheme: dark)` **et** `:root[data-theme="dark"]` : toute nouvelle couleur doit exister dans les trois blocs (et `config.app.couleurs` a un bloc `clair` et un bloc `sombre`).
+- Appli installable : sur téléphone (jamais sur ordinateur ni en `?test`), une fenêtre propose l'ajout à l'écran d'accueil après la première leçon (invite native sur Android, mode d'emploi selon le navigateur sur iOS), puis 14 jours après chaque « plus tard » ; toujours accessible dans Profil.
 - Mobile d'abord (colonne de 680 px), zones tactiles ≥ 44 px, police de code à 16 px dans l'éditeur au doigt, pas de ligatures dans le code.
 
 ## Limites connues
 
-- Deux langages exécutés : JavaScript (`code-js`) et PHP (`code-php`, un seul actif par cours) ; les autres sont des modules à ajouter (`docs/modules.md`).
-- PHP : pas de vrai réseau (ni SMTP, ni MySQL) : SQLite en mémoire à la place de MariaDB, services externes simulés.
+- Deux langages exécutés (JavaScript, PHP) ; Java, Python, C, C++, C#, SQL et Bash sont colorés mais pas exécutés (mode « code sans exécution ») ; un module d'exécution s'ajoute en suivant `docs/modules.md`.
 - Les exercices à réponse libre (rédiger un persona, une argumentation) ne sont pas corrigés automatiquement : les transformer en choix, classements, repérages d'erreurs, ou en grille d'auto-évaluation.
-- La coloration du code suit la syntaxe du JavaScript ou du PHP selon le module actif.
+- Un cours exécute un seul langage. Les types qui évaluent du JavaScript (`reduce-pas`, `filtre-visuel`, `map-visuel`, `types-chaine`, `fisher-yates`, `pointer-tableau`, `objet`) n'existent que pour les cours de JavaScript.

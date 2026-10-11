@@ -26,7 +26,7 @@ async function testerTout(filtreUnite){
         if (TYPES_CODE.has(q.type)) {
           const code = q.type === "trous" ? assembler(q.code, q.solution) : lignes(q.solution);
           const tableaux = q.donnees ? Object.entries(q.donnees).filter(([, v]) => Array.isArray(v)).map(([k]) => k) : [];
-          const lancerQ = (c) => q.dom ? executerDom({ code:c, dom:q.dom, tests:q.tests, contexte:{ tableaux } }) : executer({ code:c, donnees:q.donnees || null, prelude:q.prelude ? lignes(q.prelude) : "", tests:q.tests, contexte:{ tableaux }, requete:q.requete, fichiers:q.fichiers, fichier:q.fichier });
+          const lancerQ = (c) => q.dom ? executerDom({ code:c, dom:q.dom, tests:q.tests, contexte:{ tableaux } }) : executer({ code:c, donnees:q.donnees || null, prelude:q.prelude ? lignes(q.prelude) : "", tests:q.tests, contexte:{ tableaux }, ...champsExec(q) });
           const r = await lancerQ(code);
           stats.solutions++;
           if (!r.ok) erreurs.push(`${o} : la SOLUTION échoue → ${JSON.stringify({ erreur:r.erreur, diag:r.diagnostics, cas:r.cas.filter(c => !c.ok) }).slice(0, 500)}`);
@@ -46,9 +46,9 @@ async function testerTout(filtreUnite){
           }
           continue;
         }
-        if (q.type === "predire" && !aCode() && q.reponse !== undefined) stats.predictions++;   // cours sans code : la réponse écrite fait foi
+        if (q.type === "predire" && !aCode()) stats.predictions++;   // code non exécuté : la réponse écrite (ou le choix) fait foi
         else if (q.type === "predire") {
-          const r = await executer({ code:lignes(q.code), requete:q.requete, fichiers:q.fichiers, fichier:q.fichier });
+          const r = await executer({ code:lignes(q.code), ...champsExec(q) });
           stats.predictions++;
           const sortie = r.console.join("\n");
           if (r.erreur && !q.erreurVoulue) erreurs.push(`${o} : le code à prédire plante (${r.erreur.message})`);
@@ -62,7 +62,7 @@ async function testerTout(filtreUnite){
           if (new Set(q.choix).size !== q.choix.length) erreurs.push(`${o} : choix en double`);
         }
         if (q.type === "qcm" && q.code && q.verifierSortie) {
-          const r = await executer({ code:lignes(q.code), requete:q.requete, fichiers:q.fichiers, fichier:q.fichier });
+          const r = await executer({ code:lignes(q.code), ...champsExec(q) });
           if (norm(r.console.join("\n")) !== norm(q.choix[q.bonne])) erreurs.push(`${o} : le bon choix ne correspond pas à la sortie (${r.console.join(" ⏎ ")})`);
         }
         if (q.type === "bug") { const n = lignes(q.code).split("\n").length; if (!(q.ligne >= 1 && q.ligne <= n)) erreurs.push(`${o} : ligne du bug hors du code`); }
@@ -85,10 +85,10 @@ async function testerTout(filtreUnite){
     u.lecons.forEach(l => l.cartes.forEach((c, k) => { if (c.code && c.executable !== false && aCode()) exemples.push([`${l.id} carte ${k + 1}`, lignes(c.code), c.erreurVoulue, c.donnees, c.dom, c]); }));
     if (aCode()) u.fiches.forEach(f => (f.exemples || []).forEach((ex, k) => { if (ex.executable !== false) exemples.push([`fiche ${f.id} ex ${k + 1}`, lignes(ex.code), ex.erreurVoulue || /erreur/i.test(ex.titre || ""), null, ex.dom, ex]); }));
     for (const [lieu, code, voulue, donnees, dom, src] of exemples) {
-      const r = dom ? await executerDom({ code, dom }) : await executer({ code, donnees: donnees || null, requete: src.requete, fichiers: src.fichiers, fichier: src.fichier });
+      const r = dom ? await executerDom({ code, dom }) : await executer({ code, donnees: donnees || null, ...champsExec(src) });
       stats.exemples++;
-      const avertPhp = (r.conseils || []).find(c => c.avertissement);   // module code-php : un avertissement de PHP compte comme une erreur
-      const plante = r.erreur || avertPhp;
+      const avertissement = (r.conseils || []).find(c => c.avertissement);   // un avertissement du langage (PHP : Warning) compte comme une erreur
+      const plante = r.erreur || avertissement;
       if (plante && !voulue) erreurs.push(`${u.id} · ${lieu} : l'exemple plante (${plante.message.slice(0, 120)})`);
       if (!plante && voulue) avert.push(`${u.id} · ${lieu} : erreur annoncée mais le code ne plante pas`);
     }

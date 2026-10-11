@@ -6,21 +6,9 @@
    (clavier du téléphone, sélection, copier-coller, annuler), le <pre> ne fait que l'affichage.
    ===================================================================== */
 
-const SYMBOLES = [
-  ["( )", "(", ")"], ["{ }", "{", "}"], ["[ ]", "[", "]"], ["=>", " => "], [";", ";"], [".", "."], [",", ", "],
-  ['" "', '"', '"'], ["' '", "'", "'"], ["...", "..."], ["===", " === "], ["!==", " !== "], ["&&", " && "], ["||", " || "],
-  ["%", " % "], ["+", " + "], ["-", " - "], ["*", " * "], ["<", " < "], [">", " > "], ["=", " = "], ["!", "!"], ["?", " ? "], [":", ": "],
-  ["return", "return "], ["const", "const "], ["log", "console.log(", ")"], ["⇥", "  "]
-];
-/* module code-php : la barre de symboles du PHP, et une indentation de 4 espaces (PSR-12, comme dans le cours) */
-const SYMBOLES_PHP = [
-  ["( )", "(", ")"], ["{ }", "{", "}"], ["[ ]", "[", "]"], ["$", "$"], ["->", "->"], ["=>", " => "], [";", ";"], [".", " . "], [",", ", "],
-  ['" "', '"', '"'], ["' '", "'", "'"], ["::", "::"], ["===", " === "], ["!==", " !== "], ["&&", " && "], ["||", " || "], ["!", "!"],
-  ["=", " = "], ["<", " < "], [">", " > "], ["?", " ? "], [":", ": "], ["<br>", '"<br>"'],
-  ["$this->", "$this->"], ["return", "return "], ["echo", "echo "], ["public", "public "], ["private", "private "], ["function", "function "], ["⇥", "    "]
-];
-const listeSymboles = () => typeof estPhp === "function" && estPhp() ? SYMBOLES_PHP : SYMBOLES;
-const indentUnite = () => typeof estPhp === "function" && estPhp() ? "    " : "  ";
+// la barre de symboles et l'indentation viennent du langage du cours (js/langages.js)
+const listeSymboles = () => (LANG || LANGAGES.js).symboles;
+const indentUnite = () => (LANG || LANGAGES.js).indent;
 const PAIRES = { "(":")", "[":"]", "{":"}", '"':'"', "'":"'", "`":"`" };
 
 /* Editeur({ code, entete, onChange, symboles }) → { el, valeur(), definir(code), focus(), marquer(ligne), lectureSeule(bool) } */
@@ -31,7 +19,7 @@ function Editeur({ code = "", entete = "", onChange = () => {}, symboles = true,
       <div class="ed-scroll"><div class="ed-inner"><div class="ed-n" aria-hidden="true"></div><div class="ed-zone"><pre aria-hidden="true" translate="no"></pre><textarea spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="${esc(etiquette)}" aria-describedby="ed-aide"></textarea><div class="ed-ligne-bad" hidden></div></div></div></div>
     </div>
     ${symboles ? `<div class="symboles" role="toolbar" aria-label="Symboles à insérer">${listeSymboles().map(([lib], i) => `<button type="button" data-s="${i}" class="${lib.length > 3 && /\w/.test(lib) ? "mot" : ""}" aria-label="Insérer ${esc(lib === "⇥" ? "une indentation" : lib)}">${esc(lib)}</button>`).join("")}</div>` : ""}
-    <p id="ed-aide" hidden>Tab insère deux espaces ; Échap pour sortir de l'éditeur.</p>
+    <p id="ed-aide" hidden>Tab insère une indentation ; Échap pour sortir de l'éditeur.</p>
   </div>`);
   const ta = el.querySelector("textarea"), pre = el.querySelector("pre"), nums = el.querySelector(".ed-n"), scroll = el.querySelector(".ed-scroll"), bad = el.querySelector(".ed-ligne-bad");
   let sel = [0, 0];
@@ -83,7 +71,7 @@ function Editeur({ code = "", entete = "", onChange = () => {}, symboles = true,
     if ((prec === "{" && suiv === "}") || (prec === "[" && suiv === "]") || (prec === "(" && suiv === ")")) {
       inserer("\n" + ind + indentUnite() + "\n" + ind, ind.length + 1); return;
     }
-    inserer("\n" + ind + (prec === "{" || prec === "[" || prec === "(" ? indentUnite() : ""));
+    inserer("\n" + ind + (prec === "{" || prec === "[" || prec === "(" || (prec === ":" && indentUnite().length === 4) ? indentUnite() : ""));
   }
   ta.addEventListener("beforeinput", e => {
     if (ta.readOnly) return;

@@ -134,6 +134,10 @@ main{padding-block:20px 110px}
 
 /* ---------- accueil ---------- */
 .home-hero{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;margin-bottom:18px}
+.mascot{display:block;width:96px;height:96px;margin:0 auto;flex:none}
+.chargement{text-align:center;padding-top:80px}
+.chargement .mascot{width:120px;height:120px;animation:pop .6s cubic-bezier(.3,1.6,.5,1)}
+.chargement p{font-weight:800;color:var(--muted);margin-top:12px}
 .home-hero .mascot{width:84px;height:84px}
 .bubble{position:relative;background:var(--paper);border:2px solid var(--line);border-radius:18px;padding:12px 14px;font-weight:700}
 .bubble::before{content:"";position:absolute;left:-10px;top:24px;width:16px;height:16px;background:var(--paper);border-left:2px solid var(--line);border-bottom:2px solid var(--line);transform:rotate(45deg)}
@@ -144,6 +148,17 @@ main{padding-block:20px 110px}
 .daily h3{font-size:19px}
 .daily p{color:var(--muted);font-size:14px}
 .daily.done .ico{background:var(--ok-soft);color:var(--ok-deep)}
+.daily.projet .ico{background:var(--prim-soft);color:var(--prim-ink)}
+/* ---------- projet : critères à cocher ---------- */
+.criteres{display:grid;gap:10px;margin-bottom:28px}
+.critere{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start;background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:12px}
+.critere p{font-weight:700;line-height:1.45}
+.critere .note{font-weight:600;margin-top:6px}
+.coche{width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:transparent;display:grid;place-items:center}
+.coche svg{width:28px;height:28px;opacity:0}
+.critere.fait{border-color:var(--ok)}
+.critere.fait .coche{border-color:var(--ok);color:var(--ok)}
+.critere.fait .coche svg{opacity:1}
 @media (max-width:360px){.daily{flex-wrap:wrap}.daily .txt{flex:1 1 calc(100% - 66px)}.daily .btn{flex:1 1 100%}}
 
 .unit{margin-bottom:36px}
@@ -242,14 +257,14 @@ main{padding-block:20px 110px}
 .t-op,.t-ponct{color:var(--sy-op)}
 .t-var{color:var(--sy-prop)}
 .t-tag{color:var(--sy-fn)}
-/* module code-php : fichiers déjà écrits, nom du fichier, aperçu de la page produite */
+/* exercices de code en plusieurs fichiers (PHP…) : fichiers déjà écrits, nom du fichier, aperçu de la page produite */
 .fichier-fourni{border:2px solid var(--code-line);border-radius:14px;margin:8px 0;background:var(--code-bg)}
 .fichier-fourni summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;padding:0 12px;font-weight:700}
 .fichier-fourni summary svg,.nom-fichier svg{width:18px;height:18px;flex:none;color:var(--muted)}
 .fichier-fourni .code{margin:0 8px 8px;border-width:0}
 .nom-fichier{display:flex;align-items:center;gap:6px;margin:10px 0 -6px;font-size:14px;color:var(--muted)}
-.apercu-php{margin:10px 0}
-.apercu-php iframe{display:block;width:100%;height:260px;border:2px solid var(--code-line);border-radius:14px;background:#fff}
+.apercu-page{margin:10px 0}
+.apercu-page iframe{display:block;width:100%;height:260px;border:2px solid var(--code-line);border-radius:14px;background:#fff}
 .console{font-family:var(--f-code);font-size:14px;background:#14121F;color:#E8E4F5;border-radius:14px;padding:10px 12px;margin:10px 0;min-height:44px;overflow-x:auto}
 .console .cl{white-space:pre;display:flex;gap:8px;line-height:1.55}
 .console .cl::before{content:"›";color:#7C7896;flex:none}
@@ -515,6 +530,21 @@ textarea.save{width:100%;min-height:110px;border:2px solid var(--line);border-ra
 @media (min-width:640px){.modal-bg{place-items:center}.modal{border-radius:24px}}
 .modal h3{font-size:22px}
 .modal .row-btns .btn{flex:1}
+/* appli sur l'écran d'accueil : fenêtre et mode d'emploi */
+.inst-tete{display:flex;gap:12px;align-items:center}
+.inst-tete .mascot{width:64px;height:64px;margin:0}
+.etapes{list-style:none;padding:0;margin:0;display:grid;gap:12px;counter-reset:etape}
+.etapes li{counter-increment:etape;display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:start;line-height:1.45}
+.etapes li::before{content:counter(etape);width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--prim-btn);color:var(--on-prim);font-weight:800}
+.pic{display:inline-grid;place-items:center;width:26px;height:26px;margin:0 2px;vertical-align:-7px;border:1.5px solid var(--line);border-radius:7px;background:var(--paper);color:var(--prim-ink)}
+.pic svg{width:17px;height:17px}
+.autres{font-size:14px;color:var(--muted)}
+.autres summary{font-weight:800;color:var(--ink);cursor:pointer;min-height:44px;display:flex;align-items:center}
+.autres .etapes{margin-bottom:8px}
+.autres dl{margin:4px 0 0;display:grid;gap:8px}
+.autres dt{font-weight:800;color:var(--ink)}
+.autres dd{margin:0}
+.lien-discret{background:none;border:0;color:var(--muted);font:inherit;font-size:14px;font-weight:700;text-decoration:underline;min-height:44px;justify-self:center}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 /* code à trous : champs dans le code */

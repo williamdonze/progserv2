@@ -40,7 +40,7 @@ function runSession(steps, opts){
     if (st.kind === "carte") {
       const c = st.carte;
       const art = h(`<article class="lcard">${c.illu ? `<div class="illu">${illu(c.illu, c)}</div>` : ""}<h2>${richInline(c.titre)}</h2><div class="rich">${rich(c.texte || "")}</div></article>`);
-      if (c.code) art.appendChild(c.executable === false || !aCode() ? h(`<div>${codeHTML(lignes(c.code))}</div>`) : blocExecutable(lignes(c.code), { donnees:c.donnees, dom:c.dom, requete:c.requete, fichiers:c.fichiers, fichier:c.fichier }));
+      if (c.code) art.appendChild(c.executable === false || !aCode() ? h(`<div>${codeHTML(lignes(c.code))}</div>`) : blocExecutable(lignes(c.code), { donnees:c.donnees, dom:c.dom, source:c }));
       if (c.apres) art.appendChild(h(`<div class="rich">${rich(c.apres)}</div>`));
       if (c.analogie) art.appendChild(h(`<div class="aside analogie">${I.egg.replace("<svg", '<svg style="color:var(--gold-deep)"')}<div><b class="t">L'image à retenir</b><div class="rich">${rich(c.analogie)}</div></div></div>`));
       if (c.astuce) art.appendChild(h(`<div class="aside tip">${I.bulb.replace("<svg", '<svg style="color:var(--teal)"')}<div><b class="t">Bon à savoir</b><div class="rich">${rich(c.astuce)}</div></div></div>`));
@@ -261,7 +261,7 @@ function renderTop(){
 function render(){
   shell(); renderTop();
   $app.innerHTML = "";
-  const v = { home:viewHome, defi:viewDefi, theorie:viewTheorie, console: aCode() ? viewConsole : null, profil:viewProfil }[VIEW] || viewHome;
+  const v = { home:viewHome, defi:viewDefi, theorie:viewTheorie, console: aCode() ? viewConsole : null, profil:viewProfil, projet: D.config.projet ? viewProjet : null }[VIEW] || viewHome;
   $app.appendChild(v());
 }
 
@@ -277,6 +277,12 @@ function viewHome(){
   const daily = h(`<div class="panel daily ${done ? "done" : ""}"><div class="ico">${done ? I.check : I.star}</div><div class="txt"><h3>Défi du jour</h3><p>${done ? "Relevé ! Reviens demain pour un nouveau défi." : dues.length ? `${pluriel(dues.length, "notion")} à revoir aujourd'hui, en priorité. +30 XP.` : "6 questions de révision sur ce que tu as appris. +30 XP."}</p></div><button class="btn ${done ? "ghost" : "gold"} small" data-daily>${done ? "Rejouer" : "Jouer"}</button></div>`);
   daily.querySelector("[data-daily]").onclick = startDaily;
   el.appendChild(daily);
+  if (D.config.projet) {
+    const pj = D.config.projet, faits = pj.criteres.filter(c => ST.projet[c.id]).length;
+    const p = h(`<div class="panel daily projet"><div class="ico">${I.target}</div><div class="txt"><h3>${esc(pj.titre)}</h3><p>${faits === pj.criteres.length ? "Tous les critères sont prêts." : `${faits} critère${faits > 1 ? "s" : ""} prêt${faits > 1 ? "s" : ""} sur ${pj.criteres.length} : chacun renvoie aux leçons qui l'enseignent.`}</p></div><button class="btn ghost small" data-go="projet">Voir</button></div>`);
+    el.appendChild(p);
+  }
+  if (proposerInstall()) setTimeout(() => { if (proposerInstall() && VIEW === "home" && !document.querySelector("body > .session, body > .modal-bg, body > .drawer")) aideInstall(true); }, 900);
   let currentFound = false;
   D.unites.forEach((u, ui) => {
     const ouverte = uniteOuverte(u);
@@ -327,8 +333,38 @@ function viewDefi(){
   el.appendChild(h(`<div class="kpis" style="margin-top:16px">
     <div class="kpi" style="color:var(--gold-ink)">${I.star}<div><b style="color:var(--ink)">${jours}</b><span>défi${jours > 1 ? "s" : ""} relevé${jours > 1 ? "s" : ""}</span></div></div>
     <div class="kpi" style="color:var(--flame-ink)">${I.flame}<div><b style="color:var(--ink)">${streakNow()}</b><span>jours de série</span></div></div>
-    <div class="kpi" style="color:var(--prim-ink)">${I.braces}<div><b style="color:var(--ink)">${Object.values(ST.notions).filter(n => n.b >= 4).length}</b><span>notions solides</span></div></div>
-    <div class="kpi" style="color:var(--ko-ink)">${I.bug}<div><b style="color:var(--ink)">${dues.length}</b><span>notions à revoir</span></div></div></div>`));
+    <div class="kpi" style="color:var(--prim-ink)">${I.medal}<div><b style="color:var(--ink)">${Object.values(ST.notions).filter(n => n.b >= 4).length}</b><span>notions solides</span></div></div>
+    <div class="kpi" style="color:var(--ko-ink)">${I.book}<div><b style="color:var(--ink)">${dues.length}</b><span>notions à revoir</span></div></div></div>`));
+  return el;
+}
+
+/* ---------------- vue : projet (config.projet, facultatif) ----------------
+   Le projet du cours en fil rouge : ses critères officiels en liste à cocher (auto-évaluation),
+   chacun relié aux fiches et à l'unité qui l'enseignent. Pas de quiz sur le projet lui-même. */
+function viewProjet(){
+  const pj = D.config.projet;
+  const el = h(`<main class="wrap"></main>`);
+  const unite = id => D.unites.find(u => u.id === id);
+  const dessiner = () => {
+    const faits = pj.criteres.filter(c => ST.projet[c.id]).length;
+    el.innerHTML = "";
+    el.appendChild(h(`<div><button class="btn ghost small" data-go="home">← Parcours</button><div class="eyebrow" style="margin-top:16px">${esc(pj.source || "Projet du cours")}</div><h1 style="font-size:30px">${esc(pj.titre)}</h1>${pj.description ? `<div class="rich muted" style="margin:6px 0 4px">${rich(pj.description)}</div>` : ""}<p class="muted" style="margin-bottom:14px">Coche un critère quand ton projet le remplit. ${faits} sur ${pj.criteres.length}.</p><div class="meter" style="margin-bottom:18px"><i style="width:${Math.round(faits / pj.criteres.length * 100)}%"></i></div></div>`));
+    const liste = h(`<div class="criteres"></div>`);
+    for (const c of pj.criteres) {
+      const u = c.unite && unite(c.unite);
+      const liens = [...(c.fiches || []).filter(f => FICHES[f]).map(f => `<button type="button" class="fl" data-fiche="${esc(f)}">${esc(FICHES[f].titre)}</button>`), ...(u ? [`unité ${u.numero} : ${esc(u.titre)}`] : [])];
+      liste.appendChild(h(`<div class="critere ${ST.projet[c.id] ? "fait" : ""}"><button type="button" class="coche" data-critere="${esc(c.id)}" aria-pressed="${!!ST.projet[c.id]}" aria-label="Critère rempli">${I.check}</button><div><p>${richInline(c.texte)}</p>${liens.length ? `<p class="note">Pour t'y préparer : ${liens.join(", ")}</p>` : ""}</div></div>`));
+    }
+    el.appendChild(liste);
+  };
+  el.addEventListener("click", e => {
+    const b = e.target.closest("[data-critere]"); if (!b) return;
+    const id = b.dataset.critere;
+    if (ST.projet[id]) delete ST.projet[id]; else ST.projet[id] = todayStr();
+    save(); dessiner();
+    el.querySelector(`[data-critere="${CSS.escape(id)}"]`)?.focus();
+  });
+  dessiner();
   return el;
 }
 
@@ -358,8 +394,9 @@ function viewTheorie(){
 
 /* ---------------- vue : console libre (bac à sable) ---------------- */
 function viewConsole(){
-  const el = h(`<main class="wrap"><h1 style="font-size:32px">Console</h1><p class="muted" style="margin:4px 0 6px">Ton bac à sable : écris du ${estPhp() ? "PHP" : "JavaScript"}, exécute, regarde ${estPhp() ? "ce qui s'affiche" : "la console"}. Rien n'est noté. Les erreurs sont expliquées en français.</p><div class="zone"></div><div class="ed-actions"><button type="button" class="btn small" data-run>${I.play}Exécuter</button><button type="button" class="btn small ghost" data-clear>${I.reset}Effacer</button></div><div class="sortie"></div></main>`);
-  const depart = (estPhp() ? ["<?php", '$fruits = ["pomme", "kiwi", "mangue"];', "", "foreach ($fruits as $fruit) {", '    echo $fruit . "<br>";', "}", ""] : ['const fruits = ["pomme", "kiwi", "mangue"];', "", "fruits.forEach((fruit) => console.log(fruit));", ""]).join("\n");
+  const el = h(`<main class="wrap"><h1 style="font-size:32px">Console</h1><p class="muted" style="margin:4px 0 6px">Ton bac à sable : écris du ${esc(LANG.nom)}, exécute, regarde ${esc(LANG.ecran)}. Rien n'est noté. Les erreurs sont expliquées en français.</p><div class="zone"></div><div class="ed-actions"><button type="button" class="btn small" data-run>${I.play}Exécuter</button><button type="button" class="btn small ghost" data-clear>${I.reset}Effacer</button></div><div class="sortie"></div></main>`);
+  const depart = LANG.consoleDepart.join("\n");
+  prechargerLangage();
   let t = null;
   const ed = Editeur({ code: typeof ST.brouillons.__console === "string" ? ST.brouillons.__console : depart, onChange: v => { clearTimeout(t); t = setTimeout(() => { ST.brouillons.__console = v; save(); }, 400); }, etiquette:"Console libre" });
   el.querySelector(".zone").appendChild(ed.el);
@@ -368,7 +405,7 @@ function viewConsole(){
     const b = e.currentTarget; b.disabled = true;
     const r = await executer({ code: ed.valeur() });
     b.disabled = false; sortie.innerHTML = "";
-    sortie.appendChild(h(consoleHTML(r.console, { vide: estPhp() ? "Rien n'a été affiché. Utilise echo." : "Rien n'a été affiché. Utilise console.log(…)." })));
+    sortie.appendChild(h(consoleHTML(r.console, { vide:`Rien n'a été affiché. Utilise ${LANG.afficher}` })));
     if (r.page) sortie.appendChild(apercuPageHTML(r.page));
     if (r.erreur || r.conseils?.length) sortie.appendChild(resultatHTML({ erreur:r.erreur, conseils:r.conseils }));
     ed.marquer(r.erreur?.ligne || r.conseils?.find(c => c.avertissement)?.ligne);
@@ -392,7 +429,7 @@ function viewProfil(){
     <div class="kpi" style="color:var(--prim-ink)">${I.lesson}<div><b style="color:var(--ink)">${lecons}</b><span>leçons terminées</span></div></div>
     <div class="kpi" style="color:var(--gold-deep)">${I.trophy}<div><b style="color:var(--ink)">${Object.values(ST.quiz).filter(q => q.passed).length}/${D.unites.length}</b><span>unités validées</span></div></div>
     <div class="kpi" style="color:#C2410C">${I.boss}<div><b style="color:var(--ink)">${bossFaits}/${bossTotal}</b><span>boss vaincus</span></div></div>
-    <div class="kpi" style="color:var(--ok-ink)">${I.terminal}<div><b style="color:var(--ink)">${ST.stats.codes}</b><span>codes qui passent les tests</span></div></div></div>`));
+    ${aCode() ? `<div class="kpi" style="color:var(--ok-ink)">${I.terminal}<div><b style="color:var(--ink)">${ST.stats.codes}</b><span>codes qui passent les tests</span></div></div>` : ""}</div>`));
   const notions = Object.entries(ST.notions).filter(([id]) => FICHES[id]);
   if (notions.length) el.appendChild(h(`<div><h2 class="sec-title">Tes notions</h2><p class="muted" style="font-size:14px">5 cases vertes : la notion est solide (révisée de plus en plus rarement). Une erreur la ramène à 1 case.</p><div class="notions">${notions.sort((a, b) => a[1].b - b[1].b).map(([id, n]) => `<div class="notion"><button type="button" class="fl nm" data-fiche="${esc(id)}" style="text-align:left">${esc(FICHES[id].titre)}</button><span class="bx" aria-label="Niveau ${n.b} sur 5">${[1,2,3,4,5].map(k => `<i class="${k <= n.b ? "on" : ""}"></i>`).join("")}</span></div>`).join("")}</div></div>`));
   const badges = tousLesBadges();
@@ -401,6 +438,14 @@ function viewProfil(){
   const theme = h(`<div style="margin-bottom:26px"><h2 class="sec-title">Apparence</h2><div class="seg" role="group" aria-label="Thème">${[["auto","Auto"],["light","Clair"],["dark","Sombre"]].map(([k, n]) => `<button data-th="${k}" aria-pressed="${(ST.theme || "auto") === k}">${n}</button>`).join("")}</div></div>`);
   theme.onclick = e => { const b = e.target.closest("[data-th]"); if (!b) return; ST.theme = b.dataset.th === "auto" ? null : b.dataset.th; applyTheme(); save(); render(); };
   el.appendChild(theme);
+  const ap = appareil();
+  if (ap.mobile) {
+    const inst = h(`<div style="margin-bottom:26px"><h2 class="sec-title">Appli sur l'écran d'accueil</h2>${ap.installe
+      ? `<p class="muted" style="font-size:14px">C'est fait : tu utilises ${esc(APP.nom)} comme une appli.</p>`
+      : `<p class="muted" style="font-size:14px;margin-bottom:10px">Une icône sur ton écran d'accueil, ${esc(APP.nom)} en plein écran, même hors connexion.</p><button class="btn small" data-installer data-aide="Comment faire ?">${INVITE_INSTALL ? "Installer" : "Comment faire ?"}</button>`}</div>`);
+    inst.querySelector("[data-installer]")?.addEventListener("click", installer);
+    el.appendChild(inst);
+  }
   const sv = h(`<div class="panel"><h2 class="sec-title">Ta sauvegarde</h2><p class="muted" style="font-size:14px">Ta progression est enregistrée dans ce navigateur, sur cet appareil. Pour la transférer (téléphone ↔ ordinateur), copie ce code puis colle-le là-bas dans le champ ci-dessous.</p>
     <textarea class="save" id="save-out" readonly aria-label="Code de sauvegarde"></textarea>
     <div class="row-btns"><button class="btn small" data-a="copy">Copier le code</button></div>
@@ -442,10 +487,12 @@ function preparerUnite(u, i){
   if (!u.parcours) u.parcours = [...u.lecons.map(l => l.id), ...u.jeux.map(g => `jeu:${g.id}`), "quiz", ...u.boss.map(b => `boss:${b.id}`)];
 }
 async function boot(){
-  $app.innerHTML = `<main class="wrap" style="text-align:center;padding-top:80px">${mascot("happy")}<p style="font-weight:800;color:var(--muted)">Chargement des unités…</p></main>`;
+  // avant config.json : l'écran de chargement écrit dans index.html par tools/configurer.py (déjà à la bonne mascotte)
   try {
     D.config = await getJSON("content/config.json");
     appliquerApp(D.config.app);
+    await chargerMascotte();
+    $app.innerHTML = `<main class="wrap chargement">${mascot("happy")}<p>Chargement des unités…</p></main>`;
     D.unites = await Promise.all(D.config.unites.map(getJSON));
   } catch(err) {
     $app.innerHTML = `<main class="wrap" style="padding-top:60px"><h2>Le contenu n'a pas pu être chargé</h2>
@@ -457,7 +504,6 @@ async function boot(){
   }
   D.unites.forEach(preparerUnite);
   ST = loadState(); applyTheme();
-  if (estPhp()) setTimeout(prechargerPhp, 800);   // module code-php : PHP démarre en arrière-plan (quelques secondes)
   try { render(); }
   catch(err) {
     console.error(err);
