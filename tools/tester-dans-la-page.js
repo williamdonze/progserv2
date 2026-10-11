@@ -87,8 +87,10 @@ async function testerTout(filtreUnite){
     for (const [lieu, code, voulue, donnees, dom, src] of exemples) {
       const r = dom ? await executerDom({ code, dom }) : await executer({ code, donnees: donnees || null, requete: src.requete, fichiers: src.fichiers, fichier: src.fichier });
       stats.exemples++;
-      if (r.erreur && !voulue) erreurs.push(`${u.id} · ${lieu} : l'exemple plante (${r.erreur.message.slice(0, 120)})`);
-      if (!r.erreur && voulue) avert.push(`${u.id} · ${lieu} : erreur annoncée mais le code ne plante pas`);
+      const avertPhp = (r.conseils || []).find(c => c.avertissement);   // module code-php : un avertissement de PHP compte comme une erreur
+      const plante = r.erreur || avertPhp;
+      if (plante && !voulue) erreurs.push(`${u.id} · ${lieu} : l'exemple plante (${plante.message.slice(0, 120)})`);
+      if (!plante && voulue) avert.push(`${u.id} · ${lieu} : erreur annoncée mais le code ne plante pas`);
     }
     // liens [[fiche]] dans les textes
     const texte = JSON.stringify(u);

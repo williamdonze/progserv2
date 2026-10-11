@@ -112,7 +112,8 @@ register_shutdown_function(function () {
         'entetes' => headers_list(), 'statut' => http_response_code(),
         'session' => session_status() === PHP_SESSION_ACTIVE ? __pw_exporter($_SESSION) : null,
         'resultat' => $pw['aResultat'] ? __pw_exporter($pw['resultat']) : null, 'aResultat' => $pw['aResultat'], 'variables' => (object) $vars, 'phase' => $pw['phase'],
-    ], JSON_PARTIAL_OUTPUT_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PRESERVE_ZERO_FRACTION);
+    ], JSON_PARTIAL_OUTPUT_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PRESERVE_ZERO_FRACTION) . "\x02";
+    // ce qui s'affiche après ce marqueur vient des destructeurs appelés en fin de script (après les fonctions d'arrêt)
 });
 $__r = $GLOBALS['__pw']['req'];
 $_GET = $__r['get'] ?? []; $_POST = $__r['post'] ?? []; $_COOKIE = $__r['cookies'] ?? []; $_REQUEST = array_merge($_GET, $_POST);
@@ -442,7 +443,9 @@ async function lancerPhp(fichiers){
   if (brut.type === "panne") return { panne: brut.message };
   const txt = String(brut.texte || ""), i = txt.lastIndexOf("\x01PW\x01");
   if (i < 0) return { panne: (brut.erreurs || "").split("\n").find(l => /PHP (Fatal|Parse) error/.test(l)) || "le harnais n'a rien renvoyé" };
-  let r; try { r = JSON.parse(txt.slice(i + 4)); } catch(e) { return { panne:"réponse illisible" }; }
+  const fin = txt.indexOf("\x02", i);
+  let r; try { r = JSON.parse(txt.slice(i + 4, fin < 0 ? undefined : fin)); } catch(e) { return { panne:"réponse illisible" }; }
+  if (fin >= 0) r.sorties[r.phase] += txt.slice(fin + 1);   // destructeurs de fin de script
   r.avant = txt.slice(0, i);
   return r;
 }

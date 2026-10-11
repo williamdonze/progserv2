@@ -1,0 +1,2998 @@
+{
+  "id": "u02",
+  "titre": "Classes et objets",
+  "sousTitre": "Séance 2 · classe, objet, $this, encapsulation, constructeur, constantes",
+  "objectif": "Créer des classes et des objets en PHP, protéger leurs données avec l'encapsulation, les initialiser avec un constructeur et nommer les valeurs fixes avec des constantes.",
+  "icone": "▣",
+  "fiches": [
+    {
+      "id": "poo-concepts",
+      "titre": "Pourquoi la POO ?",
+      "icone": "◇",
+      "resume": "La programmation orientée objet regroupe les données (attributs) et les comportements (méthodes) dans des classes. Une classe est un modèle ; un objet est une instance de ce modèle.",
+      "analogie": "**Le plan et la maison.** La **classe** est le plan d'architecte : elle décrit ce que chaque maison aura (des pièces, une couleur…) et ce qu'on peut y faire. Un **objet** est une maison construite d'après ce plan (`new`). Avec un seul plan, on construit autant de maisons qu'on veut, chacune avec sa propre couleur.",
+      "texte": "**Concepts clés** : classes, objets (instances = créations en mémoire), attributs (l'état de l'objet), méthodes (ses comportements), encapsulation, constructeurs et destructeurs, interfaces, héritage, classes abstraites.\n\n**Avantages** : lisibilité (données et comportements liés sont regroupés), réutilisabilité (moins de code dupliqué), maintenabilité (modifier une classe n'affecte pas les autres).\n\n**Désavantages** : complexité (pour une petite application, le procédural peut être plus simple) et performance (légèrement moindre, souvent négligeable).\n\nPHP gère la POO depuis sa version 5.",
+      "pieges": [
+        "Une classe ne fait rien toute seule : il faut créer des objets avec `new`."
+      ]
+    },
+    {
+      "id": "classe-objet",
+      "titre": "Classe, objet, attribut, méthode",
+      "icone": "▣",
+      "resume": "`class Movie { … }` déclare une classe (PascalCase). `$movie = new Movie();` crée un objet (camelCase). On lit et écrit un attribut, ou on appelle une méthode, avec la flèche `->`. Dans une méthode, `$this` désigne l'objet courant.",
+      "analogie": "Dans le plan, `$this` veut dire « cette maison-ci » : celle sur laquelle on a appelé la méthode.",
+      "texte": "- **Attribut** : une variable déclarée dans la classe, avec une visibilité et un type : `public string $title;`.\n- **Méthode** : une fonction déclarée dans la classe : `public function describe(): string { … }`.\n- **Flèche `->`** : `$movie->title` (attribut, sans `$` après la flèche), `$movie->describe()` (méthode).\n- **`$this`** : dans une méthode, l'objet courant : `$this->title`, `$this->describe()`.\n\nChaque objet a ses propres valeurs : deux films créés avec la même classe peuvent avoir deux titres différents.",
+      "exemples": [
+        {
+          "titre": "Une classe avec une méthode",
+          "code": [
+            "class Movie {",
+            "    public string $title;",
+            "    public int $year;",
+            "",
+            "    public function describe(): string {",
+            "        return $this->title . \" (\" . $this->year . \")\";",
+            "    }",
+            "}",
+            "",
+            "$movie = new Movie();",
+            "$movie->title = \"Heidi\";",
+            "$movie->year = 1952;",
+            "echo $movie->describe();",
+            ""
+          ]
+        }
+      ],
+      "pieges": [
+        "Après la flèche, pas de `$` : `$this->title`, pas `$this->$title`.",
+        "Dans une méthode, `$title` tout seul n'est PAS l'attribut : c'est `$this->title`.",
+        "Une méthode s'appelle avec des parenthèses : `$movie->describe()`."
+      ]
+    },
+    {
+      "id": "encapsulation",
+      "titre": "Encapsulation : getters et setters",
+      "icone": "🔒",
+      "resume": "Les attributs `private` ne sont accessibles que dans la classe. On les lit avec un **getter** (`getName()`) et on les modifie avec un **setter** (`setName()`), qui peut valider la valeur avant de l'accepter.",
+      "texte": "Visibilité :\n\n- `public` : accessible de partout ;\n- `protected` : dans la classe et ses sous-classes ;\n- `private` : uniquement dans la classe.\n\nL'encapsulation protège les données : on contrôle comment elles sont lues et modifiées. Dans le cours, un setter qui refuse une valeur retourne un message d'erreur (`?string`), et `null` si tout va bien.\n\nDepuis l'extérieur, `$person->name = \"Bob\";` sur un attribut privé provoque une erreur : `Cannot access private property`.",
+      "exemples": [
+        {
+          "titre": "Un setter qui valide",
+          "code": [
+            "class Account {",
+            "    private string $owner;",
+            "",
+            "    public function setOwner(string $owner): ?string {",
+            "        if (strlen($owner) < 3) {",
+            "            return \"Owner must be at least 3 characters long.\";",
+            "        }",
+            "        $this->owner = $owner;",
+            "        return null;",
+            "    }",
+            "",
+            "    public function getOwner(): string {",
+            "        return $this->owner;",
+            "    }",
+            "}",
+            "",
+            "$account = new Account();",
+            "$error = $account->setOwner(\"Al\");",
+            "if (!empty($error)) {",
+            "    echo $error . \"<br>\";",
+            "}",
+            "$account->setOwner(\"Alice\");",
+            "echo $account->getOwner();",
+            ""
+          ]
+        }
+      ],
+      "pieges": [
+        "Un getter LIT (il retourne l'attribut), un setter MODIFIE (il reçoit la nouvelle valeur).",
+        "`private` empêche l'accès depuis l'extérieur, même en lecture."
+      ]
+    },
+    {
+      "id": "constructeur",
+      "titre": "Constructeur et destructeur",
+      "icone": "⚙",
+      "resume": "`__construct(…)` est appelé automatiquement par `new` : il initialise les attributs. `__destruct()` est appelé quand l'objet est détruit (variable mise à `null`, réaffectée, ou fin du script).",
+      "texte": "Le constructeur reçoit les valeurs de départ : `new Product(\"Pomme\", 1.2)` appelle `__construct(\"Pomme\", 1.2)`.\n\nUn objet est détruit automatiquement :\n\n- à la fin du script ;\n- quand il n'est plus référencé : sa variable reçoit `null`, ou une autre valeur.\n\nLe destructeur sert à faire un nettoyage ou une opération finale, si besoin.",
+      "exemples": [
+        {
+          "titre": "Construction et destruction",
+          "code": [
+            "class Ticket {",
+            "    private string $code;",
+            "",
+            "    public function __construct(string $code) {",
+            "        $this->code = $code;",
+            "        echo \"Création de $code<br>\";",
+            "    }",
+            "",
+            "    public function __destruct() {",
+            "        echo \"Destruction de {$this->code}<br>\";",
+            "    }",
+            "}",
+            "",
+            "$a = new Ticket(\"A\");",
+            "$b = new Ticket(\"B\");",
+            "$a = null;",
+            "echo \"Fin du script<br>\";",
+            ""
+          ]
+        }
+      ],
+      "pieges": [
+        "Deux tirets bas : `__construct`, pas `_construct` ni `__constructor`.",
+        "Un attribut typé qui n'a jamais reçu de valeur ne peut pas être lu : initialise-le dans le constructeur."
+      ]
+    },
+    {
+      "id": "constantes-classe",
+      "titre": "Constantes de classe",
+      "icone": "::",
+      "resume": "`const ROLE_ADMIN = 'Admin';` dans une classe : une valeur fixe, publique par défaut. On la lit avec `NomDeLaClasse::ROLE_ADMIN` depuis l'extérieur, et `self::ROLE_ADMIN` depuis l'intérieur de la classe.",
+      "texte": "`::` est l'**opérateur de résolution de portée**. Les constantes rendent le code lisible et évitent les fautes de frappe : `Person::ROLE_DEVELOPER` plutôt que `'Developer'` écrit à la main partout.\n\nUne constante ne peut pas être modifiée une fois définie.",
+      "exemples": [
+        {
+          "titre": "Lire une constante, dedans et dehors",
+          "code": [
+            "class Pizza {",
+            "    const SIZE_SMALL = \"S\";",
+            "    const SIZE_LARGE = \"L\";",
+            "",
+            "    private string $size;",
+            "",
+            "    public function __construct(string $size) {",
+            "        $this->size = $size;",
+            "    }",
+            "",
+            "    public function isLarge(): bool {",
+            "        return $this->size === self::SIZE_LARGE;",
+            "    }",
+            "}",
+            "",
+            "$pizza = new Pizza(Pizza::SIZE_LARGE);",
+            "var_dump($pizza->isLarge());",
+            ""
+          ]
+        }
+      ],
+      "pieges": [
+        "Pas de `$` devant une constante : `self::SIZE_LARGE`, pas `self::$SIZE_LARGE`.",
+        "Dans la classe, `self::` ; dehors, le nom de la classe : `Pizza::SIZE_LARGE`."
+      ]
+    }
+  ],
+  "lecons": [
+    {
+      "id": "u02-l1",
+      "titre": "Le plan et la maison",
+      "duree": 6,
+      "notions": [
+        "poo-concepts",
+        "classe-objet"
+      ],
+      "cartes": [
+        {
+          "titre": "Pourquoi des objets ?",
+          "texte": "La POO regroupe les **données** (attributs) et les **comportements** (méthodes) d'une même chose dans une **classe**. Avantages : lisibilité, réutilisabilité, maintenabilité. Désavantages : un peu plus de complexité, et une performance légèrement moindre.",
+          "analogie": "La classe est le plan d'architecte ; chaque objet est une maison construite d'après ce plan.",
+          "fiche": "poo-concepts"
+        },
+        {
+          "titre": "Une classe, des objets",
+          "texte": "`class` déclare le plan (nom en **PascalCase**). `new` construit un objet (variable en **camelCase**).",
+          "code": [
+            "class Movie {",
+            "    public string $title;",
+            "    public int $year;",
+            "}",
+            "",
+            "$movie = new Movie();",
+            "$otherMovie = new Movie();",
+            "var_dump($movie instanceof Movie);",
+            ""
+          ],
+          "fiche": "classe-objet"
+        },
+        {
+          "titre": "La flèche ->",
+          "texte": "On écrit et on lit un attribut avec `->`. Attention : **pas de `$`** après la flèche.",
+          "code": [
+            "class Movie {",
+            "    public string $title;",
+            "    public int $year;",
+            "}",
+            "",
+            "$movie = new Movie();",
+            "$movie->title = \"Heidi\";",
+            "$movie->year = 1952;",
+            "echo $movie->title . \" (\" . $movie->year . \")\";",
+            ""
+          ]
+        },
+        {
+          "titre": "Chaque maison a sa couleur",
+          "texte": "Deux objets d'une même classe ont chacun leurs propres valeurs.",
+          "code": [
+            "class Movie {",
+            "    public string $title;",
+            "}",
+            "",
+            "$a = new Movie();",
+            "$b = new Movie();",
+            "$a->title = \"Heidi\";",
+            "$b->title = \"Les Aventuriers\";",
+            "echo $a->title . \"<br>\";",
+            "echo $b->title;",
+            ""
+          ]
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u02-l1-e1",
+          "type": "assoc",
+          "notions": [
+            "poo-concepts"
+          ],
+          "question": "Associe chaque mot à sa définition.",
+          "paires": [
+            [
+              "Classe",
+              "Le modèle (le plan)"
+            ],
+            [
+              "Objet",
+              "Une instance créée avec new"
+            ],
+            [
+              "Attribut",
+              "Une donnée de l'objet"
+            ],
+            [
+              "Méthode",
+              "Un comportement : une fonction de la classe"
+            ]
+          ],
+          "explication": "Le plan (classe), les maisons (objets), leurs caractéristiques (attributs) et ce qu'on peut y faire (méthodes)."
+        },
+        {
+          "id": "u02-l1-e2",
+          "type": "tri",
+          "notions": [
+            "poo-concepts"
+          ],
+          "question": "Avantage ou désavantage de la POO, selon le cours ?",
+          "categories": [
+            "Avantage",
+            "Désavantage"
+          ],
+          "items": [
+            [
+              "Lisibilité",
+              0
+            ],
+            [
+              "Réutilisabilité",
+              0
+            ],
+            [
+              "Maintenabilité",
+              0
+            ],
+            [
+              "Complexité pour une petite application",
+              1
+            ],
+            [
+              "Performance légèrement moindre",
+              1
+            ]
+          ],
+          "explication": "Le cours note que la différence de performance est souvent négligeable aujourd'hui."
+        },
+        {
+          "id": "u02-l1-e3",
+          "type": "predire",
+          "notions": [
+            "classe-objet"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "class Dog {",
+            "    public string $name;",
+            "}",
+            "",
+            "$rex = new Dog();",
+            "$rex->name = \"Rex\";",
+            "$max = new Dog();",
+            "$max->name = \"Max\";",
+            "echo $max->name . \" et \" . $rex->name;",
+            ""
+          ],
+          "explication": "Chaque objet garde sa propre valeur pour `name`."
+        },
+        {
+          "id": "u02-l1-e4",
+          "type": "trous",
+          "notions": [
+            "classe-objet"
+          ],
+          "question": "Complète : crée un objet `Movie`, puis donne-lui le titre « Heidi ».",
+          "prelude": [
+            "class Movie {",
+            "    public string $title;",
+            "    public int $year;",
+            "}"
+          ],
+          "code": [
+            "$film = ___ Movie();",
+            "$film___title = \"Heidi\";",
+            "echo $film->title;",
+            ""
+          ],
+          "solution": [
+            "new",
+            "->"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Heidi"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le mot qui construit un objet.",
+            "Pour atteindre un attribut : la flèche."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "new",
+                "."
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "new",
+                "->$"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "`new Movie()` construit l'objet ; `$film->title` atteint son attribut, sans `$` après la flèche."
+        },
+        {
+          "id": "u02-l1-e5",
+          "type": "ecrire",
+          "notions": [
+            "classe-objet"
+          ],
+          "question": "Écris la classe `Dog` avec deux attributs publics : `$name` (string) et `$age` (int).",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Rex, 3 ans",
+                "code": "$d = new Dog();\n$d->name = 'Rex';\n$d->age = 3;\nreturn [$d->name, $d->age];",
+                "attendu": [
+                  "Rex",
+                  3
+                ]
+              },
+              {
+                "titre": "Type de $age",
+                "code": "return (string) (new ReflectionProperty('Dog', 'age'))->getType();",
+                "attendu": "int",
+                "siEchec": "L'attribut `$age` doit être déclaré `int` : `public int $age;`."
+              },
+              {
+                "titre": "Type de $name",
+                "code": "return (string) (new ReflectionProperty('Dog', 'name'))->getType();",
+                "attendu": "string",
+                "siEchec": "L'attribut `$name` doit être déclaré `string`."
+              }
+            ]
+          },
+          "indices": [
+            "`class Dog { … }` : les attributs se déclarent entre les accolades.",
+            "Un attribut : visibilité, type, nom : `public string $name;`.",
+            {
+              "texte": "La structure :",
+              "code": "class Dog {\n    public ___ $name;\n    public ___ $age;\n}"
+            }
+          ],
+          "solution": [
+            "class Dog {",
+            "    public string $name;",
+            "    public int $age;",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "class Dog {\n    public $name;\n    public $age;\n}",
+              "attendu": "echec"
+            },
+            {
+              "code": "class Dog {\n    public string name;\n    public int age;\n}",
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "Un attribut se déclare avec sa visibilité, son type et son nom (avec `$`)."
+        },
+        {
+          "id": "u02-l1-e6",
+          "type": "bug",
+          "notions": [
+            "classe-objet"
+          ],
+          "question": "Ce code ne fonctionne pas. Touche la ligne fautive.",
+          "code": [
+            "class Movie {",
+            "    public string $title;",
+            "}",
+            "",
+            "$movie = new Movie();",
+            "$movie.title = \"Heidi\";",
+            "echo $movie->title;",
+            ""
+          ],
+          "ligne": 6,
+          "choix": [
+            "En PHP, on atteint un attribut avec `->`, pas avec un point",
+            "Il manque `$` devant `title`",
+            "Il faut `new Movie` sans parenthèses",
+            "Le titre doit être entre guillemets simples"
+          ],
+          "bonne": 0,
+          "explication": "Le point sert à concaténer. Pour un attribut d'objet : `$movie->title`."
+        },
+        {
+          "id": "u02-l1-e7",
+          "type": "qcm",
+          "notions": [
+            "classe-objet"
+          ],
+          "mono": true,
+          "question": "Quelle écriture suit les conventions du cours ?",
+          "choix": [
+            "$myMovie = new MovieTheater();",
+            "$MyMovie = new movieTheater();",
+            "$my_movie = new movie_theater();",
+            "$mymovie = new MOVIETHEATER();"
+          ],
+          "bonne": 0,
+          "explication": "Classe en PascalCase (`MovieTheater`), objet en camelCase (`$myMovie`)."
+        }
+      ]
+    },
+    {
+      "id": "u02-l2",
+      "titre": "Méthodes et $this",
+      "duree": 6,
+      "notions": [
+        "classe-objet"
+      ],
+      "cartes": [
+        {
+          "titre": "Une méthode, c'est une fonction de la classe",
+          "texte": "Elle se déclare dans la classe, avec une visibilité, et s'appelle sur un objet : `$movie->describe()`.",
+          "code": [
+            "class Movie {",
+            "    public string $title;",
+            "    public int $year;",
+            "",
+            "    public function describe(): string {",
+            "        return $this->title . \" (\" . $this->year . \")\";",
+            "    }",
+            "}",
+            "",
+            "$movie = new Movie();",
+            "$movie->title = \"Heidi\";",
+            "$movie->year = 1952;",
+            "echo $movie->describe();",
+            ""
+          ],
+          "fiche": "classe-objet"
+        },
+        {
+          "titre": "$this : cette maison-ci",
+          "texte": "Dans une méthode, `$this` désigne l'objet sur lequel on a appelé la méthode. `$this->title` est SON titre.",
+          "analogie": "Le plan dit « la porte de **cette** maison » : selon la maison où tu te trouves, ce n'est pas la même porte."
+        },
+        {
+          "titre": "Le piège : $title tout seul",
+          "texte": "Dans une méthode, `$title` sans `$this->` est une variable locale : elle n'existe pas. PHP prévient : `Undefined variable $title`.",
+          "code": [
+            "class Movie {",
+            "    public string $title = \"Heidi\";",
+            "",
+            "    public function shout(): string {",
+            "        return strtoupper($title);",
+            "    }",
+            "}",
+            "",
+            "echo (new Movie())->shout();",
+            ""
+          ],
+          "erreurVoulue": true,
+          "piege": "Et `$this->$title` (avec un `$` après la flèche) est une autre erreur : on écrit `$this->title`."
+        },
+        {
+          "titre": "Des méthodes qui s'appellent",
+          "texte": "Une méthode peut en appeler une autre de la même classe avec `$this->`.",
+          "code": [
+            "class Movie {",
+            "    public int $year = 1952;",
+            "",
+            "    public function getAge(): int {",
+            "        return 2026 - $this->year;",
+            "    }",
+            "",
+            "    public function isClassic(): bool {",
+            "        return $this->getAge() > 50;",
+            "    }",
+            "}",
+            "",
+            "var_dump((new Movie())->isClassic());",
+            ""
+          ]
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u02-l2-e1",
+          "type": "pointer-code",
+          "notions": [
+            "classe-objet"
+          ],
+          "question": "Touche ce qui désigne l'objet courant.",
+          "code": [
+            "class Counter {",
+            "    public int $count = 0;",
+            "",
+            "    public function increment(): void {",
+            "        ⟦$this⟧->count++;",
+            "    }",
+            "}",
+            ""
+          ],
+          "explication": "`$this` est l'objet sur lequel `increment()` a été appelée."
+        },
+        {
+          "id": "u02-l2-e2",
+          "type": "predire",
+          "notions": [
+            "classe-objet"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "class Counter {",
+            "    public int $count = 0;",
+            "",
+            "    public function increment(): void {",
+            "        $this->count++;",
+            "    }",
+            "}",
+            "",
+            "$a = new Counter();",
+            "$b = new Counter();",
+            "$a->increment();",
+            "$a->increment();",
+            "$b->increment();",
+            "echo $a->count . \" / \" . $b->count;",
+            ""
+          ],
+          "explication": "Chaque objet a son propre compteur : `$a` a été incrémenté deux fois, `$b` une fois."
+        },
+        {
+          "id": "u02-l2-e3",
+          "type": "ecrire",
+          "notions": [
+            "classe-objet"
+          ],
+          "question": "Écris la classe `Rectangle` avec deux attributs publics `float $width` et `float $height`, et une méthode `getArea(): float` qui retourne l'aire.",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "3 × 4",
+                "code": "$r = new Rectangle();\n$r->width = 3;\n$r->height = 4;\nreturn $r->getArea();",
+                "attendu": 12
+              },
+              {
+                "titre": "2.5 × 2",
+                "code": "$r = new Rectangle();\n$r->width = 2.5;\n$r->height = 2;\nreturn $r->getArea();",
+                "attendu": 5
+              },
+              {
+                "titre": "Largeur nulle",
+                "code": "$r = new Rectangle();\n$r->width = 0;\n$r->height = 9;\nreturn $r->getArea();",
+                "attendu": 0
+              }
+            ]
+          },
+          "indices": [
+            "Deux attributs `public float`, puis une méthode `public function getArea(): float`.",
+            "Dans la méthode, les attributs s'écrivent avec `$this->`.",
+            {
+              "texte": "Presque :",
+              "code": "public function getArea(): float {\n    return ___ * ___;\n}"
+            }
+          ],
+          "solution": [
+            "class Rectangle {",
+            "    public float $width;",
+            "    public float $height;",
+            "",
+            "    public function getArea(): float {",
+            "        return $this->width * $this->height;",
+            "    }",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "class Rectangle {\n    public float $width;\n    public float $height;\n\n    public function getArea(): float {\n        return $width * $height;\n    }\n}",
+              "attendu": "echec",
+              "diagnostic": "this-oublie"
+            },
+            {
+              "code": "class Rectangle {\n    public float $width;\n    public float $height;\n\n    public function getArea(): float {\n        return $this->$width * $this->$height;\n    }\n}",
+              "attendu": "echec",
+              "diagnostic": "this-dollar"
+            },
+            {
+              "code": "class Rectangle {\n    public float $width;\n    public float $height;\n\n    public function getArea() {\n        echo $this->width * $this->height;\n    }\n}",
+              "attendu": "echec",
+              "diagnostic": "echo-vs-return"
+            }
+          ],
+          "explication": "Dans une méthode, chaque attribut se lit avec `$this->`, et le résultat se rend avec `return`."
+        },
+        {
+          "id": "u02-l2-e4",
+          "type": "corriger",
+          "notions": [
+            "classe-objet"
+          ],
+          "question": "Cette méthode devrait retourner « Rex a 3 ans ». Corrige-la.",
+          "depart": [
+            "class Dog {",
+            "    public string $name = \"Rex\";",
+            "    public int $age = 3;",
+            "",
+            "    public function describe(): string {",
+            "        return $name . \" a \" . $age . \" ans\";",
+            "    }",
+            "}",
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Rex",
+                "code": "return (new Dog())->describe();",
+                "attendu": "Rex a 3 ans"
+              },
+              {
+                "titre": "Autre chien",
+                "code": "$d = new Dog();\n$d->name = 'Max';\n$d->age = 7;\nreturn $d->describe();",
+                "attendu": "Max a 7 ans"
+              }
+            ]
+          },
+          "indices": [
+            "Lis l'avertissement : quelle variable n'existe pas ?",
+            "Dans une méthode, l'attribut de l'objet s'écrit avec `$this->`."
+          ],
+          "solution": [
+            "class Dog {",
+            "    public string $name = \"Rex\";",
+            "    public int $age = 3;",
+            "",
+            "    public function describe(): string {",
+            "        return $this->name . \" a \" . $this->age . \" ans\";",
+            "    }",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "class Dog {\n    public string $name = \"Rex\";\n    public int $age = 3;\n\n    public function describe(): string {\n        return $name . \" a \" . $age . \" ans\";\n    }\n}",
+              "attendu": "echec",
+              "diagnostic": "this-oublie"
+            }
+          ],
+          "explication": "`$name` seul est une variable locale (vide) ; l'attribut de l'objet est `$this->name`."
+        },
+        {
+          "id": "u02-l2-e5",
+          "type": "erreurs",
+          "notions": [
+            "classe-objet"
+          ],
+          "question": "Traduis chaque message de PHP.",
+          "paires": [
+            [
+              "Undefined variable $title (dans une méthode)",
+              "Il manque $this-> devant l'attribut"
+            ],
+            [
+              "Call to undefined method Movie::describ()",
+              "La méthode est mal nommée ou n'existe pas"
+            ],
+            [
+              "Call to a member function describe() on null",
+              "La variable n'est pas un objet"
+            ],
+            [
+              "Using $this when not in object context",
+              "$this utilisé hors d'une méthode d'objet"
+            ]
+          ],
+          "explication": "Chaque message nomme le coupable : la variable, la méthode, ou ce qui n'est pas un objet."
+        },
+        {
+          "id": "u02-l2-e6",
+          "type": "qcm",
+          "notions": [
+            "classe-objet"
+          ],
+          "mono": true,
+          "question": "Dans une méthode, comment lire l'attribut `title` de l'objet courant ?",
+          "choix": [
+            "$this->title",
+            "$this->$title",
+            "$title",
+            "this.title"
+          ],
+          "bonne": 0,
+          "explication": "`$this->title` : `$this`, la flèche, puis le nom de l'attribut sans `$`."
+        },
+        {
+          "id": "u02-l2-e7",
+          "type": "ecrire",
+          "notions": [
+            "classe-objet"
+          ],
+          "question": "Écris la classe `Counter` : un attribut `public int $count = 0;`, une méthode `increment(): void` qui ajoute 1, et une méthode `getCount(): int`.",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Trois fois",
+                "code": "$c = new Counter();\n$c->increment();\n$c->increment();\n$c->increment();\nreturn $c->getCount();",
+                "attendu": 3
+              },
+              {
+                "titre": "Jamais",
+                "code": "return (new Counter())->getCount();",
+                "attendu": 0
+              },
+              {
+                "titre": "Deux compteurs",
+                "code": "$a = new Counter();\n$b = new Counter();\n$a->increment();\nreturn [$a->getCount(), $b->getCount()];",
+                "attendu": [
+                  1,
+                  0
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Trois éléments dans la classe : l'attribut et deux méthodes.",
+            "`increment` modifie `$this->count` ; `getCount` le retourne.",
+            {
+              "texte": "Presque :",
+              "code": "public function increment(): void {\n    $this->count___;\n}"
+            }
+          ],
+          "solution": [
+            "class Counter {",
+            "    public int $count = 0;",
+            "",
+            "    public function increment(): void {",
+            "        $this->count++;",
+            "    }",
+            "",
+            "    public function getCount(): int {",
+            "        return $this->count;",
+            "    }",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "class Counter {\n    public int $count = 0;\n\n    public function increment(): void {\n        $count++;\n    }\n\n    public function getCount(): int {\n        return $this->count;\n    }\n}",
+              "attendu": "echec",
+              "diagnostic": "this-oublie"
+            }
+          ],
+          "explication": "`void` : la méthode ne retourne rien, elle modifie l'objet. `getCount` lit l'attribut et le rend."
+        }
+      ]
+    },
+    {
+      "id": "u02-l3",
+      "titre": "Encapsulation : getters et setters",
+      "duree": 7,
+      "notions": [
+        "encapsulation"
+      ],
+      "cartes": [
+        {
+          "titre": "public, protected, private",
+          "texte": "La **visibilité** dit qui peut toucher un attribut ou une méthode : `public` (tout le monde), `protected` (la classe et ses sous-classes), `private` (la classe seulement).",
+          "fiche": "encapsulation"
+        },
+        {
+          "titre": "Protéger les données",
+          "texte": "Un attribut `private` ne peut pas être modifié n'importe comment depuis l'extérieur : PHP l'interdit.",
+          "code": [
+            "class Account {",
+            "    private float $balance = 0;",
+            "}",
+            "",
+            "$account = new Account();",
+            "$account->balance = 1000000;",
+            ""
+          ],
+          "erreurVoulue": true,
+          "apres": "`Cannot access private property Account::$balance` : la porte est fermée à clé."
+        },
+        {
+          "titre": "Getter et setter",
+          "texte": "Le **getter** lit l'attribut ; le **setter** reçoit une nouvelle valeur, la **vérifie**, puis la range. Dans le cours, le setter retourne un message d'erreur, ou `null` si tout va bien.",
+          "code": [
+            "class Account {",
+            "    private string $owner;",
+            "",
+            "    public function setOwner(string $owner): ?string {",
+            "        if (strlen($owner) < 3) {",
+            "            return \"Owner must be at least 3 characters long.\";",
+            "        }",
+            "        $this->owner = $owner;",
+            "        return null;",
+            "    }",
+            "",
+            "    public function getOwner(): string {",
+            "        return $this->owner;",
+            "    }",
+            "}",
+            "",
+            "$account = new Account();",
+            "echo $account->setOwner(\"Al\") . \"<br>\";",
+            "$account->setOwner(\"Alice\");",
+            "echo $account->getOwner();",
+            ""
+          ]
+        },
+        {
+          "titre": "Utiliser le message d'erreur",
+          "texte": "Celui qui appelle le setter vérifie ce qu'il a reçu : `!empty($error)` est vrai s'il y a un message.",
+          "code": [
+            "class Account {",
+            "    private string $owner = \"\";",
+            "",
+            "    public function setOwner(string $owner): ?string {",
+            "        if (strlen($owner) < 3) {",
+            "            return \"Owner must be at least 3 characters long.\";",
+            "        }",
+            "        $this->owner = $owner;",
+            "        return null;",
+            "    }",
+            "}",
+            "",
+            "$account = new Account();",
+            "$error = $account->setOwner(\"Bo\");",
+            "if (!empty($error)) {",
+            "    echo \"Erreur : \" . $error;",
+            "}",
+            ""
+          ],
+          "astuce": "`?string` veut dire « une string, ou null »."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u02-l3-e1",
+          "type": "assoc",
+          "notions": [
+            "encapsulation"
+          ],
+          "question": "Qui peut accéder à quoi ?",
+          "paires": [
+            [
+              "public",
+              "Accessible de partout"
+            ],
+            [
+              "protected",
+              "La classe et ses sous-classes"
+            ],
+            [
+              "private",
+              "Uniquement la classe"
+            ]
+          ],
+          "explication": "Du plus ouvert au plus fermé : public, protected, private."
+        },
+        {
+          "id": "u02-l3-e2",
+          "type": "qcm",
+          "notions": [
+            "encapsulation"
+          ],
+          "question": "`$balance` est `private` dans `Account`. Que fait `echo $account->balance;` hors de la classe ?",
+          "choix": [
+            "Une erreur : Cannot access private property",
+            "Affiche la valeur",
+            "Affiche null",
+            "Affiche « private »"
+          ],
+          "bonne": 0,
+          "explication": "`private` interdit même la lecture depuis l'extérieur : on passe par un getter."
+        },
+        {
+          "id": "u02-l3-e3",
+          "type": "vf",
+          "notions": [
+            "encapsulation"
+          ],
+          "question": "Un getter sert à modifier un attribut.",
+          "bonne": false,
+          "explication": "Le getter lit (get), le setter modifie (set)."
+        },
+        {
+          "id": "u02-l3-e4",
+          "type": "trous",
+          "notions": [
+            "encapsulation"
+          ],
+          "question": "Complète le getter.",
+          "code": [
+            "class City {",
+            "    private string $name = \"Sion\";",
+            "",
+            "    public function getName(): string {",
+            "        return ___->name;",
+            "    }",
+            "}",
+            "",
+            "echo (new City())->getName();",
+            ""
+          ],
+          "solution": [
+            "$this"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Sion"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "L'objet courant."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "this"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "Le getter retourne l'attribut privé de l'objet courant : `$this->name`."
+        },
+        {
+          "id": "u02-l3-e5",
+          "type": "predire",
+          "notions": [
+            "encapsulation"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "class Thermostat {",
+            "    private int $target = 20;",
+            "",
+            "    public function setTarget(int $target): ?string {",
+            "        if ($target < 5 || $target > 30) {",
+            "            return \"Target out of range.\";",
+            "        }",
+            "        $this->target = $target;",
+            "        return null;",
+            "    }",
+            "",
+            "    public function getTarget(): int {",
+            "        return $this->target;",
+            "    }",
+            "}",
+            "",
+            "$t = new Thermostat();",
+            "echo $t->setTarget(45) . \"<br>\";",
+            "echo $t->getTarget() . \"<br>\";",
+            "$t->setTarget(22);",
+            "echo $t->getTarget();",
+            ""
+          ],
+          "explication": "45 est refusé (message retourné, attribut inchangé : 20) ; 22 est accepté."
+        },
+        {
+          "id": "u02-l3-e6",
+          "type": "ecrire",
+          "notions": [
+            "encapsulation"
+          ],
+          "question": "Écris `BankAccount` : un attribut **privé** `float $balance` qui commence à 0 ; `deposit(float $amount): ?string` ajoute le montant s'il est strictement positif et retourne `null`, sinon retourne « Amount must be positive. » sans rien changer ; `getBalance(): float`.",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Deux dépôts",
+                "code": "$a = new BankAccount();\n$a->deposit(50);\n$a->deposit(25.5);\nreturn $a->getBalance();",
+                "attendu": 75.5
+              },
+              {
+                "titre": "Dépôt accepté",
+                "code": "return (new BankAccount())->deposit(10);",
+                "attendu": null
+              },
+              {
+                "titre": "Dépôt négatif refusé",
+                "code": "$a = new BankAccount();\n$e = $a->deposit(-20);\nreturn [$e, $a->getBalance()];",
+                "attendu": [
+                  "Amount must be positive.",
+                  0
+                ]
+              },
+              {
+                "titre": "Dépôt nul refusé",
+                "code": "$a = new BankAccount();\nreturn $a->deposit(0);",
+                "attendu": "Amount must be positive."
+              },
+              {
+                "titre": "Règle : attribut private",
+                "code": "foreach ((new ReflectionClass('BankAccount'))->getProperties() as $p) {\n    if (!$p->isPrivate()) return $p->getName() . \" n'est pas private\";\n}\nreturn 'ok';",
+                "attendu": "ok",
+                "siEchec": "L'attribut `$balance` doit être `private` : c'est tout l'intérêt de l'encapsulation."
+              }
+            ]
+          },
+          "indices": [
+            "`private float $balance = 0;`, puis deux méthodes publiques.",
+            "Dans `deposit`, commence par refuser les montants `<= 0` (return du message), puis ajoute avec `+=`.",
+            {
+              "texte": "La structure de deposit :",
+              "code": "if (___) {\n    return \"Amount must be positive.\";\n}\n$this->balance += $amount;\nreturn null;"
+            }
+          ],
+          "solution": [
+            "class BankAccount {",
+            "    private float $balance = 0;",
+            "",
+            "    public function deposit(float $amount): ?string {",
+            "        if ($amount <= 0) {",
+            "            return \"Amount must be positive.\";",
+            "        }",
+            "        $this->balance += $amount;",
+            "        return null;",
+            "    }",
+            "",
+            "    public function getBalance(): float {",
+            "        return $this->balance;",
+            "    }",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "class BankAccount {\n    public float $balance = 0;\n\n    public function deposit(float $amount): ?string {\n        if ($amount <= 0) {\n            return \"Amount must be positive.\";\n        }\n        $this->balance += $amount;\n        return null;\n    }\n\n    public function getBalance(): float {\n        return $this->balance;\n    }\n}",
+              "attendu": "echec"
+            },
+            {
+              "code": "class BankAccount {\n    private float $balance = 0;\n\n    public function deposit(float $amount): ?string {\n        if ($amount < 0) {\n            return \"Amount must be positive.\";\n        }\n        $this->balance += $amount;\n        return null;\n    }\n\n    public function getBalance(): float {\n        return $this->balance;\n    }\n}",
+              "attendu": "echec"
+            },
+            {
+              "code": "class BankAccount {\n    private float $balance = 0;\n\n    public function deposit(float $amount): ?string {\n        if ($amount <= 0) {\n            return \"Amount must be positive.\";\n        }\n        $this->balance = $amount;\n        return null;\n    }\n\n    public function getBalance(): float {\n        return $this->balance;\n    }\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Le setter (ici `deposit`) est le gardien : seuls les montants valides entrent dans `$balance`, qui reste privé."
+        },
+        {
+          "id": "u02-l3-e7",
+          "type": "parsons",
+          "notions": [
+            "encapsulation"
+          ],
+          "question": "Remets dans l'ordre le setter qui refuse un nom vide.",
+          "lignes": [
+            "public function setName(string $name): ?string {",
+            "    if ($name === \"\") {",
+            "        return \"Name cannot be empty.\";",
+            "    }",
+            "    $this->name = $name;",
+            "    return null;",
+            "}"
+          ],
+          "distracteurs": [
+            "    $name = $this->name;",
+            "    return $this->name;"
+          ],
+          "explication": "D'abord refuser (et sortir), ensuite ranger la valeur, enfin retourner `null`."
+        }
+      ]
+    },
+    {
+      "id": "u02-l4",
+      "titre": "Constructeur et destructeur",
+      "duree": 7,
+      "notions": [
+        "constructeur"
+      ],
+      "cartes": [
+        {
+          "titre": "__construct : la maison livrée meublée",
+          "texte": "Le constructeur est appelé **automatiquement** par `new`. Il reçoit les valeurs de départ et initialise les attributs.",
+          "code": [
+            "class Product {",
+            "    private string $name;",
+            "    private float $price;",
+            "",
+            "    public function __construct(string $name, float $price) {",
+            "        $this->name = $name;",
+            "        $this->price = $price;",
+            "    }",
+            "",
+            "    public function getName(): string {",
+            "        return $this->name;",
+            "    }",
+            "}",
+            "",
+            "$apple = new Product(\"Pomme\", 1.2);",
+            "echo $apple->getName();",
+            ""
+          ],
+          "fiche": "constructeur"
+        },
+        {
+          "titre": "Oublier un argument",
+          "texte": "Les arguments de `new` vont au constructeur, dans l'ordre. S'il en manque : `Too few arguments to function Product::__construct()`.",
+          "code": [
+            "class Product {",
+            "    public function __construct(string $name, float $price) {",
+            "    }",
+            "}",
+            "",
+            "$apple = new Product(\"Pomme\");",
+            ""
+          ],
+          "erreurVoulue": true
+        },
+        {
+          "titre": "__destruct : le départ",
+          "texte": "Le destructeur est appelé quand l'objet est détruit : quand sa variable reçoit `null` (ou une autre valeur), ou à la fin du script.",
+          "code": [
+            "class Ticket {",
+            "    private string $code;",
+            "",
+            "    public function __construct(string $code) {",
+            "        $this->code = $code;",
+            "        echo \"Création de $code<br>\";",
+            "    }",
+            "",
+            "    public function __destruct() {",
+            "        echo \"Destruction de {$this->code}<br>\";",
+            "    }",
+            "}",
+            "",
+            "$a = new Ticket(\"A\");",
+            "$b = new Ticket(\"B\");",
+            "$a = null;",
+            "echo \"Fin du script<br>\";",
+            ""
+          ],
+          "apres": "`$a = null` détruit A tout de suite ; B est détruit à la fin du script."
+        },
+        {
+          "titre": "Deux variables, un seul objet",
+          "texte": "`$c = $b;` ne copie pas l'objet : les deux variables désignent la même maison. Elle n'est détruite que lorsque plus aucune variable ne la désigne.",
+          "piege": "Le nom est `__construct`, avec **deux** tirets bas. `_construct` ou `__constructor` ne sont jamais appelés."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u02-l4-e1",
+          "type": "predire",
+          "notions": [
+            "constructeur"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "class Lamp {",
+            "    private string $room;",
+            "",
+            "    public function __construct(string $room) {",
+            "        $this->room = $room;",
+            "        echo \"On ($room)<br>\";",
+            "    }",
+            "",
+            "    public function __destruct() {",
+            "        echo \"Off ({$this->room})<br>\";",
+            "    }",
+            "}",
+            "",
+            "$kitchen = new Lamp(\"cuisine\");",
+            "$hall = new Lamp(\"hall\");",
+            "$kitchen = null;",
+            "echo \"Bonne nuit<br>\";",
+            ""
+          ],
+          "explication": "Construction de la cuisine, puis du hall ; `$kitchen = null` éteint la cuisine tout de suite ; le hall s'éteint à la fin du script, après « Bonne nuit »."
+        },
+        {
+          "id": "u02-l4-e2",
+          "type": "trous",
+          "notions": [
+            "constructeur"
+          ],
+          "question": "Complète le constructeur.",
+          "code": [
+            "class City {",
+            "    private string $name;",
+            "",
+            "    public function ___(string $name) {",
+            "        ___ = $name;",
+            "    }",
+            "",
+            "    public function getName(): string {",
+            "        return $this->name;",
+            "    }",
+            "}",
+            "",
+            "$city = new City(\"Bienne\");",
+            "echo $city->getName();",
+            ""
+          ],
+          "solution": [
+            "__construct",
+            "$this->name"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Bienne"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Deux tirets bas.",
+            "L'attribut de l'objet courant reçoit le paramètre."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "_construct",
+                "$this->name"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "__construct",
+                "$name"
+              ],
+              "attendu": "erreur",
+              "diagnostic": "attribut-vide"
+            }
+          ],
+          "explication": "`__construct` est appelé par `new City(\"Bienne\")` ; `$this->name = $name;` range le paramètre dans l'attribut."
+        },
+        {
+          "id": "u02-l4-e3",
+          "type": "ecrire",
+          "notions": [
+            "constructeur",
+            "encapsulation"
+          ],
+          "question": "Écris `Product` : deux attributs privés `$name` (string) et `$price` (float), un constructeur qui les reçoit, les getters `getName()` et `getPrice()`, et `getLabel(): string` qui retourne par exemple « Pomme : 1.2 CHF ».",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Pomme",
+                "code": "$p = new Product(\"Pomme\", 1.2);\nreturn [$p->getName(), $p->getPrice(), $p->getLabel()];",
+                "attendu": [
+                  "Pomme",
+                  1.2,
+                  "Pomme : 1.2 CHF"
+                ]
+              },
+              {
+                "titre": "Raclette",
+                "code": "return (new Product(\"Raclette\", 24.5))->getLabel();",
+                "attendu": "Raclette : 24.5 CHF"
+              },
+              {
+                "titre": "Règle : attributs private",
+                "code": "foreach ((new ReflectionClass('Product'))->getProperties() as $p) {\n    if (!$p->isPrivate()) return $p->getName() . \" n'est pas private\";\n}\nreturn 'ok';",
+                "attendu": "ok",
+                "siEchec": "Les attributs doivent être `private`."
+              }
+            ]
+          },
+          "indices": [
+            "Deux attributs privés, puis `public function __construct(string $name, float $price)`.",
+            "Le constructeur range chaque paramètre dans `$this->…` ; `getLabel` colle nom, ` : `, prix et ` CHF`.",
+            {
+              "texte": "Presque :",
+              "code": "public function getLabel(): string {\n    return ___ . \" : \" . ___ . \" CHF\";\n}"
+            }
+          ],
+          "solution": [
+            "class Product {",
+            "    private string $name;",
+            "    private float $price;",
+            "",
+            "    public function __construct(string $name, float $price) {",
+            "        $this->name = $name;",
+            "        $this->price = $price;",
+            "    }",
+            "",
+            "    public function getName(): string {",
+            "        return $this->name;",
+            "    }",
+            "",
+            "    public function getPrice(): float {",
+            "        return $this->price;",
+            "    }",
+            "",
+            "    public function getLabel(): string {",
+            "        return $this->name . \" : \" . $this->price . \" CHF\";",
+            "    }",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "class Product {\n    private string $name;\n    private float $price;\n\n    public function __construct(string $name, float $price) {\n    }\n\n    public function getName(): string {\n        return $this->name;\n    }\n\n    public function getPrice(): float {\n        return $this->price;\n    }\n\n    public function getLabel(): string {\n        return $this->name . \" : \" . $this->price . \" CHF\";\n    }\n}",
+              "attendu": "echec",
+              "diagnostic": "attribut-vide"
+            },
+            {
+              "code": "class Product {\n    private string $name;\n    private float $price;\n\n    public function _construct(string $name, float $price) {\n        $this->name = $name;\n        $this->price = $price;\n    }\n\n    public function getName(): string {\n        return $this->name;\n    }\n\n    public function getPrice(): float {\n        return $this->price;\n    }\n\n    public function getLabel(): string {\n        return $this->name . \" : \" . $this->price . \" CHF\";\n    }\n}",
+              "attendu": "echec",
+              "diagnostic": "attribut-vide"
+            }
+          ],
+          "explication": "Le constructeur garantit qu'un produit a toujours un nom et un prix dès sa création."
+        },
+        {
+          "id": "u02-l4-e4",
+          "type": "qcm",
+          "notions": [
+            "constructeur"
+          ],
+          "question": "Laquelle de ces lignes ne détruit PAS l'objet de `$a` (seule variable qui le désigne) ?",
+          "choix": [
+            "$b = $a;",
+            "$a = null;",
+            "$a = new Ticket(\"Z\");",
+            "La fin du script"
+          ],
+          "bonne": 0,
+          "explication": "`$b = $a;` fait désigner le même objet par une deuxième variable : il est encore utilisé, donc pas détruit."
+        },
+        {
+          "id": "u02-l4-e5",
+          "type": "vf",
+          "notions": [
+            "constructeur"
+          ],
+          "question": "On appelle le constructeur soi-même : `$p->__construct(\"Pomme\", 1.2);` après `new Product();`.",
+          "bonne": false,
+          "explication": "C'est `new Product(\"Pomme\", 1.2)` qui appelle automatiquement le constructeur avec ces arguments."
+        },
+        {
+          "id": "u02-l4-e6",
+          "type": "erreurs",
+          "notions": [
+            "constructeur"
+          ],
+          "question": "Traduis chaque message.",
+          "paires": [
+            [
+              "Too few arguments to function Product::__construct(), 1 passed",
+              "Il manque un argument à new Product(…)"
+            ],
+            [
+              "Typed property Product::$name must not be accessed before initialization",
+              "L'attribut n'a jamais reçu de valeur"
+            ],
+            [
+              "Cannot access private property Product::$price",
+              "Passe par un getter"
+            ]
+          ],
+          "explication": "Ce sont les trois erreurs les plus fréquentes autour des constructeurs."
+        }
+      ]
+    },
+    {
+      "id": "u02-l5",
+      "titre": "Constantes de classe",
+      "duree": 5,
+      "notions": [
+        "constantes-classe"
+      ],
+      "cartes": [
+        {
+          "titre": "Une valeur fixe, rangée dans la classe",
+          "texte": "`const` dans une classe crée une constante, publique par défaut, impossible à modifier.",
+          "code": [
+            "class User {",
+            "    const ROLE_ADMIN = \"Admin\";",
+            "    const ROLE_MEMBER = \"Member\";",
+            "}",
+            "",
+            "echo User::ROLE_ADMIN;",
+            ""
+          ],
+          "fiche": "constantes-classe"
+        },
+        {
+          "titre": "Dehors : NomDeLaClasse::",
+          "texte": "Depuis l'extérieur, on lit une constante avec le nom de la classe et `::` (l'opérateur de résolution de portée). Pratique pour passer une valeur au constructeur sans faute de frappe.",
+          "code": [
+            "class User {",
+            "    const ROLE_ADMIN = \"Admin\";",
+            "    const ROLE_MEMBER = \"Member\";",
+            "",
+            "    private string $role;",
+            "",
+            "    public function __construct(string $role) {",
+            "        $this->role = $role;",
+            "    }",
+            "",
+            "    public function getRole(): string {",
+            "        return $this->role;",
+            "    }",
+            "}",
+            "",
+            "$ana = new User(User::ROLE_ADMIN);",
+            "echo $ana->getRole();",
+            ""
+          ]
+        },
+        {
+          "titre": "Dedans : self::",
+          "texte": "À l'intérieur de la classe, on écrit `self::NOM`.",
+          "code": [
+            "class User {",
+            "    const ROLE_ADMIN = \"Admin\";",
+            "",
+            "    private string $role = \"Admin\";",
+            "",
+            "    public function isAdmin(): bool {",
+            "        return $this->role === self::ROLE_ADMIN;",
+            "    }",
+            "}",
+            "",
+            "var_dump((new User())->isAdmin());",
+            ""
+          ],
+          "piege": "Pas de `$` : `self::ROLE_ADMIN`, et pas de `$this->ROLE_ADMIN`."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u02-l5-e1",
+          "type": "predire",
+          "notions": [
+            "constantes-classe"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "class Coffee {",
+            "    const SMALL = 2;",
+            "    const LARGE = 4;",
+            "}",
+            "",
+            "echo Coffee::LARGE - Coffee::SMALL;",
+            ""
+          ],
+          "explication": "Les constantes se lisent avec `Classe::NOM` : 4 - 2."
+        },
+        {
+          "id": "u02-l5-e2",
+          "type": "trous",
+          "notions": [
+            "constantes-classe"
+          ],
+          "question": "Complète : dans la classe, compare avec la constante.",
+          "code": [
+            "class Room {",
+            "    const MAX_GUESTS = 4;",
+            "    private int $guests = 5;",
+            "",
+            "    public function isFull(): bool {",
+            "        return $this->guests >= ___::MAX_GUESTS;",
+            "    }",
+            "}",
+            "",
+            "var_dump((new Room())->isFull());",
+            ""
+          ],
+          "solution": [
+            "self"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "bool(true)"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le mot qui désigne la classe elle-même, depuis l'intérieur."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "this"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "Room->"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "Dans la classe : `self::MAX_GUESTS`. (Le nom de la classe, `Room::MAX_GUESTS`, marche aussi.)"
+        },
+        {
+          "id": "u02-l5-e3",
+          "type": "ecrire",
+          "notions": [
+            "constantes-classe",
+            "constructeur"
+          ],
+          "question": "Écris `Shirt` avec trois constantes `SIZE_S = \"S\"`, `SIZE_M = \"M\"`, `SIZE_L = \"L\"`, un constructeur qui reçoit la taille (attribut privé), et `getPrice(): int` : 20 pour S, 25 pour M, 30 pour L. Compare avec `self::`.",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Taille M",
+                "code": "return (new Shirt(Shirt::SIZE_M))->getPrice();",
+                "attendu": 25
+              },
+              {
+                "titre": "Taille S",
+                "code": "return (new Shirt(Shirt::SIZE_S))->getPrice();",
+                "attendu": 20
+              },
+              {
+                "titre": "Taille L",
+                "code": "return (new Shirt(Shirt::SIZE_L))->getPrice();",
+                "attendu": 30
+              },
+              {
+                "titre": "Valeurs des constantes",
+                "code": "return [Shirt::SIZE_S, Shirt::SIZE_M, Shirt::SIZE_L];",
+                "attendu": [
+                  "S",
+                  "M",
+                  "L"
+                ]
+              }
+            ],
+            "obligatoire": [
+              "self::"
+            ]
+          },
+          "indices": [
+            "Les constantes en haut de la classe : `const SIZE_S = \"S\";`…",
+            "Dans `getPrice`, compare `$this->size` à `self::SIZE_S`, puis à `self::SIZE_M`.",
+            {
+              "texte": "Presque :",
+              "code": "if ($this->size === ___) {\n    return 20;\n} elseif (___) {\n    return 25;\n}\nreturn 30;"
+            }
+          ],
+          "solution": [
+            "class Shirt {",
+            "    const SIZE_S = \"S\";",
+            "    const SIZE_M = \"M\";",
+            "    const SIZE_L = \"L\";",
+            "",
+            "    private string $size;",
+            "",
+            "    public function __construct(string $size) {",
+            "        $this->size = $size;",
+            "    }",
+            "",
+            "    public function getPrice(): int {",
+            "        if ($this->size === self::SIZE_S) {",
+            "            return 20;",
+            "        } elseif ($this->size === self::SIZE_M) {",
+            "            return 25;",
+            "        }",
+            "        return 30;",
+            "    }",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "class Shirt {\n    const SIZE_S = \"S\";\n    const SIZE_M = \"M\";\n    const SIZE_L = \"L\";\n\n    private string $size;\n\n    public function __construct(string $size) {\n        $this->size = $size;\n    }\n\n    public function getPrice(): int {\n        if ($this->size === SIZE_S) {\n            return 20;\n        } elseif ($this->size === self::SIZE_M) {\n            return 25;\n        }\n        return 30;\n    }\n}",
+              "attendu": "erreur",
+              "diagnostic": "constante-inconnue"
+            },
+            {
+              "code": "class Shirt {\n    const SIZE_S = \"S\";\n    const SIZE_M = \"M\";\n    const SIZE_L = \"L\";\n\n    private string $size;\n\n    public function __construct(string $size) {\n        $this->size = $size;\n    }\n\n    public function getPrice(): int {\n        if ($this->size === $this->SIZE_S) {\n            return 20;\n        } elseif ($this->size === self::SIZE_M) {\n            return 25;\n        }\n        return 30;\n    }\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`self::SIZE_M` plutôt que `\"M\"` écrit à la main : une faute de frappe dans le nom d'une constante provoque une erreur claire."
+        },
+        {
+          "id": "u02-l5-e4",
+          "type": "qcm",
+          "notions": [
+            "constantes-classe"
+          ],
+          "mono": true,
+          "question": "Hors de la classe `User`, comment lire sa constante `ROLE_ADMIN` ?",
+          "choix": [
+            "User::ROLE_ADMIN",
+            "User->ROLE_ADMIN",
+            "self::ROLE_ADMIN",
+            "$User::$ROLE_ADMIN"
+          ],
+          "bonne": 0,
+          "explication": "Dehors, le nom de la classe ; dedans, `self`. Toujours `::` et jamais de `$`."
+        },
+        {
+          "id": "u02-l5-e5",
+          "type": "vf",
+          "notions": [
+            "constantes-classe"
+          ],
+          "question": "Une constante de classe peut être modifiée par un setter.",
+          "bonne": false,
+          "explication": "Une constante ne peut pas être modifiée une fois définie."
+        },
+        {
+          "id": "u02-l5-e6",
+          "type": "pointer-code",
+          "notions": [
+            "constantes-classe"
+          ],
+          "question": "Touche l'opérateur de résolution de portée.",
+          "code": "$ana = new User(User⟦::⟧ROLE_ADMIN);",
+          "explication": "`::` relie une classe à ce qui lui appartient : ses constantes."
+        }
+      ]
+    }
+  ],
+  "jeux": [
+    {
+      "id": "u02-vocabulaire",
+      "titre": "Le vocabulaire de l'objet",
+      "description": "Dix questions éclair sur classes, objets, $this et visibilité.",
+      "tours": 10,
+      "questions": [
+        {
+          "id": "u02-j1",
+          "type": "qcm",
+          "notions": [
+            "classe-objet"
+          ],
+          "mono": true,
+          "question": "Quel mot crée un objet ?",
+          "choix": [
+            "new",
+            "class",
+            "create",
+            "this"
+          ],
+          "bonne": 0,
+          "explication": "`new NomDeLaClasse(…)`."
+        },
+        {
+          "id": "u02-j2",
+          "type": "qcm",
+          "notions": [
+            "classe-objet"
+          ],
+          "mono": true,
+          "question": "Quel opérateur atteint un attribut d'objet ?",
+          "choix": [
+            "->",
+            ".",
+            "::",
+            "=>"
+          ],
+          "bonne": 0,
+          "explication": "`->` pour les objets ; `::` pour les constantes de classe ; `=>` dans les tableaux."
+        },
+        {
+          "id": "u02-j3",
+          "type": "vf",
+          "notions": [
+            "classe-objet"
+          ],
+          "question": "`$this` peut s'utiliser hors d'une classe.",
+          "bonne": false,
+          "explication": "`$this` n'existe que dans une méthode appelée sur un objet."
+        },
+        {
+          "id": "u02-j4",
+          "type": "vf",
+          "notions": [
+            "encapsulation"
+          ],
+          "question": "Un attribut `protected` est accessible dans les sous-classes.",
+          "bonne": true,
+          "explication": "`protected` : la classe et ses sous-classes ; `private` : la classe seulement."
+        },
+        {
+          "id": "u02-j5",
+          "type": "qcm",
+          "notions": [
+            "encapsulation"
+          ],
+          "question": "À quoi sert un setter ?",
+          "choix": [
+            "Modifier un attribut, en vérifiant la valeur",
+            "Lire un attribut",
+            "Créer l'objet",
+            "Détruire l'objet"
+          ],
+          "bonne": 0,
+          "explication": "Le setter reçoit la nouvelle valeur et peut la refuser."
+        },
+        {
+          "id": "u02-j6",
+          "type": "qcm",
+          "notions": [
+            "constructeur"
+          ],
+          "mono": true,
+          "question": "Quel est le nom du constructeur ?",
+          "choix": [
+            "__construct",
+            "_construct",
+            "__constructor",
+            "constructor"
+          ],
+          "bonne": 0,
+          "explication": "Deux tirets bas, puis `construct`."
+        },
+        {
+          "id": "u02-j7",
+          "type": "vf",
+          "notions": [
+            "constructeur"
+          ],
+          "question": "Le destructeur est appelé à la fin du script pour les objets encore vivants.",
+          "bonne": true,
+          "explication": "Ou plus tôt, quand plus aucune variable ne désigne l'objet."
+        },
+        {
+          "id": "u02-j8",
+          "type": "qcm",
+          "notions": [
+            "constantes-classe"
+          ],
+          "mono": true,
+          "question": "Dans la classe, comment lire la constante `MAX` ?",
+          "choix": [
+            "self::MAX",
+            "$this->MAX",
+            "$MAX",
+            "this::MAX"
+          ],
+          "bonne": 0,
+          "explication": "`self::MAX` à l'intérieur, `NomDeLaClasse::MAX` à l'extérieur."
+        },
+        {
+          "id": "u02-j9",
+          "type": "vf",
+          "notions": [
+            "poo-concepts"
+          ],
+          "question": "Le cours cite la maintenabilité parmi les avantages de la POO.",
+          "bonne": true,
+          "explication": "Avec la lisibilité et la réutilisabilité."
+        },
+        {
+          "id": "u02-j10",
+          "type": "qcm",
+          "notions": [
+            "classe-objet"
+          ],
+          "mono": true,
+          "question": "Quel nom de classe suit la convention ?",
+          "choix": [
+            "ShoppingCart",
+            "shoppingCart",
+            "shopping_cart",
+            "SHOPPINGCART"
+          ],
+          "bonne": 0,
+          "explication": "Les classes sont en PascalCase."
+        },
+        {
+          "id": "u02-j11",
+          "type": "vf",
+          "notions": [
+            "classe-objet"
+          ],
+          "question": "Deux objets de la même classe partagent forcément les mêmes valeurs d'attributs.",
+          "bonne": false,
+          "explication": "Chaque objet a ses propres valeurs : chaque maison a sa couleur."
+        },
+        {
+          "id": "u02-j12",
+          "type": "qcm",
+          "notions": [
+            "encapsulation"
+          ],
+          "question": "Que signifie le type de retour `?string` ?",
+          "choix": [
+            "Une string ou null",
+            "Une string obligatoire",
+            "N'importe quel type",
+            "Un booléen"
+          ],
+          "bonne": 0,
+          "explication": "Le `?` autorise aussi `null` : le setter du cours retourne un message, ou `null` si tout va bien."
+        }
+      ]
+    }
+  ],
+  "quiz": {
+    "titre": "Quiz : classes et objets",
+    "questions": [
+      {
+        "id": "u02-q1",
+        "type": "qcm",
+        "notions": [
+          "poo-concepts"
+        ],
+        "question": "Selon le cours, qu'est-ce qu'un objet ?",
+        "choix": [
+          "Une instance (une création en mémoire) d'une classe",
+          "Un modèle qui décrit des propriétés",
+          "Une fonction déclarée dans une classe",
+          "Un fichier PHP"
+        ],
+        "bonne": 0,
+        "explication": "La classe est le modèle ; l'objet, une instance concrète."
+      },
+      {
+        "id": "u02-q2",
+        "type": "predire",
+        "notions": [
+          "classe-objet"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "class Bike {",
+          "    public int $gear = 1;",
+          "",
+          "    public function shiftUp(): void {",
+          "        $this->gear++;",
+          "    }",
+          "}",
+          "",
+          "$bike = new Bike();",
+          "$bike->shiftUp();",
+          "$bike->shiftUp();",
+          "echo $bike->gear;",
+          ""
+        ],
+        "explication": "Deux appels à `shiftUp()` : 1 → 2 → 3."
+      },
+      {
+        "id": "u02-q3",
+        "type": "bug",
+        "notions": [
+          "classe-objet"
+        ],
+        "question": "Touche la ligne fautive.",
+        "code": [
+          "class Bike {",
+          "    public int $gear = 1;",
+          "",
+          "    public function getGear(): int {",
+          "        return $gear;",
+          "    }",
+          "}",
+          ""
+        ],
+        "ligne": 5,
+        "choix": [
+          "Il manque `$this->` devant `gear`",
+          "Il manque `public` devant `return`",
+          "`int` doit être `integer`",
+          "Il faut `echo` au lieu de `return`"
+        ],
+        "bonne": 0,
+        "explication": "Dans une méthode, l'attribut se lit avec `$this->gear`."
+      },
+      {
+        "id": "u02-q4",
+        "type": "qcm",
+        "notions": [
+          "encapsulation"
+        ],
+        "question": "Pourquoi mettre les attributs en `private` ?",
+        "choix": [
+          "Pour contrôler comment ils sont lus et modifiés (encapsulation)",
+          "Pour que le code s'exécute plus vite",
+          "Pour que PHP les affiche automatiquement",
+          "Pour pouvoir les modifier de partout"
+        ],
+        "bonne": 0,
+        "explication": "On passe par des getters et des setters, qui peuvent valider les données."
+      },
+      {
+        "id": "u02-q5",
+        "type": "assoc",
+        "notions": [
+          "encapsulation"
+        ],
+        "question": "Associe chaque méthode à son rôle.",
+        "paires": [
+          [
+            "getEmail()",
+            "Lit l'adresse"
+          ],
+          [
+            "setEmail($email)",
+            "Modifie l'adresse, après vérification"
+          ],
+          [
+            "__construct(...)",
+            "Initialise l'objet à sa création"
+          ],
+          [
+            "__destruct()",
+            "S'exécute à la destruction de l'objet"
+          ]
+        ],
+        "explication": "Getter, setter, constructeur, destructeur."
+      },
+      {
+        "id": "u02-q6",
+        "type": "predire",
+        "notions": [
+          "encapsulation"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "class Score {",
+          "    private int $points = 0;",
+          "",
+          "    public function add(int $p): ?string {",
+          "        if ($p < 0) {",
+          "            return \"Negative!\";",
+          "        }",
+          "        $this->points += $p;",
+          "        return null;",
+          "    }",
+          "",
+          "    public function getPoints(): int {",
+          "        return $this->points;",
+          "    }",
+          "}",
+          "",
+          "$s = new Score();",
+          "$s->add(5);",
+          "echo $s->add(-3) . \"<br>\";",
+          "echo $s->getPoints();",
+          ""
+        ],
+        "explication": "-3 est refusé (le message est affiché, les points restent à 5)."
+      },
+      {
+        "id": "u02-q7",
+        "type": "qcm",
+        "notions": [
+          "constructeur"
+        ],
+        "question": "Quand le constructeur est-il appelé ?",
+        "choix": [
+          "Automatiquement, par new",
+          "Quand on appelle $objet->__construct()",
+          "À la fin du script",
+          "Jamais, il faut l'appeler à la main"
+        ],
+        "bonne": 0,
+        "explication": "`new Product(\"Pomme\", 1.2)` appelle `__construct(\"Pomme\", 1.2)`."
+      },
+      {
+        "id": "u02-q8",
+        "type": "predire",
+        "notions": [
+          "constructeur"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "class Guest {",
+          "    private string $name;",
+          "",
+          "    public function __construct(string $name) {",
+          "        $this->name = $name;",
+          "    }",
+          "",
+          "    public function __destruct() {",
+          "        echo \"Au revoir {$this->name}<br>\";",
+          "    }",
+          "}",
+          "",
+          "$g = new Guest(\"Zoé\");",
+          "$g = new Guest(\"Noé\");",
+          "echo \"Fin<br>\";",
+          ""
+        ],
+        "explication": "Quand `$g` reçoit Noé, plus personne ne désigne Zoé : elle est détruite tout de suite. Noé est détruit à la fin du script."
+      },
+      {
+        "id": "u02-q9",
+        "type": "trous",
+        "notions": [
+          "constructeur"
+        ],
+        "question": "Complète le constructeur.",
+        "code": [
+          "class Song {",
+          "    private string $title;",
+          "",
+          "    public function __construct(string $title) {",
+          "        ___ = ___;",
+          "    }",
+          "",
+          "    public function getTitle(): string {",
+          "        return $this->title;",
+          "    }",
+          "}",
+          "",
+          "echo (new Song(\"Alors on danse\"))->getTitle();",
+          ""
+        ],
+        "solution": [
+          "$this->title",
+          "$title"
+        ],
+        "tests": {
+          "cas": [
+            {
+              "sortie": [
+                "Alors on danse"
+              ]
+            }
+          ]
+        },
+        "indices": [
+          "L'attribut reçoit le paramètre."
+        ],
+        "erreursTypiques": [
+          {
+            "trous": [
+              "$title",
+              "$this->title"
+            ],
+            "attendu": "erreur"
+          }
+        ],
+        "explication": "L'attribut (`$this->title`) reçoit la valeur du paramètre (`$title`)."
+      },
+      {
+        "id": "u02-q10",
+        "type": "vf",
+        "notions": [
+          "constantes-classe"
+        ],
+        "question": "Les constantes de classe sont `public` par défaut.",
+        "bonne": true,
+        "explication": "On peut les lire depuis l'extérieur : `User::ROLE_ADMIN`."
+      },
+      {
+        "id": "u02-q11",
+        "type": "qcm",
+        "notions": [
+          "constantes-classe"
+        ],
+        "question": "Quel est l'intérêt de `new User(User::ROLE_ADMIN)` plutôt que `new User(\"Admin\")` ?",
+        "choix": [
+          "Éviter les fautes de frappe et rendre le code lisible",
+          "Le code s'exécute plus vite",
+          "La constante peut changer de valeur",
+          "Il n'y en a aucun"
+        ],
+        "bonne": 0,
+        "explication": "Une faute dans le nom d'une constante provoque une erreur ; une faute dans « Admni » passerait inaperçue."
+      },
+      {
+        "id": "u02-q12",
+        "type": "pointer-code",
+        "notions": [
+          "encapsulation"
+        ],
+        "question": "Touche le mot qui rend l'attribut inaccessible depuis l'extérieur.",
+        "code": [
+          "class Safe {",
+          "    ⟦private⟧ string $code;",
+          "}",
+          ""
+        ],
+        "explication": "`private` : uniquement dans la classe."
+      },
+      {
+        "id": "u02-q13",
+        "type": "erreurs",
+        "notions": [
+          "classe-objet",
+          "encapsulation"
+        ],
+        "question": "Traduis ces messages.",
+        "paires": [
+          [
+            "Cannot access private property Safe::$code",
+            "On lit un attribut privé depuis l'extérieur"
+          ],
+          [
+            "Call to undefined method Safe::open()",
+            "La méthode n'existe pas dans la classe"
+          ],
+          [
+            "Undefined property: Safe::$cod",
+            "L'attribut est mal écrit ou pas déclaré"
+          ]
+        ],
+        "explication": "Lis toujours le nom de la classe et de l'attribut cités."
+      },
+      {
+        "id": "u02-q14",
+        "type": "ecrire",
+        "notions": [
+          "classe-objet",
+          "constructeur"
+        ],
+        "question": "Écris `Temperature` : un attribut privé `float $celsius` reçu par le constructeur, et `toFahrenheit(): float` qui retourne `celsius × 9 / 5 + 32`.",
+        "depart": [
+          ""
+        ],
+        "tests": {
+          "cas": [
+            {
+              "titre": "100 °C",
+              "code": "return (new Temperature(100))->toFahrenheit();",
+              "attendu": 212
+            },
+            {
+              "titre": "0 °C",
+              "code": "return (new Temperature(0))->toFahrenheit();",
+              "attendu": 32
+            },
+            {
+              "titre": "-40 °C",
+              "code": "return (new Temperature(-40))->toFahrenheit();",
+              "attendu": -40
+            }
+          ]
+        },
+        "indices": [
+          "Constructeur : `$this->celsius = $celsius;`.",
+          "La méthode utilise `$this->celsius` dans la formule.",
+          {
+            "texte": "Presque :",
+            "code": "return ___ * 9 / 5 + 32;"
+          }
+        ],
+        "solution": [
+          "class Temperature {",
+          "    private float $celsius;",
+          "",
+          "    public function __construct(float $celsius) {",
+          "        $this->celsius = $celsius;",
+          "    }",
+          "",
+          "    public function toFahrenheit(): float {",
+          "        return $this->celsius * 9 / 5 + 32;",
+          "    }",
+          "}",
+          ""
+        ],
+        "erreursTypiques": [
+          {
+            "code": "class Temperature {\n    private float $celsius;\n\n    public function __construct(float $celsius) {\n        $this->celsius = $celsius;\n    }\n\n    public function toFahrenheit(): float {\n        return $celsius * 9 / 5 + 32;\n    }\n}",
+            "attendu": "echec",
+            "diagnostic": "this-oublie"
+          }
+        ],
+        "explication": "Le constructeur range la valeur ; la méthode la relit avec `$this->celsius`."
+      },
+      {
+        "id": "u02-q15",
+        "type": "qcm",
+        "notions": [
+          "classe-objet"
+        ],
+        "question": "Que donne `$this->$name` dans une méthode ?",
+        "choix": [
+          "Une erreur : il y a un `$` en trop après la flèche",
+          "L'attribut `name`",
+          "La variable locale `$name`",
+          "Le nom de la classe"
+        ],
+        "bonne": 0,
+        "explication": "On écrit `$this->name`, sans `$` après la flèche."
+      },
+      {
+        "id": "u02-q16",
+        "type": "tri",
+        "notions": [
+          "classe-objet",
+          "constantes-classe"
+        ],
+        "mono": true,
+        "question": "Écriture correcte ou fautive ?",
+        "categories": [
+          "Correcte",
+          "Fautive"
+        ],
+        "items": [
+          [
+            "$movie->title",
+            0
+          ],
+          [
+            "$movie->$title",
+            1
+          ],
+          [
+            "self::MAX",
+            0
+          ],
+          [
+            "self::$MAX",
+            1
+          ],
+          [
+            "$this->describe()",
+            0
+          ],
+          [
+            "$movie.title",
+            1
+          ]
+        ],
+        "explication": "Flèche sans `$` pour les attributs, `::` sans `$` pour les constantes, parenthèses pour les méthodes."
+      }
+    ]
+  },
+  "boss": [
+    {
+      "id": "u02-b1",
+      "titre": "La classe Person",
+      "source": "Séance 2, exercice 1a",
+      "notions": [
+        "classe-objet",
+        "encapsulation",
+        "constructeur"
+      ],
+      "enonce": "Réalisez une classe `Person` avec PHP qui représente une personne avec les attributs `firstName`, `lastName`, `age` et `email`. Implémentez les méthodes suivantes :\n\n- `__construct(string $firstName, string $lastName, int $age, string $email)` : constructeur pour initialiser les attributs.\n- Tous les setters et getters pour les attributs `firstName`, `lastName`, `age` et `email`.\n- `getFullName()` : retourne le nom complet de la personne (prénom + nom).\n- `isAdult()` : retourne `true` si la personne est majeure (18 ans ou plus), `false` sinon.\n- `getEmailDomain()` : retourne le domaine de l'email (par exemple, pour `jane.doe@example.com`, retourne `example.com`). Vous pouvez utiliser la fonction `explode` de PHP pour séparer l'email par le caractère `@` et retourner la deuxième partie. Si l'email n'est pas valide, retournez une chaîne vide.\n\n*Pour l'appli : le nom complet est le prénom, une espace, puis le nom (« Jane Doe »).*",
+      "regles": [
+        "Utilisez la visibilité `private` pour les attributs.",
+        "Utilisez la visibilité `public` pour les méthodes.",
+        "Toutes les méthodes doivent avoir des types de retour et des types de paramètres appropriés."
+      ],
+      "depart": [
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Jane Doe : constructeur et getters",
+            "code": "$p = new Person('Jane', 'Doe', 25, 'jane.doe@example.com');\nreturn [$p->getFirstName(), $p->getLastName(), $p->getAge(), $p->getEmail()];",
+            "attendu": [
+              "Jane",
+              "Doe",
+              25,
+              "jane.doe@example.com"
+            ]
+          },
+          {
+            "titre": "Setters",
+            "code": "$p = new Person('Jane', 'Doe', 25, 'jane.doe@example.com');\n$p->setFirstName('Ada');\n$p->setLastName('Lovelace');\n$p->setAge(36);\n$p->setEmail('ada@math.org');\nreturn [$p->getFirstName(), $p->getLastName(), $p->getAge(), $p->getEmail()];",
+            "attendu": [
+              "Ada",
+              "Lovelace",
+              36,
+              "ada@math.org"
+            ]
+          },
+          {
+            "titre": "getFullName",
+            "code": "return (new Person('Jane', 'Doe', 25, 'jane.doe@example.com'))->getFullName();",
+            "attendu": "Jane Doe"
+          },
+          {
+            "titre": "getFullName, autre personne",
+            "code": "return (new Person('Grace', 'Hopper', 85, 'grace@navy.mil'))->getFullName();",
+            "attendu": "Grace Hopper"
+          },
+          {
+            "titre": "isAdult : 25 ans",
+            "code": "return (new Person('Jane', 'Doe', 25, 'jane.doe@example.com'))->isAdult();",
+            "attendu": true
+          },
+          {
+            "titre": "isAdult : 17 ans",
+            "code": "return (new Person('John', 'Smith', 17, 'john.smith'))->isAdult();",
+            "attendu": false
+          },
+          {
+            "titre": "isAdult : 18 ans tout juste",
+            "code": "return (new Person('Léa', 'Rey', 18, 'lea@rey.ch'))->isAdult();",
+            "attendu": true
+          },
+          {
+            "titre": "getEmailDomain",
+            "code": "return (new Person('Jane', 'Doe', 25, 'jane.doe@example.com'))->getEmailDomain();",
+            "attendu": "example.com"
+          },
+          {
+            "titre": "getEmailDomain, autre adresse",
+            "code": "return (new Person('Ana', 'Silva', 30, 'ana@heig-vd.ch'))->getEmailDomain();",
+            "attendu": "heig-vd.ch"
+          },
+          {
+            "titre": "Email invalide : chaîne vide",
+            "code": "return (new Person('John', 'Smith', 17, 'john.smith'))->getEmailDomain();",
+            "attendu": "",
+            "siEchec": "Sans `@`, `explode` donne un tableau d'UNE seule case : il n'y a pas de deuxième partie. Vérifie le nombre de parties (`count`) avant de retourner `$parts[1]`."
+          },
+          {
+            "titre": "Règle : attributs private",
+            "code": "foreach ((new ReflectionClass('Person'))->getProperties() as $p) {\n    if (!$p->isPrivate()) return $p->getName() . \" n'est pas private\";\n}\nreturn 'ok';",
+            "attendu": "ok",
+            "siEchec": "Tous les attributs doivent être `private`."
+          },
+          {
+            "titre": "Règle : méthodes public",
+            "code": "foreach ((new ReflectionClass('Person'))->getMethods() as $m) {\n    if (!$m->isPublic()) return $m->getName() . \"() n'est pas public\";\n}\nreturn 'ok';",
+            "attendu": "ok",
+            "siEchec": "Toutes les méthodes doivent être `public`."
+          },
+          {
+            "titre": "Règle : types partout",
+            "code": "foreach ((new ReflectionClass('Person'))->getMethods() as $m) {\n    if ($m->getName() !== '__construct' && $m->getName() !== '__destruct' && !$m->hasReturnType()) return $m->getName() . \"() n'a pas de type de retour\";\n    foreach ($m->getParameters() as $p) {\n        if (!$p->hasType()) return '$' . $p->getName() . ' de ' . $m->getName() . \"() n'a pas de type\";\n    }\n}\nreturn 'ok';",
+            "attendu": "ok",
+            "siEchec": "Chaque méthode a un type de retour (`: string`, `: int`, `: bool`, `: void` pour un setter) et chaque paramètre un type."
+          }
+        ]
+      },
+      "indices": [
+        "Commence par les quatre attributs privés et le constructeur ; puis écris les getters et setters un par un (un setter ne retourne rien : `: void`).",
+        "`isAdult` peut retourner directement la comparaison `$this->age >= 18`. Pour `getEmailDomain`, `explode(\"@\", $this->email)` donne un tableau : regarde combien de parties il contient.",
+        {
+          "texte": "Le squelette de getEmailDomain :",
+          "code": "$parts = explode(\"@\", $this->email);\nif (count($parts) === ___) {\n    return $parts[___];\n}\nreturn \"\";"
+        }
+      ],
+      "solution": [
+        "class Person {",
+        "    private string $firstName;",
+        "    private string $lastName;",
+        "    private int $age;",
+        "    private string $email;",
+        "",
+        "    public function __construct(string $firstName, string $lastName, int $age, string $email) {",
+        "        $this->firstName = $firstName;",
+        "        $this->lastName = $lastName;",
+        "        $this->age = $age;",
+        "        $this->email = $email;",
+        "    }",
+        "",
+        "    public function getFirstName(): string {",
+        "        return $this->firstName;",
+        "    }",
+        "",
+        "    public function setFirstName(string $firstName): void {",
+        "        $this->firstName = $firstName;",
+        "    }",
+        "",
+        "    public function getLastName(): string {",
+        "        return $this->lastName;",
+        "    }",
+        "",
+        "    public function setLastName(string $lastName): void {",
+        "        $this->lastName = $lastName;",
+        "    }",
+        "",
+        "    public function getAge(): int {",
+        "        return $this->age;",
+        "    }",
+        "",
+        "    public function setAge(int $age): void {",
+        "        $this->age = $age;",
+        "    }",
+        "",
+        "    public function getEmail(): string {",
+        "        return $this->email;",
+        "    }",
+        "",
+        "    public function setEmail(string $email): void {",
+        "        $this->email = $email;",
+        "    }",
+        "",
+        "    public function getFullName(): string {",
+        "        return $this->firstName . \" \" . $this->lastName;",
+        "    }",
+        "",
+        "    public function isAdult(): bool {",
+        "        return $this->age >= 18;",
+        "    }",
+        "",
+        "    public function getEmailDomain(): string {",
+        "        $parts = explode(\"@\", $this->email);",
+        "        if (count($parts) === 2) {",
+        "            return $parts[1];",
+        "        }",
+        "        return \"\";",
+        "    }",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "class Person {\n    private string $firstName;\n    private string $lastName;\n    private int $age;\n    private string $email;\n\n    public function __construct(string $firstName, string $lastName, int $age, string $email) {\n        $this->firstName = $firstName;\n        $this->lastName = $lastName;\n        $this->age = $age;\n        $this->email = $email;\n    }\n\n    public function getFirstName(): string {\n        return $this->firstName;\n    }\n\n    public function setFirstName(string $firstName): void {\n        $this->firstName = $firstName;\n    }\n\n    public function getLastName(): string {\n        return $this->lastName;\n    }\n\n    public function setLastName(string $lastName): void {\n        $this->lastName = $lastName;\n    }\n\n    public function getAge(): int {\n        return $this->age;\n    }\n\n    public function setAge(int $age): void {\n        $this->age = $age;\n    }\n\n    public function getEmail(): string {\n        return $this->email;\n    }\n\n    public function setEmail(string $email): void {\n        $this->email = $email;\n    }\n\n    public function getFullName(): string {\n        return $this->firstName . \" \" . $this->lastName;\n    }\n\n    public function isAdult(): bool {\n        return $this->age >= 18;\n    }\n\n    public function getEmailDomain(): string {\n        $parts = explode(\"@\", $this->email);\n        return $parts[1];\n    }\n}",
+          "attendu": "echec",
+          "diagnostic": "cle-inconnue"
+        },
+        {
+          "code": "class Person {\n    private string $firstName;\n    private string $lastName;\n    private int $age;\n    private string $email;\n\n    public function __construct(string $firstName, string $lastName, int $age, string $email) {\n        $this->firstName = $firstName;\n        $this->lastName = $lastName;\n        $this->age = $age;\n        $this->email = $email;\n    }\n\n    public function getFirstName(): string {\n        return $this->firstName;\n    }\n\n    public function setFirstName(string $firstName): void {\n        $this->firstName = $firstName;\n    }\n\n    public function getLastName(): string {\n        return $this->lastName;\n    }\n\n    public function setLastName(string $lastName): void {\n        $this->lastName = $lastName;\n    }\n\n    public function getAge(): int {\n        return $this->age;\n    }\n\n    public function setAge(int $age): void {\n        $this->age = $age;\n    }\n\n    public function getEmail(): string {\n        return $this->email;\n    }\n\n    public function setEmail(string $email): void {\n        $this->email = $email;\n    }\n\n    public function getFullName(): string {\n        return $this->firstName . \" \" . $this->lastName;\n    }\n\n    public function isAdult(): bool {\n        return $this->age > 18;\n    }\n\n    public function getEmailDomain(): string {\n        $parts = explode(\"@\", $this->email);\n        if (count($parts) === 2) {\n            return $parts[1];\n        }\n        return \"\";\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "class Person {\n    public string $firstName;\n    private string $lastName;\n    private int $age;\n    private string $email;\n\n    public function __construct(string $firstName, string $lastName, int $age, string $email) {\n        $this->firstName = $firstName;\n        $this->lastName = $lastName;\n        $this->age = $age;\n        $this->email = $email;\n    }\n\n    public function getFirstName(): string {\n        return $this->firstName;\n    }\n\n    public function setFirstName(string $firstName): void {\n        $this->firstName = $firstName;\n    }\n\n    public function getLastName(): string {\n        return $this->lastName;\n    }\n\n    public function setLastName(string $lastName): void {\n        $this->lastName = $lastName;\n    }\n\n    public function getAge(): int {\n        return $this->age;\n    }\n\n    public function setAge(int $age): void {\n        $this->age = $age;\n    }\n\n    public function getEmail(): string {\n        return $this->email;\n    }\n\n    public function setEmail(string $email): void {\n        $this->email = $email;\n    }\n\n    public function getFullName(): string {\n        return $this->firstName . \" \" . $this->lastName;\n    }\n\n    public function isAdult(): bool {\n        return $this->age >= 18;\n    }\n\n    public function getEmailDomain(): string {\n        $parts = explode(\"@\", $this->email);\n        if (count($parts) === 2) {\n            return $parts[1];\n        }\n        return \"\";\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "class Person {\n    private string $firstName;\n    private string $lastName;\n    private int $age;\n    private string $email;\n\n    public function __construct(string $firstName, string $lastName, int $age, string $email) {\n        $this->firstName = $firstName;\n        $this->lastName = $lastName;\n        $this->age = $age;\n        $this->email = $email;\n    }\n\n    public function getFirstName(): string {\n        return $this->firstName;\n    }\n\n    public function setFirstName(string $firstName): void {\n        $this->firstName = $firstName;\n    }\n\n    public function getLastName(): string {\n        return $this->lastName;\n    }\n\n    public function setLastName(string $lastName): void {\n        $this->lastName = $lastName;\n    }\n\n    public function getAge(): int {\n        return $this->age;\n    }\n\n    public function setAge(int $age): void {\n        $this->age = $age;\n    }\n\n    public function getEmail(): string {\n        return $this->email;\n    }\n\n    public function setEmail(string $email): void {\n        $this->email = $email;\n    }\n\n    public function getFullName(): string {\n        return $this->firstName . \" \" . $this->lastName;\n    }\n\n    public function isAdult() {\n        return $this->age >= 18;\n    }\n\n    public function getEmailDomain(): string {\n        $parts = explode(\"@\", $this->email);\n        if (count($parts) === 2) {\n            return $parts[1];\n        }\n        return \"\";\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "class Person {\n    private string $firstName;\n    private string $lastName;\n    private int $age;\n    private string $email;\n\n    public function __construct(string $firstName, string $lastName, int $age, string $email) {\n        $this->firstName = $firstName;\n        $this->lastName = $lastName;\n        $this->age = $age;\n        $this->email = $email;\n    }\n\n    public function getFirstName(): string {\n        return $this->firstName;\n    }\n\n    public function setFirstName(string $firstName): void {\n        $this->firstName = $firstName;\n    }\n\n    public function getLastName(): string {\n        return $this->lastName;\n    }\n\n    public function setLastName(string $lastName): void {\n        $this->lastName = $lastName;\n    }\n\n    public function getAge(): int {\n        return $this->age;\n    }\n\n    public function setAge(int $age): void {\n        $this->age = $age;\n    }\n\n    public function getEmail(): string {\n        return $this->email;\n    }\n\n    public function setEmail(string $email): void {\n        $this->email = $email;\n    }\n\n    public function getFullName(): string {\n        return $this->firstName . $this->lastName;\n    }\n\n    public function isAdult(): bool {\n        return $this->age >= 18;\n    }\n\n    public function getEmailDomain(): string {\n        $parts = explode(\"@\", $this->email);\n        if (count($parts) === 2) {\n            return $parts[1];\n        }\n        return \"\";\n    }\n}",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "Encapsulation complète : attributs privés, accès par getters et setters typés, et deux méthodes qui calculent à partir des attributs."
+    },
+    {
+      "id": "u02-b2",
+      "titre": "Jane et John",
+      "source": "Séance 2, exercice 1b",
+      "notions": [
+        "classe-objet",
+        "constructeur"
+      ],
+      "enonce": "En utilisant la classe `Person` créée dans l'exercice précédent (dans le fichier `Person.php`, déjà écrit), instanciez deux objets `Person` avec les données suivantes :\n\n- Personne 1 : prénom `Jane`, nom `Doe`, âge `25`, email `jane.doe@example.com`.\n- Personne 2 : prénom `John`, nom `Smith`, âge `17`, email `john.smith`.\n\nEnsuite, effectuez les opérations suivantes :\n\n- Affichez le nom complet de chaque personne en utilisant la méthode `getFullName()`.\n- Vérifiez si chaque personne est majeure en utilisant la méthode `isAdult()`.\n- Affichez le e-mail de chaque personne en utilisant la méthode `getEmail()`.\n- Affichez le domaine de l'email de chaque personne en utilisant la méthode `getEmailDomain()`. Pour la personne avec un email invalide, affichez un message indiquant que l'email est invalide.\n\n*Pour l'appli, affiche pour chaque personne ces quatre lignes (chacune suivie de `<br>`) : `Full Name: Jane Doe`, `Is Adult: Yes` (ou `No`), `Email: jane.doe@example.com`, `Email Domain: example.com` (ou `Email Domain: Invalid`).*",
+      "fichiers": {
+        "Person.php": [
+          "<?php",
+          "class Person {",
+          "    private string $firstName;",
+          "    private string $lastName;",
+          "    private int $age;",
+          "    private string $email;",
+          "",
+          "    public function __construct(string $firstName, string $lastName, int $age, string $email) {",
+          "        $this->firstName = $firstName;",
+          "        $this->lastName = $lastName;",
+          "        $this->age = $age;",
+          "        $this->email = $email;",
+          "    }",
+          "",
+          "    public function getFirstName(): string {",
+          "        return $this->firstName;",
+          "    }",
+          "",
+          "    public function setFirstName(string $firstName): void {",
+          "        $this->firstName = $firstName;",
+          "    }",
+          "",
+          "    public function getLastName(): string {",
+          "        return $this->lastName;",
+          "    }",
+          "",
+          "    public function setLastName(string $lastName): void {",
+          "        $this->lastName = $lastName;",
+          "    }",
+          "",
+          "    public function getAge(): int {",
+          "        return $this->age;",
+          "    }",
+          "",
+          "    public function setAge(int $age): void {",
+          "        $this->age = $age;",
+          "    }",
+          "",
+          "    public function getEmail(): string {",
+          "        return $this->email;",
+          "    }",
+          "",
+          "    public function setEmail(string $email): void {",
+          "        $this->email = $email;",
+          "    }",
+          "",
+          "    public function getFullName(): string {",
+          "        return $this->firstName . \" \" . $this->lastName;",
+          "    }",
+          "",
+          "    public function isAdult(): bool {",
+          "        return $this->age >= 18;",
+          "    }",
+          "",
+          "    public function getEmailDomain(): string {",
+          "        $parts = explode(\"@\", $this->email);",
+          "        if (count($parts) === 2) {",
+          "            return $parts[1];",
+          "        }",
+          "        return \"\";",
+          "    }",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        "require_once __DIR__ . '/Person.php';",
+        "",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Affichage attendu",
+            "sortie": [
+              "Full Name: Jane Doe",
+              "Is Adult: Yes",
+              "Email: jane.doe@example.com",
+              "Email Domain: example.com",
+              "Full Name: John Smith",
+              "Is Adult: No",
+              "Email: john.smith",
+              "Email Domain: Invalid"
+            ]
+          }
+        ],
+        "obligatoire": [
+          "->getFullName",
+          "->isAdult",
+          "->getEmail",
+          "->getEmailDomain"
+        ]
+      },
+      "indices": [
+        "Deux `new Person(…)`, avec les données dans l'ordre du constructeur : prénom, nom, âge, email.",
+        "`isAdult()` donne un booléen : choisis « Yes » ou « No » avec un `if` (ou l'opérateur `? :`). Pour le domaine, une chaîne vide signifie « invalide » : teste-la avec `empty(…)`.",
+        {
+          "texte": "Pour une personne :",
+          "code": "echo \"Full Name: \" . $jane->getFullName() . \"<br>\";\necho \"Is Adult: \" . ($jane->isAdult() ? \"Yes\" : \"No\") . \"<br>\";\n// …\n$domain = $jane->getEmailDomain();\nif (empty($domain)) {\n    $domain = ___;\n}"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "require_once __DIR__ . '/Person.php';",
+        "",
+        "$janeDoe = new Person(\"Jane\", \"Doe\", 25, \"jane.doe@example.com\");",
+        "$johnSmith = new Person(\"John\", \"Smith\", 17, \"john.smith\");",
+        "",
+        "foreach ([$janeDoe, $johnSmith] as $person) {",
+        "    echo \"Full Name: \" . $person->getFullName() . \"<br>\";",
+        "    echo \"Is Adult: \" . ($person->isAdult() ? \"Yes\" : \"No\") . \"<br>\";",
+        "    echo \"Email: \" . $person->getEmail() . \"<br>\";",
+        "    $domain = $person->getEmailDomain();",
+        "    if (empty($domain)) {",
+        "        $domain = \"Invalid\";",
+        "    }",
+        "    echo \"Email Domain: \" . $domain . \"<br>\";",
+        "}",
+        ""
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/Person.php';\n\n$janeDoe = new Person(\"Jane\", \"Doe\", 25, \"jane.doe@example.com\");\n$johnSmith = new Person(\"John\", \"Smith\", 17, \"john.smith\");\n\nforeach ([$janeDoe, $johnSmith] as $person) {\n    echo \"Full Name: \" . $person->getFullName() . \"<br>\";\n    echo \"Is Adult: \" . $person->isAdult() . \"<br>\";\n    echo \"Email: \" . $person->getEmail() . \"<br>\";\n    echo \"Email Domain: \" . $person->getEmailDomain() . \"<br>\";\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/Person.php';\n\n$janeDoe = new Person(\"Jane\", \"Doe\", \"jane.doe@example.com\", 25);",
+          "attendu": "erreur",
+          "diagnostic": "type-argument"
+        },
+        {
+          "code": "<?php\n$janeDoe = new Person(\"Jane\", \"Doe\", 25, \"jane.doe@example.com\");",
+          "attendu": "erreur",
+          "diagnostic": "classe-inconnue"
+        }
+      ],
+      "explication": "`echo true` affiche « 1 » et `echo false` rien du tout : pour un affichage lisible, on traduit le booléen en « Yes » / « No »."
+    },
+    {
+      "id": "u02-b3",
+      "titre": "La classe Vehicle",
+      "source": "Séance 2, exercice 2a",
+      "notions": [
+        "encapsulation",
+        "constructeur",
+        "constantes-classe"
+      ],
+      "enonce": "Réalisez une classe `Vehicle` avec PHP qui représente un véhicule avec les attributs `numberOfWheels`, `color`, `brand` et `model`.\n\nImplémentez les méthodes suivantes :\n\n- `__construct($numberOfWheels, $color, $brand, $model)` : constructeur pour initialiser les attributs.\n- Tous les setters et getters pour les attributs `numberOfWheels`, `color`, `brand` et `model`.\n- `getDescription()` : retourne une description du véhicule sous la forme `\"Brand Model, Color, Number of wheels\"`. Par exemple, pour un véhicule de marque `Toyota`, modèle `Corolla`, couleur `Red` et 4 roues, la méthode retourne `\"Toyota Corolla, Red, 4 wheels\"`.\n- `type()` : retourne le type de véhicule en fonction du nombre de roues : 2 → `\"Motorcycle\"` ; 4 → `\"Car\"` ; plus de 4 → `\"Truck\"` ; sinon `\"Unknown\"`.",
+      "regles": [
+        "Utilisez la visibilité `private` pour les attributs.",
+        "Utilisez la visibilité `public` pour les méthodes.",
+        "Utilisez une ou des constantes pour définir les marques de véhicules (par exemple, `TOYOTA`, `YAMAHA`, etc.) et/ou les types de véhicule si vous le souhaitez. Astuce : vous pouvez utiliser la syntaxe `self::` pour accéder aux constantes de la classe depuis l'intérieur de la classe, notamment dans la méthode `type()`."
+      ],
+      "depart": [
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Toyota Corolla : getters",
+            "code": "$v = new Vehicle(4, 'Red', 'Toyota', 'Corolla');\nreturn [$v->getNumberOfWheels(), $v->getColor(), $v->getBrand(), $v->getModel()];",
+            "attendu": [
+              4,
+              "Red",
+              "Toyota",
+              "Corolla"
+            ]
+          },
+          {
+            "titre": "Setters",
+            "code": "$v = new Vehicle(4, 'Red', 'Toyota', 'Corolla');\n$v->setNumberOfWheels(3);\n$v->setColor('Yellow');\n$v->setBrand('Piaggio');\n$v->setModel('Ape');\nreturn [$v->getNumberOfWheels(), $v->getColor(), $v->getBrand(), $v->getModel()];",
+            "attendu": [
+              3,
+              "Yellow",
+              "Piaggio",
+              "Ape"
+            ]
+          },
+          {
+            "titre": "getDescription (énoncé)",
+            "code": "return (new Vehicle(4, 'Red', 'Toyota', 'Corolla'))->getDescription();",
+            "attendu": "Toyota Corolla, Red, 4 wheels"
+          },
+          {
+            "titre": "getDescription, autre véhicule",
+            "code": "return (new Vehicle(2, 'Black', 'Yamaha', 'MT-07'))->getDescription();",
+            "attendu": "Yamaha MT-07, Black, 2 wheels"
+          },
+          {
+            "titre": "type : 2 roues",
+            "code": "return (new Vehicle(2, 'Black', 'Yamaha', 'MT-07'))->type();",
+            "attendu": "Motorcycle"
+          },
+          {
+            "titre": "type : 4 roues",
+            "code": "return (new Vehicle(4, 'Red', 'Toyota', 'Corolla'))->type();",
+            "attendu": "Car"
+          },
+          {
+            "titre": "type : 6 roues",
+            "code": "return (new Vehicle(6, 'Blue', 'Volvo', 'FH16'))->type();",
+            "attendu": "Truck"
+          },
+          {
+            "titre": "type : 5 roues (plus de 4)",
+            "code": "return (new Vehicle(5, 'White', 'Iveco', 'Daily'))->type();",
+            "attendu": "Truck"
+          },
+          {
+            "titre": "type : 0 roue",
+            "code": "return (new Vehicle(0, 'Green', 'UFO', 'X-2000'))->type();",
+            "attendu": "Unknown"
+          },
+          {
+            "titre": "type : 3 roues",
+            "code": "return (new Vehicle(3, 'Yellow', 'Piaggio', 'Ape'))->type();",
+            "attendu": "Unknown"
+          },
+          {
+            "titre": "Règle : des constantes",
+            "code": "return count((new ReflectionClass('Vehicle'))->getConstants()) > 0;",
+            "attendu": true,
+            "siEchec": "Déclare au moins une constante dans la classe (par exemple `const TYPE_CAR = \"Car\";`) et utilise-la avec `self::`."
+          },
+          {
+            "titre": "Règle : attributs private",
+            "code": "foreach ((new ReflectionClass('Vehicle'))->getProperties() as $p) {\n    if (!$p->isPrivate()) return $p->getName() . \" n'est pas private\";\n}\nreturn 'ok';",
+            "attendu": "ok",
+            "siEchec": "Tous les attributs doivent être `private`."
+          },
+          {
+            "titre": "Règle : méthodes public",
+            "code": "foreach ((new ReflectionClass('Vehicle'))->getMethods() as $m) {\n    if (!$m->isPublic()) return $m->getName() . \"() n'est pas public\";\n}\nreturn 'ok';",
+            "attendu": "ok",
+            "siEchec": "Toutes les méthodes doivent être `public`."
+          }
+        ]
+      },
+      "indices": [
+        "Commence par les constantes (types de véhicules), les quatre attributs privés et le constructeur ; puis les getters et setters.",
+        "`getDescription` colle les attributs avec des espaces, des virgules et « wheels » ; `type` teste le nombre de roues avec `if / elseif / else` (2, puis 4, puis plus de 4).",
+        {
+          "texte": "Le squelette de type() :",
+          "code": "if ($this->numberOfWheels === 2) {\n    return self::TYPE_MOTORCYCLE;\n} elseif (___) {\n    return ___;\n} elseif (___) {\n    return ___;\n}\nreturn self::TYPE_UNKNOWN;"
+        }
+      ],
+      "solution": [
+        "class Vehicle {",
+        "    const TYPE_MOTORCYCLE = \"Motorcycle\";",
+        "    const TYPE_CAR = \"Car\";",
+        "    const TYPE_TRUCK = \"Truck\";",
+        "    const TYPE_UNKNOWN = \"Unknown\";",
+        "",
+        "    private int $numberOfWheels;",
+        "    private string $color;",
+        "    private string $brand;",
+        "    private string $model;",
+        "",
+        "    public function __construct(int $numberOfWheels, string $color, string $brand, string $model) {",
+        "        $this->numberOfWheels = $numberOfWheels;",
+        "        $this->color = $color;",
+        "        $this->brand = $brand;",
+        "        $this->model = $model;",
+        "    }",
+        "",
+        "    public function getNumberOfWheels(): int {",
+        "        return $this->numberOfWheels;",
+        "    }",
+        "",
+        "    public function setNumberOfWheels(int $numberOfWheels): void {",
+        "        $this->numberOfWheels = $numberOfWheels;",
+        "    }",
+        "",
+        "    public function getColor(): string {",
+        "        return $this->color;",
+        "    }",
+        "",
+        "    public function setColor(string $color): void {",
+        "        $this->color = $color;",
+        "    }",
+        "",
+        "    public function getBrand(): string {",
+        "        return $this->brand;",
+        "    }",
+        "",
+        "    public function setBrand(string $brand): void {",
+        "        $this->brand = $brand;",
+        "    }",
+        "",
+        "    public function getModel(): string {",
+        "        return $this->model;",
+        "    }",
+        "",
+        "    public function setModel(string $model): void {",
+        "        $this->model = $model;",
+        "    }",
+        "",
+        "    public function getDescription(): string {",
+        "        return $this->brand . \" \" . $this->model . \", \" . $this->color . \", \" . $this->numberOfWheels . \" wheels\";",
+        "    }",
+        "",
+        "    public function type(): string {",
+        "        if ($this->numberOfWheels === 2) {",
+        "            return self::TYPE_MOTORCYCLE;",
+        "        } elseif ($this->numberOfWheels === 4) {",
+        "            return self::TYPE_CAR;",
+        "        } elseif ($this->numberOfWheels > 4) {",
+        "            return self::TYPE_TRUCK;",
+        "        }",
+        "        return self::TYPE_UNKNOWN;",
+        "    }",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "class Vehicle {\n    const TYPE_MOTORCYCLE = \"Motorcycle\";\n    const TYPE_CAR = \"Car\";\n    const TYPE_TRUCK = \"Truck\";\n    const TYPE_UNKNOWN = \"Unknown\";\n\n    private int $numberOfWheels;\n    private string $color;\n    private string $brand;\n    private string $model;\n\n    public function __construct(int $numberOfWheels, string $color, string $brand, string $model) {\n        $this->numberOfWheels = $numberOfWheels;\n        $this->color = $color;\n        $this->brand = $brand;\n        $this->model = $model;\n    }\n\n    public function getNumberOfWheels(): int {\n        return $this->numberOfWheels;\n    }\n\n    public function setNumberOfWheels(int $numberOfWheels): void {\n        $this->numberOfWheels = $numberOfWheels;\n    }\n\n    public function getColor(): string {\n        return $this->color;\n    }\n\n    public function setColor(string $color): void {\n        $this->color = $color;\n    }\n\n    public function getBrand(): string {\n        return $this->brand;\n    }\n\n    public function setBrand(string $brand): void {\n        $this->brand = $brand;\n    }\n\n    public function getModel(): string {\n        return $this->model;\n    }\n\n    public function setModel(string $model): void {\n        $this->model = $model;\n    }\n\n    public function getDescription(): string {\n        return $this->brand . \" \" . $this->model . \", \" . $this->color . \", \" . $this->numberOfWheels . \" wheels\";\n    }\n\n    public function type(): string {\n        if ($this->numberOfWheels === 2) {\n            return self::TYPE_MOTORCYCLE;\n        } elseif ($this->numberOfWheels === 4) {\n            return self::TYPE_CAR;\n        } elseif ($this->numberOfWheels >= 6) {\n            return self::TYPE_TRUCK;\n        }\n        return self::TYPE_UNKNOWN;\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "class Vehicle {\n    const TYPE_MOTORCYCLE = \"Motorcycle\";\n    const TYPE_CAR = \"Car\";\n    const TYPE_TRUCK = \"Truck\";\n    const TYPE_UNKNOWN = \"Unknown\";\n\n    private int $numberOfWheels;\n    private string $color;\n    private string $brand;\n    private string $model;\n\n    public function __construct(int $numberOfWheels, string $color, string $brand, string $model) {\n        $this->numberOfWheels = $numberOfWheels;\n        $this->color = $color;\n        $this->brand = $brand;\n        $this->model = $model;\n    }\n\n    public function getNumberOfWheels(): int {\n        return $this->numberOfWheels;\n    }\n\n    public function setNumberOfWheels(int $numberOfWheels): void {\n        $this->numberOfWheels = $numberOfWheels;\n    }\n\n    public function getColor(): string {\n        return $this->color;\n    }\n\n    public function setColor(string $color): void {\n        $this->color = $color;\n    }\n\n    public function getBrand(): string {\n        return $this->brand;\n    }\n\n    public function setBrand(string $brand): void {\n        $this->brand = $brand;\n    }\n\n    public function getModel(): string {\n        return $this->model;\n    }\n\n    public function setModel(string $model): void {\n        $this->model = $model;\n    }\n\n    public function getDescription(): string {\n        return $this->brand . \" \" . $this->model . \", \" . $this->color . \", \" . $this->numberOfWheels . \" roues\";\n    }\n\n    public function type(): string {\n        if ($this->numberOfWheels === 2) {\n            return self::TYPE_MOTORCYCLE;\n        } elseif ($this->numberOfWheels === 4) {\n            return self::TYPE_CAR;\n        } elseif ($this->numberOfWheels > 4) {\n            return self::TYPE_TRUCK;\n        }\n        return self::TYPE_UNKNOWN;\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "class Vehicle {\n    const TYPE_MOTORCYCLE = \"Motorcycle\";\n    const TYPE_CAR = \"Car\";\n    const TYPE_TRUCK = \"Truck\";\n    const TYPE_UNKNOWN = \"Unknown\";\n\n    private int $numberOfWheels;\n    private string $color;\n    private string $brand;\n    private string $model;\n\n    public function __construct(int $numberOfWheels, string $color, string $brand, string $model) {\n        $this->numberOfWheels = $numberOfWheels;\n        $this->color = $color;\n        $this->brand = $brand;\n        $this->model = $model;\n    }\n\n    public function getNumberOfWheels(): int {\n        return $this->numberOfWheels;\n    }\n\n    public function setNumberOfWheels(int $numberOfWheels): void {\n        $this->numberOfWheels = $numberOfWheels;\n    }\n\n    public function getColor(): string {\n        return $this->color;\n    }\n\n    public function setColor(string $color): void {\n        $this->color = $color;\n    }\n\n    public function getBrand(): string {\n        return $this->brand;\n    }\n\n    public function setBrand(string $brand): void {\n        $this->brand = $brand;\n    }\n\n    public function getModel(): string {\n        return $this->model;\n    }\n\n    public function setModel(string $model): void {\n        $this->model = $model;\n    }\n\n    public function getDescription(): string {\n        return $this->brand . \" \" . $this->model . \", \" . $this->color . \", \" . $this->numberOfWheels . \" wheels\";\n    }\n\n    public function type(): string {\n        if ($this->numberOfWheels === 2) {\n            return TYPE_MOTORCYCLE;\n        } elseif ($this->numberOfWheels === 4) {\n            return self::TYPE_CAR;\n        } elseif ($this->numberOfWheels > 4) {\n            return self::TYPE_TRUCK;\n        }\n        return self::TYPE_UNKNOWN;\n    }\n}",
+          "attendu": "echec",
+          "diagnostic": "constante-inconnue"
+        }
+      ],
+      "explication": "Les constantes donnent un nom aux valeurs fixes (`self::TYPE_CAR`) ; `type()` choisit selon le nombre de roues, sans oublier le cas « sinon »."
+    },
+    {
+      "id": "u02-b4",
+      "titre": "Le garage",
+      "source": "Séance 2, exercice 2b",
+      "notions": [
+        "classe-objet",
+        "constructeur"
+      ],
+      "enonce": "En utilisant la classe `Vehicle` créée dans l'exercice précédent (fichier `Vehicle.php`, déjà écrit), instanciez les objets `Vehicle` suivants :\n\n- Véhicule 1 : 4 roues, couleur `Red`, marque `Toyota`, modèle `Corolla`.\n- Véhicule 2 : 2 roues, couleur `Black`, marque `Yamaha`, modèle `MT-07`.\n- Véhicule 3 : 6 roues, couleur `Blue`, marque `Volvo`, modèle `FH16`.\n- Véhicule 4 : 0 roue, couleur `Green`, marque `UFO`, modèle `X-2000`.\n\nEnsuite, affichez la description de chaque véhicule en utilisant la méthode `getDescription()`, et son type en utilisant la méthode `type()`.\n\n*Pour l'appli, une ligne par véhicule (suivie de `<br>`) : `Toyota Corolla, Red, 4 wheels - Type: Car`.*",
+      "fichiers": {
+        "Vehicle.php": [
+          "<?php",
+          "class Vehicle {",
+          "    const TYPE_MOTORCYCLE = \"Motorcycle\";",
+          "    const TYPE_CAR = \"Car\";",
+          "    const TYPE_TRUCK = \"Truck\";",
+          "    const TYPE_UNKNOWN = \"Unknown\";",
+          "",
+          "    private int $numberOfWheels;",
+          "    private string $color;",
+          "    private string $brand;",
+          "    private string $model;",
+          "",
+          "    public function __construct(int $numberOfWheels, string $color, string $brand, string $model) {",
+          "        $this->numberOfWheels = $numberOfWheels;",
+          "        $this->color = $color;",
+          "        $this->brand = $brand;",
+          "        $this->model = $model;",
+          "    }",
+          "",
+          "    public function getNumberOfWheels(): int {",
+          "        return $this->numberOfWheels;",
+          "    }",
+          "",
+          "    public function setNumberOfWheels(int $numberOfWheels): void {",
+          "        $this->numberOfWheels = $numberOfWheels;",
+          "    }",
+          "",
+          "    public function getColor(): string {",
+          "        return $this->color;",
+          "    }",
+          "",
+          "    public function setColor(string $color): void {",
+          "        $this->color = $color;",
+          "    }",
+          "",
+          "    public function getBrand(): string {",
+          "        return $this->brand;",
+          "    }",
+          "",
+          "    public function setBrand(string $brand): void {",
+          "        $this->brand = $brand;",
+          "    }",
+          "",
+          "    public function getModel(): string {",
+          "        return $this->model;",
+          "    }",
+          "",
+          "    public function setModel(string $model): void {",
+          "        $this->model = $model;",
+          "    }",
+          "",
+          "    public function getDescription(): string {",
+          "        return $this->brand . \" \" . $this->model . \", \" . $this->color . \", \" . $this->numberOfWheels . \" wheels\";",
+          "    }",
+          "",
+          "    public function type(): string {",
+          "        if ($this->numberOfWheels === 2) {",
+          "            return self::TYPE_MOTORCYCLE;",
+          "        } elseif ($this->numberOfWheels === 4) {",
+          "            return self::TYPE_CAR;",
+          "        } elseif ($this->numberOfWheels > 4) {",
+          "            return self::TYPE_TRUCK;",
+          "        }",
+          "        return self::TYPE_UNKNOWN;",
+          "    }",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        "require_once __DIR__ . '/Vehicle.php';",
+        "",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Affichage attendu",
+            "sortie": [
+              "Toyota Corolla, Red, 4 wheels - Type: Car",
+              "Yamaha MT-07, Black, 2 wheels - Type: Motorcycle",
+              "Volvo FH16, Blue, 6 wheels - Type: Truck",
+              "UFO X-2000, Green, 0 wheels - Type: Unknown"
+            ]
+          }
+        ],
+        "obligatoire": [
+          "->getDescription",
+          "->type"
+        ]
+      },
+      "indices": [
+        "Quatre `new Vehicle(…)` : nombre de roues, couleur, marque, modèle (l'ordre du constructeur).",
+        "Range les quatre véhicules dans un tableau, puis un `foreach` affiche chacun.",
+        {
+          "texte": "La ligne d'affichage :",
+          "code": "echo $vehicle->getDescription() . \" - Type: \" . ___ . \"<br>\";"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "require_once __DIR__ . '/Vehicle.php';",
+        "",
+        "$vehicles = [",
+        "    new Vehicle(4, \"Red\", \"Toyota\", \"Corolla\"),",
+        "    new Vehicle(2, \"Black\", \"Yamaha\", \"MT-07\"),",
+        "    new Vehicle(6, \"Blue\", \"Volvo\", \"FH16\"),",
+        "    new Vehicle(0, \"Green\", \"UFO\", \"X-2000\"),",
+        "];",
+        "",
+        "foreach ($vehicles as $vehicle) {",
+        "    echo $vehicle->getDescription() . \" - Type: \" . $vehicle->type() . \"<br>\";",
+        "}",
+        ""
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/Vehicle.php';\n\n$toyota = new Vehicle(\"Red\", 4, \"Toyota\", \"Corolla\");",
+          "attendu": "erreur",
+          "diagnostic": "type-argument"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/Vehicle.php';\n\n$vehicles = [new Vehicle(4, \"Red\", \"Toyota\", \"Corolla\"), new Vehicle(2, \"Black\", \"Yamaha\", \"MT-07\"), new Vehicle(6, \"Blue\", \"Volvo\", \"FH16\"), new Vehicle(0, \"Green\", \"UFO\", \"X-2000\")];\nforeach ($vehicles as $vehicle) {\n    echo $vehicle->getDescription() . \" - Type: \" . $vehicle->type();\n}",
+          "attendu": "echec",
+          "diagnostic": "lignes-collees"
+        }
+      ],
+      "explication": "Un tableau d'objets et une boucle : le même code affiche n'importe quel nombre de véhicules."
+    }
+  ],
+  "parcours": [
+    "u02-l1",
+    "u02-l2",
+    "u02-l3",
+    "jeu:u02-vocabulaire",
+    "u02-l4",
+    "u02-l5",
+    "quiz",
+    "boss:u02-b1",
+    "boss:u02-b2",
+    "boss:u02-b3",
+    "boss:u02-b4"
+  ]
+}
