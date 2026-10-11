@@ -47,7 +47,8 @@
     "content/unites/u03-heritage.json",
     "content/unites/u04-pdo.json",
     "content/unites/u05-interface.json",
-    "content/unites/u06-securite.json"
+    "content/unites/u06-securite.json",
+    "content/unites/u07-cookies.json"
   ],
   "aVenir": [],
   "rangs": [

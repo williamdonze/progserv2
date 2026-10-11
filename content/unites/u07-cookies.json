@@ -1,0 +1,1846 @@
+{
+  "id": "u07",
+  "titre": "Cookies et i18n",
+  "sousTitre": "Séance 6 · setcookie, $_COOKIE, préférences, traductions",
+  "objectif": "Stocker et relire des préférences dans des cookies, les supprimer, s'en méfier comme de toute saisie, et afficher une application en plusieurs langues.",
+  "icone": "🍪",
+  "fiches": [
+    {
+      "id": "cookies",
+      "titre": "Les cookies",
+      "icone": "🍪",
+      "resume": "Un cookie est un petit fichier texte stocké par le navigateur. Le serveur l'envoie dans l'en-tête HTTP `Set-Cookie` ; le navigateur le renvoie ensuite automatiquement (en-tête `Cookie`) à chaque requête vers le même domaine.",
+      "analogie": "**Le ticket de la Poste.** Le serveur donne un ticket au client (`Set-Cookie`) ; le client le garde dans sa poche (le navigateur) et le montre à chaque passage (`Cookie`). Ce qui est écrit sur le ticket voyage avec le client : n'importe qui peut le lire ou le modifier.",
+      "texte": "On y stocke par exemple : les préférences de langue, les sessions de connexion, le thème (clair/sombre), le panier d'achat, des identifiants de suivi…\n\nUn cookie a une **date d'expiration** : il est **persistant** (gardé jusqu'à cette date) ou **de session** (supprimé à la fermeture du navigateur).\n\nOptions : domaine et chemin de validité, cookie sécurisé (transmis seulement en HTTPS), durée de vie, `HttpOnly` (inaccessible au JavaScript)…\n\nLes outils de développement du navigateur (onglet « Application » ou « Stockage ») permettent de voir, modifier et supprimer les cookies.",
+      "pieges": [
+        "Un cookie est stocké chez le client : il peut être lu et modifié. On n'y met rien de secret, et on traite sa valeur comme une saisie."
+      ]
+    },
+    {
+      "id": "cookies-php",
+      "titre": "setcookie() et $_COOKIE",
+      "icone": "⚙",
+      "resume": "`setcookie('language', 'fr', time() + 30 * 24 * 60 * 60, '/')` crée un cookie pour 30 jours. On le lit à la requête suivante dans `$_COOKIE['language']`. Pour le supprimer : le recréer avec une date passée (`time() - 3600`) ou une valeur vide.",
+      "texte": "- `time()` : le nombre de secondes depuis le 1er janvier 1970 ; `time() + 3600` = dans une heure.\n- `setcookie()` envoie un en-tête HTTP : à appeler **avant tout affichage** (echo, HTML).\n- Lire : `isset($_COOKIE['language'])` ou `$_COOKIE['language'] ?? 'en'`.\n- Le cookie créé n'apparaît dans `$_COOKIE` qu'à la **requête suivante** : d'où la redirection (`header('Location: index.php'); exit;`) après l'avoir créé.\n- Supprimer : `setcookie('language', '', time() - 3600, '/');` ou `setcookie('language', '', 0, '/');`.\n- Afficher une valeur de cookie : avec `htmlspecialchars()`, comme toute saisie.",
+      "exemples": [
+        {
+          "titre": "Lire un cookie (requête avec le cookie language=fr)",
+          "code": [
+            "if (isset($_COOKIE['language'])) {",
+            "    echo \"La langue préférée est : \" . htmlspecialchars($_COOKIE['language']);",
+            "} else {",
+            "    echo \"Aucune langue préférée définie.\";",
+            "}",
+            ""
+          ],
+          "requete": {
+            "cookies": {
+              "language": "fr"
+            }
+          }
+        }
+      ],
+      "pieges": [
+        "`setcookie()` après un `echo` : « headers already sent ».",
+        "Juste après `setcookie()`, `$_COOKIE` ne contient pas encore la nouvelle valeur."
+      ]
+    },
+    {
+      "id": "i18n",
+      "titre": "Gestion multilingue (i18n)",
+      "icone": "文",
+      "resume": "i18n = internationalization (18 lettres entre le i et le n). Dans le cours : la langue choisie est gardée dans un cookie, et les textes viennent de tableaux de traductions (un fichier par langue) : `$translations[$language]['welcome']`.",
+      "texte": "L'i18n implique de traduire les textes, d'adapter les formats (dates, nombres) et parfois les contenus propres à une culture. On peut utiliser des fichiers de traduction (l'approche du cours), une base de données, des services externes, ou des bibliothèques.\n\n``` $translations = [ 'en' => ['welcome' => 'Welcome', 'hello' => 'Hello'], 'fr' => ['welcome' => 'Bienvenue', 'hello' => 'Bonjour'], ];\n\n$language = DEFAULT_LANGUAGE; if (isset($_COOKIE['language']) && array_key_exists($_COOKIE['language'], $translations)) { $language = $_COOKIE['language']; } echo $translations[$language]['welcome']; ```\n\nDans l'exemple complet du cours, chaque langue a son fichier (`translations/fr.php`) qui **retourne** un tableau (`return [ … ];`), chargé par une fonction `loadTranslation($lang)` qui retombe sur la langue par défaut si le fichier n'existe pas.",
+      "pieges": [
+        "Ne jamais utiliser la valeur du cookie sans la vérifier : `array_key_exists($lang, $translations)`, ou un fichier qui existe vraiment.",
+        "Une clé de traduction oubliée dans une langue provoque « Undefined array key »."
+      ]
+    }
+  ],
+  "lecons": [
+    {
+      "id": "u07-l1",
+      "titre": "Le ticket du navigateur",
+      "duree": 5,
+      "notions": [
+        "cookies"
+      ],
+      "cartes": [
+        {
+          "titre": "Un petit fichier chez le client",
+          "texte": "Un cookie est un petit fichier texte stocké par le **navigateur**. Le serveur l'envoie dans l'en-tête `Set-Cookie` ; ensuite, le navigateur le renvoie tout seul dans l'en-tête `Cookie` à chaque requête vers le même site.",
+          "analogie": "Le serveur donne un ticket ; le client le garde en poche et le montre à chaque passage.",
+          "fiche": "cookies"
+        },
+        {
+          "titre": "À quoi ça sert ?",
+          "texte": "Préférences de langue ou de thème, panier d'achat, sessions de connexion, suivi pour les statistiques…"
+        },
+        {
+          "titre": "Une durée de vie",
+          "texte": "Un cookie **persistant** reste jusqu'à sa date d'expiration ; un cookie **de session** disparaît à la fermeture du navigateur. Options : domaine, chemin, sécurisé (HTTPS seulement), `HttpOnly` (pas d'accès en JavaScript)."
+        },
+        {
+          "titre": "Les voir dans le navigateur",
+          "texte": "Outils de développement (Ctrl+Shift+I, ou Cmd+Option+I sur Mac), onglet « Application » (Chrome) ou « Stockage » (Firefox, Safari), rubrique « Cookies ». On peut les modifier ou les supprimer : pratique pour tester… et preuve qu'un cookie n'est pas une donnée fiable."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u07-l1-e1",
+          "type": "ordre",
+          "notions": [
+            "cookies"
+          ],
+          "question": "Remets dans l'ordre la vie d'un cookie de langue.",
+          "items": [
+            "Le navigateur demande la page et choisit « fr »",
+            "Le serveur répond avec l'en-tête Set-Cookie: language=fr",
+            "Le navigateur stocke le cookie",
+            "À la requête suivante, le navigateur envoie Cookie: language=fr",
+            "Le serveur lit $_COOKIE['language'] et répond en français"
+          ],
+          "explication": "Le serveur crée, le navigateur garde et renvoie, le serveur relit."
+        },
+        {
+          "id": "u07-l1-e2",
+          "type": "qcm",
+          "notions": [
+            "cookies"
+          ],
+          "question": "Où est stocké un cookie ?",
+          "choix": [
+            "Dans le navigateur de l'utilisateur",
+            "Sur le serveur web",
+            "Dans la base de données",
+            "Dans le fichier PHP"
+          ],
+          "bonne": 0,
+          "explication": "C'est le ticket gardé par le client."
+        },
+        {
+          "id": "u07-l1-e3",
+          "type": "assoc",
+          "notions": [
+            "cookies"
+          ],
+          "question": "Associe chaque option à son effet.",
+          "paires": [
+            [
+              "Date d'expiration",
+              "Le cookie disparaît après cette date"
+            ],
+            [
+              "Sécurisé (secure)",
+              "Transmis seulement en HTTPS"
+            ],
+            [
+              "HttpOnly",
+              "Inaccessible au JavaScript"
+            ],
+            [
+              "Chemin (path) « / »",
+              "Valide pour tout le site"
+            ]
+          ],
+          "explication": "Les options que le cours mentionne."
+        },
+        {
+          "id": "u07-l1-e4",
+          "type": "vf",
+          "notions": [
+            "cookies"
+          ],
+          "question": "Un utilisateur peut modifier la valeur d'un cookie avec les outils de développement.",
+          "bonne": true,
+          "explication": "D'où la règle : une valeur de cookie se vérifie et s'échappe comme une saisie."
+        },
+        {
+          "id": "u07-l1-e5",
+          "type": "tri",
+          "notions": [
+            "cookies"
+          ],
+          "question": "Persistant ou de session ?",
+          "categories": [
+            "Persistant",
+            "De session"
+          ],
+          "items": [
+            [
+              "Expire dans 30 jours",
+              0
+            ],
+            [
+              "Supprimé à la fermeture du navigateur",
+              1
+            ],
+            [
+              "Créé avec time() + 3600",
+              0
+            ],
+            [
+              "Créé sans date d'expiration",
+              1
+            ]
+          ],
+          "explication": "Sans date d'expiration, le cookie ne vit que le temps de la session du navigateur."
+        }
+      ]
+    },
+    {
+      "id": "u07-l2",
+      "titre": "setcookie() et $_COOKIE",
+      "duree": 7,
+      "notions": [
+        "cookies-php"
+      ],
+      "cartes": [
+        {
+          "titre": "Créer un cookie",
+          "texte": "`setcookie(nom, valeur, expiration, chemin)`. L'expiration est un moment : `time()` (maintenant, en secondes) plus une durée.",
+          "code": [
+            "setcookie('language', 'fr', time() + (30 * 24 * 60 * 60), '/');",
+            "echo \"Cookie envoyé pour 30 jours.\";",
+            ""
+          ],
+          "fiche": "cookies-php"
+        },
+        {
+          "titre": "Le lire à la requête suivante",
+          "texte": "Le navigateur renvoie le cookie : il apparaît dans `$_COOKIE`. Cet exemple simule une requête qui porte `language=fr`.",
+          "code": [
+            "if (isset($_COOKIE['language'])) {",
+            "    echo \"La langue préférée est : \" . htmlspecialchars($_COOKIE['language']);",
+            "} else {",
+            "    echo \"Aucune langue préférée définie.\";",
+            "}",
+            ""
+          ],
+          "requete": {
+            "cookies": {
+              "language": "fr"
+            }
+          }
+        },
+        {
+          "titre": "Créer, puis rediriger",
+          "texte": "Juste après `setcookie()`, `$_COOKIE` ne contient pas encore la valeur (elle n'arrivera qu'avec la prochaine requête). D'où le schéma du cours : créer le cookie, puis rediriger vers la page.",
+          "code": [
+            "if ($_SERVER['REQUEST_METHOD'] === 'POST') {",
+            "    setcookie('theme', $_POST['theme'], time() + 3600);",
+            "    header('Location: index.php');",
+            "    exit();",
+            "}",
+            ""
+          ],
+          "executable": false
+        },
+        {
+          "titre": "Avant tout affichage",
+          "texte": "`setcookie()` envoie un **en-tête** HTTP, qui part avant le contenu de la page. Il doit être appelé avant tout `echo` et tout HTML.",
+          "piege": "Même une ligne vide avant `<?php` compte comme un affichage."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u07-l2-e1",
+          "type": "qcm",
+          "notions": [
+            "cookies-php"
+          ],
+          "mono": true,
+          "question": "Quelle ligne crée un cookie `theme` valable 7 jours ?",
+          "choix": [
+            "setcookie('theme', 'dark', time() + 7 * 24 * 60 * 60);",
+            "setcookie('theme', 'dark', 7);",
+            "$_COOKIE['theme'] = 'dark';",
+            "cookie('theme', 'dark', '7 days');"
+          ],
+          "bonne": 0,
+          "explication": "L'expiration est un moment : maintenant (`time()`) + 7 jours en secondes."
+        },
+        {
+          "id": "u07-l2-e2",
+          "type": "ecrire",
+          "notions": [
+            "cookies-php"
+          ],
+          "question": "Écris la page : si le formulaire est envoyé (POST) avec `theme`, crée le cookie `theme` pour 30 jours et redirige vers `index.php` ; sinon, affiche « Thème : » suivi du thème du cookie, ou de `light` s'il n'y en a pas.",
+          "depart": [
+            "<?php",
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Envoi : dark",
+                "requete": {
+                  "methode": "POST",
+                  "post": {
+                    "theme": "dark"
+                  }
+                },
+                "cookies": {
+                  "theme": "dark"
+                },
+                "dureeCookies": {
+                  "theme": 2592000
+                },
+                "redirection": "index.php"
+              },
+              {
+                "titre": "Visite avec le cookie",
+                "requete": {
+                  "cookies": {
+                    "theme": "dark"
+                  }
+                },
+                "sortie": [
+                  "Thème : dark"
+                ],
+                "redirection": false
+              },
+              {
+                "titre": "Première visite",
+                "requete": {
+                  "methode": "GET"
+                },
+                "sortie": [
+                  "Thème : light"
+                ]
+              },
+              {
+                "titre": "Cookie piégé",
+                "requete": {
+                  "cookies": {
+                    "theme": "<b>x</b>"
+                  }
+                },
+                "neContientPas": [
+                  "<b>x</b>"
+                ],
+                "siEchec": "Un cookie peut être modifié par l'utilisateur : affiche-le avec `htmlspecialchars`."
+              }
+            ]
+          },
+          "indices": [
+            "Deux parties : d'abord le traitement du POST (setcookie, header, exit), ensuite l'affichage.",
+            "`time() + 30 * 24 * 60 * 60` pour 30 jours ; `$_COOKIE['theme'] ?? 'light'` pour la lecture.",
+            {
+              "texte": "La structure :",
+              "code": "if ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    setcookie('theme', $_POST['theme'], ___);\n    header('Location: index.php');\n    exit();\n}\necho \"Thème : \" . htmlspecialchars(___);"
+            }
+          ],
+          "solution": [
+            "<?php",
+            "if ($_SERVER['REQUEST_METHOD'] === 'POST') {",
+            "    setcookie('theme', $_POST['theme'], time() + 30 * 24 * 60 * 60);",
+            "    header('Location: index.php');",
+            "    exit();",
+            "}",
+            "echo \"Thème : \" . htmlspecialchars($_COOKIE['theme'] ?? 'light');",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "<?php\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    setcookie('theme', $_POST['theme']);\n    header('Location: index.php');\n    exit();\n}\necho \"Thème : \" . htmlspecialchars($_COOKIE['theme'] ?? 'light');",
+              "attendu": "echec"
+            },
+            {
+              "code": "<?php\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    setcookie('theme', $_POST['theme'], time() + 30 * 24 * 60 * 60);\n}\necho \"Thème : \" . htmlspecialchars($_COOKIE['theme'] ?? 'light');",
+              "attendu": "echec"
+            },
+            {
+              "code": "<?php\necho \"Bienvenue<br>\";\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    setcookie('theme', $_POST['theme'], time() + 30 * 24 * 60 * 60);\n    header('Location: index.php');\n    exit();\n}\necho \"Thème : \" . htmlspecialchars($_COOKIE['theme'] ?? 'light');",
+              "attendu": "conseil",
+              "diagnostic": "entete-envoye"
+            }
+          ],
+          "explication": "Sans date d'expiration, c'est un cookie de session (perdu à la fermeture du navigateur) ; sans redirection, la page ne voit pas encore le nouveau cookie."
+        },
+        {
+          "id": "u07-l2-e3",
+          "type": "predire",
+          "notions": [
+            "cookies-php"
+          ],
+          "question": "La requête porte le cookie `city=Sion`. Qu'affiche ce code ?",
+          "requete": {
+            "cookies": {
+              "city": "Sion"
+            }
+          },
+          "code": [
+            "$city = $_COOKIE['city'] ?? 'inconnue';",
+            "$lang = $_COOKIE['lang'] ?? 'fr';",
+            "echo \"$city ($lang)\";",
+            ""
+          ],
+          "explication": "Le cookie `city` existe ; `lang` non, donc sa valeur par défaut."
+        },
+        {
+          "id": "u07-l2-e4",
+          "type": "qcm",
+          "notions": [
+            "cookies-php"
+          ],
+          "question": "Juste après `setcookie('lang', 'it', time() + 3600);`, que vaut `$_COOKIE['lang']` dans le même script (le navigateur n'avait pas encore ce cookie) ?",
+          "choix": [
+            "Il n'existe pas encore : il arrivera avec la prochaine requête",
+            "'it'",
+            "time() + 3600",
+            "true"
+          ],
+          "bonne": 0,
+          "explication": "`$_COOKIE` contient ce que le navigateur a envoyé avec CETTE requête. D'où la redirection après setcookie."
+        },
+        {
+          "id": "u07-l2-e5",
+          "type": "bug",
+          "notions": [
+            "cookies-php"
+          ],
+          "question": "Le cookie n'est jamais créé (« headers already sent »). Touche la ligne qui pose problème.",
+          "code": [
+            "<h1>Préférences</h1>",
+            "<?php",
+            "if ($_SERVER['REQUEST_METHOD'] === 'POST') {",
+            "    setcookie('theme', $_POST['theme'], time() + 3600);",
+            "}",
+            ""
+          ],
+          "ligne": 1,
+          "choix": [
+            "Du HTML est envoyé avant setcookie : l'en-tête ne peut plus partir",
+            "Il manque `exit()` ligne 4",
+            "`$_POST` est vide",
+            "Le nom du cookie est réservé"
+          ],
+          "bonne": 0,
+          "explication": "Les en-têtes partent avant le contenu : `setcookie()` doit venir avant tout affichage."
+        }
+      ]
+    },
+    {
+      "id": "u07-l3",
+      "titre": "Supprimer un cookie, et s'en méfier",
+      "duree": 5,
+      "notions": [
+        "cookies-php"
+      ],
+      "cartes": [
+        {
+          "titre": "Une date dans le passé",
+          "texte": "Pour supprimer un cookie, on le recrée avec une date d'expiration passée : le navigateur le jette.",
+          "code": [
+            "setcookie('language', '', time() - 3600, '/');",
+            "echo \"Préférence supprimée.\";",
+            ""
+          ],
+          "fiche": "cookies-php"
+        },
+        {
+          "titre": "Ou une valeur vide",
+          "texte": "Autre façon du cours : une valeur vide, sans date (0).",
+          "code": [
+            "setcookie('language', '', 0, '/');",
+            ""
+          ],
+          "executable": false
+        },
+        {
+          "titre": "Un cookie est une saisie",
+          "texte": "L'utilisateur peut écrire n'importe quoi dans un cookie. On vérifie sa valeur avant de s'en servir, et on l'échappe avant de l'afficher.",
+          "code": [
+            "$color = $_COOKIE['color'] ?? '#ffffff';",
+            "echo \"<p>Couleur : \" . htmlspecialchars($color) . \"</p>\";",
+            ""
+          ],
+          "requete": {
+            "cookies": {
+              "color": "\"><script>alert(1)</script>"
+            }
+          }
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u07-l3-e1",
+          "type": "ecrire",
+          "notions": [
+            "cookies-php"
+          ],
+          "question": "Écris la page : si le formulaire est envoyé (POST) et que le cookie `language` existe, supprime-le (date passée) et redirige vers `index.php` ; sinon, affiche « Langue : » suivi du cookie, ou « aucune ».",
+          "depart": [
+            "<?php",
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Supprimer",
+                "requete": {
+                  "methode": "POST",
+                  "post": {
+                    "delete": "1"
+                  },
+                  "cookies": {
+                    "language": "fr"
+                  }
+                },
+                "cookies": {
+                  "language": null
+                },
+                "redirection": "index.php"
+              },
+              {
+                "titre": "Afficher",
+                "requete": {
+                  "cookies": {
+                    "language": "it"
+                  }
+                },
+                "sortie": [
+                  "Langue : it"
+                ]
+              },
+              {
+                "titre": "Sans cookie",
+                "requete": {
+                  "methode": "GET"
+                },
+                "sortie": [
+                  "Langue : aucune"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Condition : `$_SERVER['REQUEST_METHOD'] === 'POST' && isset($_COOKIE['language'])`.",
+            "Pour supprimer : `setcookie('language', '', time() - 3600);`, puis `header` et `exit`.",
+            {
+              "texte": "La structure :",
+              "code": "if (___) {\n    setcookie('language', '', ___);\n    header('Location: index.php');\n    exit();\n}\necho \"Langue : \" . htmlspecialchars($_COOKIE['language'] ?? 'aucune');"
+            }
+          ],
+          "solution": [
+            "<?php",
+            "if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_COOKIE['language'])) {",
+            "    setcookie('language', '', time() - 3600);",
+            "    header('Location: index.php');",
+            "    exit();",
+            "}",
+            "echo \"Langue : \" . htmlspecialchars($_COOKIE['language'] ?? 'aucune');",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "<?php\nif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_COOKIE['language'])) {\n    unset($_COOKIE['language']);\n    header('Location: index.php');\n    exit();\n}\necho \"Langue : \" . htmlspecialchars($_COOKIE['language'] ?? 'aucune');",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`unset($_COOKIE[...])` n'efface que la copie du serveur pour cette requête : le navigateur garde le cookie. Il faut lui envoyer un cookie expiré."
+        },
+        {
+          "id": "u07-l3-e2",
+          "type": "vf",
+          "notions": [
+            "cookies-php"
+          ],
+          "question": "`unset($_COOKIE['lang'])` supprime le cookie du navigateur.",
+          "bonne": false,
+          "explication": "Seul un `setcookie()` avec une date passée (ou une valeur vide) demande au navigateur de le supprimer."
+        },
+        {
+          "id": "u07-l3-e3",
+          "type": "qcm",
+          "notions": [
+            "cookies-php"
+          ],
+          "question": "Pourquoi passer la valeur d'un cookie dans `htmlspecialchars` avant de l'afficher ?",
+          "choix": [
+            "Parce que l'utilisateur peut la modifier : c'est une saisie comme une autre",
+            "Pour la chiffrer",
+            "Pour qu'elle dure plus longtemps",
+            "Ce n'est pas nécessaire, c'est le serveur qui l'a créée"
+          ],
+          "bonne": 0,
+          "explication": "Le ticket est dans la poche du client : il peut le réécrire."
+        },
+        {
+          "id": "u07-l3-e4",
+          "type": "trous",
+          "notions": [
+            "cookies-php"
+          ],
+          "question": "Complète la suppression du cookie `cart`.",
+          "code": [
+            "setcookie('cart', ___, time() ___ 3600);"
+          ],
+          "solution": [
+            "''",
+            "-"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "cookies": {
+                  "cart": null
+                }
+              }
+            ]
+          },
+          "indices": [
+            "Une valeur vide.",
+            "Une date dans le passé."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "'0'",
+                "+"
+              ],
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Valeur vide et date passée : le navigateur supprime le cookie. (Une valeur comme '0' avec une date future créerait au contraire un cookie valable une heure.)"
+        }
+      ]
+    },
+    {
+      "id": "u07-l4",
+      "titre": "i18n : parler plusieurs langues",
+      "duree": 7,
+      "notions": [
+        "i18n"
+      ],
+      "cartes": [
+        {
+          "titre": "i18n ?",
+          "texte": "*internationalization* : un i, 18 lettres, un n. Rendre une application utilisable dans plusieurs langues et cultures : traduire les textes, adapter les formats de date, d'heure et de nombre, parfois les images ou les couleurs.",
+          "fiche": "i18n"
+        },
+        {
+          "titre": "Un tableau de traductions",
+          "texte": "L'approche simple du cours : un tableau associatif, une case par langue, une clé par texte.",
+          "code": [
+            "$translations = [",
+            "    'en' => ['welcome' => 'Welcome', 'hello' => 'Hello'],",
+            "    'fr' => ['welcome' => 'Bienvenue', 'hello' => 'Bonjour'],",
+            "];",
+            "",
+            "$language = 'fr';",
+            "echo $translations[$language]['welcome'];",
+            ""
+          ]
+        },
+        {
+          "titre": "La langue vient du cookie… vérifiée",
+          "texte": "On part de la langue par défaut, et on prend celle du cookie seulement si elle existe dans les traductions.",
+          "code": [
+            "const DEFAULT_LANGUAGE = 'en';",
+            "$translations = [",
+            "    'en' => ['welcome' => 'Welcome'],",
+            "    'fr' => ['welcome' => 'Bienvenue'],",
+            "];",
+            "",
+            "$language = DEFAULT_LANGUAGE;",
+            "if (isset($_COOKIE['language']) && array_key_exists($_COOKIE['language'], $translations)) {",
+            "    $language = $_COOKIE['language'];",
+            "}",
+            "echo $translations[$language]['welcome'];",
+            ""
+          ],
+          "requete": {
+            "cookies": {
+              "language": "fr"
+            }
+          }
+        },
+        {
+          "titre": "Un fichier par langue",
+          "texte": "Pour ne pas tout mettre dans un seul fichier, l'exemple complet du cours range chaque langue dans `translations/fr.php`, `translations/en.php`… Chaque fichier **retourne** son tableau, et `loadTranslation($lang)` le charge (ou celui de la langue par défaut si le fichier n'existe pas).",
+          "code": [
+            "<?php",
+            "return [",
+            "    'title' => 'Bienvenue',",
+            "    'welcome' => 'Bonjour et bienvenue sur notre site!',",
+            "    'choose_language' => 'Choisissez votre langue préférée:',",
+            "    'submit' => 'Changer la langue',",
+            "];"
+          ],
+          "executable": false,
+          "astuce": "`$t = require 'fr.php';` : un fichier inclus peut retourner une valeur avec `return`."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u07-l4-e1",
+          "type": "qcm",
+          "notions": [
+            "i18n"
+          ],
+          "question": "D'où vient le nom « i18n » ?",
+          "choix": [
+            "18 lettres entre le i et le n de « internationalization »",
+            "La version 18 de l'internationalisation",
+            "18 langues gérées",
+            "Le nom d'une bibliothèque PHP"
+          ],
+          "bonne": 0,
+          "explication": "Un numéronyme : i + 18 lettres + n."
+        },
+        {
+          "id": "u07-l4-e2",
+          "type": "ecrire",
+          "notions": [
+            "i18n",
+            "cookies-php"
+          ],
+          "question": "Écris `chooseLanguage(array $translations, ?string $cookie): string` qui retourne la langue du cookie si elle existe dans `$translations`, sinon `DEFAULT_LANGUAGE`.",
+          "prelude": [
+            "const DEFAULT_LANGUAGE = 'en';",
+            "$translations = [",
+            "    'en' => ['welcome' => 'Welcome', 'hello' => 'Hello'],",
+            "    'fr' => ['welcome' => 'Bienvenue', 'hello' => 'Bonjour'],",
+            "    'de' => ['welcome' => 'Willkommen', 'hello' => 'Hallo'],",
+            "];"
+          ],
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Cookie fr",
+                "code": "return chooseLanguage($translations, 'fr');",
+                "attendu": "fr"
+              },
+              {
+                "titre": "Pas de cookie",
+                "code": "return chooseLanguage($translations, null);",
+                "attendu": "en"
+              },
+              {
+                "titre": "Langue inconnue",
+                "code": "return chooseLanguage($translations, 'xx');",
+                "attendu": "en",
+                "siEchec": "Une langue inconnue (cookie modifié !) doit retomber sur la langue par défaut : vérifie avec `array_key_exists`."
+              },
+              {
+                "titre": "Cookie de",
+                "code": "return chooseLanguage($translations, 'de');",
+                "attendu": "de"
+              }
+            ]
+          },
+          "indices": [
+            "Commence avec `$language = DEFAULT_LANGUAGE;`.",
+            "Remplace-la par `$cookie` seulement si `$cookie !== null` et que `array_key_exists($cookie, $translations)`.",
+            {
+              "texte": "Presque :",
+              "code": "if ($cookie !== null && ___) {\n    return $cookie;\n}\nreturn DEFAULT_LANGUAGE;"
+            }
+          ],
+          "solution": [
+            "function chooseLanguage(array $translations, ?string $cookie): string {",
+            "    if ($cookie !== null && array_key_exists($cookie, $translations)) {",
+            "        return $cookie;",
+            "    }",
+            "    return DEFAULT_LANGUAGE;",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function chooseLanguage(array $translations, ?string $cookie): string {\n    return $cookie ?? DEFAULT_LANGUAGE;\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Le cookie est une saisie : on ne garde sa valeur que si elle fait partie des langues connues."
+        },
+        {
+          "id": "u07-l4-e3",
+          "type": "predire",
+          "notions": [
+            "i18n"
+          ],
+          "question": "La requête porte le cookie `language=de`. Qu'affiche ce code ?",
+          "requete": {
+            "cookies": {
+              "language": "de"
+            }
+          },
+          "prelude": [
+            "const DEFAULT_LANGUAGE = 'en';",
+            "$translations = [",
+            "    'en' => ['welcome' => 'Welcome', 'hello' => 'Hello'],",
+            "    'fr' => ['welcome' => 'Bienvenue', 'hello' => 'Bonjour'],",
+            "    'de' => ['welcome' => 'Willkommen', 'hello' => 'Hallo'],",
+            "];"
+          ],
+          "code": [
+            "const DEFAULT_LANGUAGE = 'en';",
+            "$translations = [",
+            "    'en' => ['hello' => 'Hello'],",
+            "    'fr' => ['hello' => 'Bonjour'],",
+            "];",
+            "$language = DEFAULT_LANGUAGE;",
+            "if (isset($_COOKIE['language']) && array_key_exists($_COOKIE['language'], $translations)) {",
+            "    $language = $_COOKIE['language'];",
+            "}",
+            "echo $translations[$language]['hello'];",
+            ""
+          ],
+          "explication": "`de` n'existe pas dans ces traductions : on garde la langue par défaut."
+        },
+        {
+          "id": "u07-l4-e4",
+          "type": "ecrire",
+          "notions": [
+            "i18n"
+          ],
+          "question": "Les fichiers `translations/fr.php`, `en.php` et `it.php` retournent chacun un tableau de traductions. Écris `loadTranslation(string $lang): array` qui charge le fichier de la langue, ou celui du français si ce fichier n'existe pas.",
+          "fichier": "load-translation.php",
+          "fichiers": {
+            "translations/fr.php": [
+              "<?php",
+              "return [",
+              "    'title' => 'Bienvenue',",
+              "    'welcome' => 'Bonjour et bienvenue sur notre site!',",
+              "    'choose_language' => 'Choisissez votre langue préférée:',",
+              "    'submit' => 'Changer la langue',",
+              "];"
+            ],
+            "translations/en.php": [
+              "<?php",
+              "return [",
+              "    'title' => 'Welcome',",
+              "    'welcome' => 'Hello and welcome to our website!',",
+              "    'choose_language' => 'Choose your preferred language:',",
+              "    'submit' => 'Change language',",
+              "];"
+            ],
+            "translations/it.php": [
+              "<?php",
+              "return [",
+              "    'title' => 'Benvenuto',",
+              "    'welcome' => 'Ciao e benvenuto nel nostro sito!',",
+              "    'choose_language' => 'Scegli la tua lingua preferita:',",
+              "    'submit' => 'Cambiare lingua',",
+              "];"
+            ]
+          },
+          "depart": [
+            "<?php",
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Anglais",
+                "code": "return loadTranslation('en')['welcome'];",
+                "attendu": "Hello and welcome to our website!"
+              },
+              {
+                "titre": "Italien",
+                "code": "return loadTranslation('it')['title'];",
+                "attendu": "Benvenuto"
+              },
+              {
+                "titre": "Langue inconnue : français",
+                "code": "return loadTranslation('es')['title'];",
+                "attendu": "Bienvenue"
+              },
+              {
+                "titre": "Deux langues dans la même page",
+                "code": "loadTranslation('en');\nreturn loadTranslation('it')['submit'];",
+                "attendu": "Cambiare lingua"
+              }
+            ]
+          },
+          "indices": [
+            "Le chemin : `__DIR__ . \"/translations/{$lang}.php\"`.",
+            "Si `!file_exists($langFile)`, remplace-le par le fichier français. Ensuite, `return require $langFile;` : le fichier retourne son tableau.",
+            {
+              "texte": "Presque :",
+              "code": "$langFile = __DIR__ . \"/translations/{$lang}.php\";\nif (___) {\n    $langFile = __DIR__ . \"/translations/fr.php\";\n}\nreturn require $langFile;"
+            }
+          ],
+          "solution": [
+            "<?php",
+            "function loadTranslation(string $lang): array {",
+            "    $langFile = __DIR__ . \"/translations/{$lang}.php\";",
+            "",
+            "    // Langue par défaut si le fichier n'existe pas",
+            "    if (!file_exists($langFile)) {",
+            "        $langFile = __DIR__ . \"/translations/fr.php\";",
+            "    }",
+            "",
+            "    return require $langFile;",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "<?php\nfunction loadTranslation(string $lang): array {\n    $langFile = __DIR__ . \"/translations/{$lang}.php\";\n\n    // Langue par défaut si le fichier n'existe pas\n\n    return require $langFile;\n}",
+              "attendu": "erreur",
+              "diagnostic": "fichier-introuvable"
+            },
+            {
+              "code": "<?php\nfunction loadTranslation(string $lang): array {\n    $langFile = __DIR__ . \"/translations/{$lang}.php\";\n\n    // Langue par défaut si le fichier n'existe pas\n    if (!file_exists($langFile)) {\n        $langFile = __DIR__ . \"/translations/fr.php\";\n    }\n\n    require $langFile;\n    return [];\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`require` d'un fichier qui fait `return [...]` donne ce tableau : un fichier de traductions par langue."
+        },
+        {
+          "id": "u07-l4-e5",
+          "type": "tri",
+          "notions": [
+            "i18n"
+          ],
+          "question": "Ce que l'i18n implique, selon le cours ?",
+          "categories": [
+            "Oui",
+            "Non"
+          ],
+          "items": [
+            [
+              "Traduire les textes",
+              0
+            ],
+            [
+              "Adapter les formats de date et de nombre",
+              0
+            ],
+            [
+              "Adapter des contenus propres à une culture",
+              0
+            ],
+            [
+              "Changer de langage de programmation",
+              1
+            ],
+            [
+              "Créer une base de données par langue",
+              1
+            ]
+          ],
+          "explication": "Textes, formats, contenus culturels."
+        }
+      ]
+    }
+  ],
+  "jeux": [
+    {
+      "id": "u07-cookies",
+      "titre": "Le bocal à cookies",
+      "description": "Dix questions rapides sur les cookies et l'i18n.",
+      "tours": 10,
+      "questions": [
+        {
+          "id": "u07-j1",
+          "type": "qcm",
+          "notions": [
+            "cookies-php"
+          ],
+          "mono": true,
+          "question": "Quelle fonction crée un cookie ?",
+          "choix": [
+            "setcookie",
+            "createcookie",
+            "$_COOKIE[]",
+            "cookie_set"
+          ],
+          "bonne": 0,
+          "explication": "`setcookie(nom, valeur, expiration, chemin)`."
+        },
+        {
+          "id": "u07-j2",
+          "type": "qcm",
+          "notions": [
+            "cookies-php"
+          ],
+          "mono": true,
+          "question": "Où lire les cookies envoyés par le navigateur ?",
+          "choix": [
+            "$_COOKIE",
+            "$_POST",
+            "$_SESSION",
+            "$_SERVER['COOKIE']"
+          ],
+          "bonne": 0,
+          "explication": "La superglobale `$_COOKIE`."
+        },
+        {
+          "id": "u07-j3",
+          "type": "vf",
+          "notions": [
+            "cookies"
+          ],
+          "question": "Le navigateur renvoie automatiquement le cookie à chaque requête vers le même domaine.",
+          "bonne": true,
+          "explication": "Dans l'en-tête HTTP `Cookie`."
+        },
+        {
+          "id": "u07-j4",
+          "type": "vf",
+          "notions": [
+            "cookies-php"
+          ],
+          "question": "`setcookie()` peut être appelé après un `echo`.",
+          "bonne": false,
+          "explication": "C'est un en-tête : avant tout affichage."
+        },
+        {
+          "id": "u07-j5",
+          "type": "qcm",
+          "notions": [
+            "cookies-php"
+          ],
+          "question": "Que vaut `time() + 3600` ?",
+          "choix": [
+            "Le moment présent + 1 heure, en secondes depuis 1970",
+            "3600 jours",
+            "L'heure actuelle en texte",
+            "1 heure exactement"
+          ],
+          "bonne": 0,
+          "explication": "`time()` compte les secondes depuis le 1er janvier 1970."
+        },
+        {
+          "id": "u07-j6",
+          "type": "qcm",
+          "notions": [
+            "cookies-php"
+          ],
+          "mono": true,
+          "question": "Comment supprimer le cookie `lang` ?",
+          "choix": [
+            "setcookie('lang', '', time() - 3600);",
+            "unset($_COOKIE['lang']);",
+            "delete_cookie('lang');",
+            "$_COOKIE['lang'] = null;"
+          ],
+          "bonne": 0,
+          "explication": "Une date d'expiration passée."
+        },
+        {
+          "id": "u07-j7",
+          "type": "vf",
+          "notions": [
+            "cookies"
+          ],
+          "question": "Un cookie est un bon endroit pour stocker un mot de passe.",
+          "bonne": false,
+          "explication": "Il est stocké chez le client, lisible et modifiable."
+        },
+        {
+          "id": "u07-j8",
+          "type": "vf",
+          "notions": [
+            "i18n"
+          ],
+          "question": "Dans l'exemple du cours, chaque fichier de langue retourne un tableau avec `return`.",
+          "bonne": true,
+          "explication": "`$t = require 'fr.php';` récupère ce tableau."
+        },
+        {
+          "id": "u07-j9",
+          "type": "qcm",
+          "notions": [
+            "i18n"
+          ],
+          "mono": true,
+          "question": "Quelle fonction vérifie que la langue du cookie existe dans `$translations` ?",
+          "choix": [
+            "array_key_exists",
+            "in_array",
+            "isset_lang",
+            "array_search"
+          ],
+          "bonne": 0,
+          "explication": "`array_key_exists($lang, $translations)` : les langues sont les clés."
+        },
+        {
+          "id": "u07-j10",
+          "type": "qcm",
+          "notions": [
+            "cookies"
+          ],
+          "question": "Que fait l'attribut HttpOnly ?",
+          "choix": [
+            "Il empêche l'accès au cookie par JavaScript",
+            "Il force le HTTPS",
+            "Il supprime le cookie après une heure",
+            "Il chiffre la valeur"
+          ],
+          "bonne": 0,
+          "explication": "Le cookie reste lisible par le serveur, pas par les scripts de la page."
+        },
+        {
+          "id": "u07-j11",
+          "type": "vf",
+          "notions": [
+            "cookies"
+          ],
+          "question": "Un cookie de session disparaît quand on ferme le navigateur.",
+          "bonne": true,
+          "explication": "Contrairement au cookie persistant, qui a une date d'expiration."
+        }
+      ]
+    }
+  ],
+  "quiz": {
+    "titre": "Quiz : cookies et i18n",
+    "questions": [
+      {
+        "id": "u07-q1",
+        "type": "qcm",
+        "notions": [
+          "cookies"
+        ],
+        "question": "Comment le serveur transmet-il un cookie au navigateur ?",
+        "choix": [
+          "Dans l'en-tête HTTP Set-Cookie de la réponse",
+          "Dans le corps HTML de la page",
+          "Par e-mail",
+          "Dans l'URL"
+        ],
+        "bonne": 0,
+        "explication": "Et le navigateur le renvoie dans l'en-tête `Cookie`."
+      },
+      {
+        "id": "u07-q2",
+        "type": "tri",
+        "notions": [
+          "cookies"
+        ],
+        "question": "Bonne utilisation d'un cookie, ou pas ?",
+        "categories": [
+          "Oui",
+          "Non"
+        ],
+        "items": [
+          [
+            "Préférence de langue",
+            0
+          ],
+          [
+            "Thème clair/sombre",
+            0
+          ],
+          [
+            "Mot de passe en clair",
+            1
+          ],
+          [
+            "Rôle « admin » qu'on croit sur parole",
+            1
+          ],
+          [
+            "Identifiant de session",
+            0
+          ]
+        ],
+        "explication": "Tout ce qui est dans un cookie peut être lu et modifié par l'utilisateur."
+      },
+      {
+        "id": "u07-q3",
+        "type": "predire",
+        "notions": [
+          "cookies-php"
+        ],
+        "question": "La requête porte le cookie `visits=3`. Qu'affiche ce code ?",
+        "requete": {
+          "cookies": {
+            "visits": "3"
+          }
+        },
+        "code": [
+          "$visits = (int) ($_COOKIE['visits'] ?? 0) + 1;",
+          "setcookie('visits', $visits, time() + 3600);",
+          "echo \"Visite n° $visits\";",
+          ""
+        ],
+        "explication": "Le cookie vaut « 3 » (texte), converti en 3, plus 1."
+      },
+      {
+        "id": "u07-q4",
+        "type": "trous",
+        "notions": [
+          "cookies-php"
+        ],
+        "question": "Complète : un cookie `lang` valable 30 jours, pour tout le site.",
+        "code": [
+          "setcookie('lang', 'it', ___ + 30 * 24 * 60 * 60, ___);"
+        ],
+        "solution": [
+          "time()",
+          "'/'"
+        ],
+        "tests": {
+          "cas": [
+            {
+              "cookies": {
+                "lang": "it"
+              },
+              "dureeCookies": {
+                "lang": 2592000
+              }
+            }
+          ]
+        },
+        "indices": [
+          "Le moment présent, en secondes.",
+          "Le chemin de tout le site."
+        ],
+        "erreursTypiques": [
+          {
+            "trous": [
+              "0",
+              "'/'"
+            ],
+            "attendu": "echec"
+          }
+        ],
+        "explication": "`time() + …` pour l'expiration, `'/'` pour le chemin."
+      },
+      {
+        "id": "u07-q5",
+        "type": "qcm",
+        "notions": [
+          "cookies-php"
+        ],
+        "question": "Pourquoi rediriger (`header('Location: …')`) après `setcookie()` ?",
+        "choix": [
+          "Pour que la page suivante reçoive le cookie dans $_COOKIE",
+          "Pour supprimer le cookie",
+          "Pour chiffrer le cookie",
+          "C'est obligatoire en PHP"
+        ],
+        "bonne": 0,
+        "explication": "Le nouveau cookie n'arrive qu'avec la requête suivante."
+      },
+      {
+        "id": "u07-q6",
+        "type": "vf",
+        "notions": [
+          "cookies-php"
+        ],
+        "question": "Une ligne vide avant `<?php` peut empêcher `setcookie()` de fonctionner.",
+        "bonne": true,
+        "explication": "C'est déjà un affichage : les en-têtes sont partis."
+      },
+      {
+        "id": "u07-q7",
+        "type": "bug",
+        "notions": [
+          "cookies-php"
+        ],
+        "question": "Le panier n'est jamais vidé dans le navigateur. Touche la ligne fautive.",
+        "code": [
+          "if ($_SERVER['REQUEST_METHOD'] === 'POST') {",
+          "    unset($_COOKIE['cart']);",
+          "    header('Location: index.php');",
+          "    exit();",
+          "}",
+          ""
+        ],
+        "ligne": 2,
+        "choix": [
+          "unset ne touche que la copie du serveur : il faut setcookie('cart', '', time() - 3600)",
+          "Il manque une date d'expiration future",
+          "header doit venir avant",
+          "Il manque htmlspecialchars"
+        ],
+        "bonne": 0,
+        "explication": "Seul un `setcookie()` (valeur vide, date passée) demande au navigateur de supprimer son cookie."
+      },
+      {
+        "id": "u07-q8",
+        "type": "qcm",
+        "notions": [
+          "i18n"
+        ],
+        "question": "Dans l'approche du cours, où est gardée la langue choisie par l'utilisateur ?",
+        "choix": [
+          "Dans un cookie",
+          "Dans le nom du fichier PHP",
+          "Dans la base de données",
+          "Dans le code source"
+        ],
+        "bonne": 0,
+        "explication": "Le cookie `language` (ou `lang`) est relu à chaque requête."
+      },
+      {
+        "id": "u07-q9",
+        "type": "predire",
+        "notions": [
+          "i18n"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "$translations = [",
+          "    'fr' => ['bye' => 'Au revoir'],",
+          "    'it' => ['bye' => 'Arrivederci'],",
+          "];",
+          "foreach (['it', 'fr'] as $lang) {",
+          "    echo $translations[$lang]['bye'] . \"<br>\";",
+          "}",
+          ""
+        ],
+        "explication": "On lit la même clé dans chaque langue."
+      },
+      {
+        "id": "u07-q10",
+        "type": "qcm",
+        "notions": [
+          "i18n"
+        ],
+        "question": "Le cookie `language` vaut « xx » (modifié par l'utilisateur). Que doit faire la page ?",
+        "choix": [
+          "Utiliser la langue par défaut",
+          "Afficher une erreur fatale",
+          "Créer une langue « xx »",
+          "Supprimer toutes les traductions"
+        ],
+        "bonne": 0,
+        "explication": "On vérifie avec `array_key_exists` et on retombe sur la langue par défaut."
+      },
+      {
+        "id": "u07-q11",
+        "type": "assoc",
+        "notions": [
+          "cookies-php",
+          "i18n"
+        ],
+        "question": "Associe.",
+        "mono": true,
+        "paires": [
+          [
+            "setcookie('lang', 'fr', time() + 3600)",
+            "Créer"
+          ],
+          [
+            "$_COOKIE['lang'] ?? 'fr'",
+            "Lire"
+          ],
+          [
+            "setcookie('lang', '', time() - 3600)",
+            "Supprimer"
+          ],
+          [
+            "$translations[$lang]['title']",
+            "Traduire"
+          ]
+        ],
+        "explication": "Le cycle complet d'une préférence."
+      },
+      {
+        "id": "u07-q12",
+        "type": "vf",
+        "notions": [
+          "cookies"
+        ],
+        "question": "On peut voir les cookies d'un site dans les outils de développement du navigateur.",
+        "bonne": true,
+        "explication": "Onglet « Application » (Chrome) ou « Stockage » (Firefox, Safari)."
+      },
+      {
+        "id": "u07-q13",
+        "type": "ecrire",
+        "notions": [
+          "i18n"
+        ],
+        "question": "Écris `t(array $translations, string $lang, string $key): string` qui retourne la traduction de `$key` dans `$lang`, ou la clé elle-même si la traduction manque.",
+        "depart": [
+          ""
+        ],
+        "tests": {
+          "cas": [
+            {
+              "titre": "Traduction trouvée",
+              "code": "return t(['fr' => ['hello' => 'Bonjour']], 'fr', 'hello');",
+              "attendu": "Bonjour"
+            },
+            {
+              "titre": "Clé manquante",
+              "code": "return t(['fr' => ['hello' => 'Bonjour']], 'fr', 'bye');",
+              "attendu": "bye"
+            },
+            {
+              "titre": "Langue manquante",
+              "code": "return t(['fr' => ['hello' => 'Bonjour']], 'de', 'hello');",
+              "attendu": "hello"
+            }
+          ]
+        },
+        "indices": [
+          "L'opérateur `??` fonctionne aussi sur des cases imbriquées qui n'existent pas.",
+          {
+            "texte": "Presque :",
+            "code": "return $translations[$lang][$key] ?? ___;"
+          }
+        ],
+        "solution": [
+          "function t(array $translations, string $lang, string $key): string {",
+          "    return $translations[$lang][$key] ?? $key;",
+          "}"
+        ],
+        "erreursTypiques": [
+          {
+            "code": "function t(array $translations, string $lang, string $key): string {\n    return $translations[$lang][$key];\n}",
+            "attendu": "erreur"
+          }
+        ],
+        "explication": "`??` évite l'avertissement « Undefined array key » et donne un repli lisible."
+      },
+      {
+        "id": "u07-q14",
+        "type": "qcm",
+        "notions": [
+          "cookies"
+        ],
+        "question": "Quelle est la différence entre un cookie persistant et un cookie de session ?",
+        "choix": [
+          "Le persistant a une date d'expiration ; celui de session disparaît à la fermeture du navigateur",
+          "Le persistant est stocké sur le serveur",
+          "Celui de session est chiffré",
+          "Aucune"
+        ],
+        "bonne": 0,
+        "explication": "Tout dépend de la date d'expiration."
+      },
+      {
+        "id": "u07-q15",
+        "type": "qcm",
+        "notions": [
+          "cookies-php"
+        ],
+        "question": "Que fait `setcookie('lang', '', 0, '/')` selon le cours ?",
+        "choix": [
+          "Supprime le cookie (valeur vide)",
+          "Crée un cookie éternel",
+          "Crée un cookie de 0 seconde puis le garde",
+          "Rien"
+        ],
+        "bonne": 0,
+        "explication": "C'est la seconde façon de supprimer présentée par le cours."
+      }
+    ]
+  },
+  "boss": [
+    {
+      "id": "u07-b1",
+      "titre": "La couleur préférée",
+      "source": "Séance 6, exercice 1",
+      "notions": [
+        "cookies-php",
+        "cookies"
+      ],
+      "enonce": "Réalisez une application web PHP qui permet à une personne de choisir sa couleur préférée (par exemple, rouge, vert, bleu) et de stocker cette préférence dans un cookie.\n\nSi la personne n'a pas encore choisi de couleur, affichez un formulaire lui permettant de sélectionner sa couleur préférée.\n\nUne fois la couleur choisie et le formulaire soumis, stockez la couleur dans un cookie avec une validité de 30 jours et redirigez la personne vers la même page.\n\nLa page, détectant la couleur préférée, affichera un message du type « Votre couleur préférée est : [couleur choisie] ». Le style de la page utilisera cette couleur comme couleur de fond.\n\nLe formulaire n'est donc plus affiché mais un bouton « Supprimer la préférence » devrait être proposé. Si la personne clique sur ce bouton, le cookie devrait être supprimé et la page devrait revenir à son état initial (avec le formulaire pour choisir une couleur).\n\n**Astuces du cours** : utilisez le champ `color` de HTML5 (`<input type=\"color\">`) ; pour la couleur de fond, la propriété CSS `background-color` ; pour supprimer la préférence, un formulaire avec un bouton qui soumet une requête POST, puis un cookie avec une date d'expiration passée et une redirection vers la même page.\n\n*Pour l'appli : la page s'appelle `index.php`, le cookie `color`, le champ de couleur `color`, et le bouton de suppression envoie le champ `delete`.*",
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Première visite : le formulaire",
+            "requete": {
+              "methode": "GET"
+            },
+            "contient": [
+              "type=\"color\"",
+              "name=\"color\"",
+              "method=\"POST\""
+            ],
+            "redirection": false
+          },
+          {
+            "titre": "Choisir #ff0000 : cookie de 30 jours et redirection",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "color": "#ff0000"
+              }
+            },
+            "cookies": {
+              "color": "#ff0000"
+            },
+            "dureeCookies": {
+              "color": 2592000
+            },
+            "redirection": "index.php"
+          },
+          {
+            "titre": "Avec le cookie : message et fond",
+            "requete": {
+              "cookies": {
+                "color": "#00ff00"
+              }
+            },
+            "contient": [
+              "Votre couleur préférée est : #00ff00",
+              "background-color",
+              "Supprimer la préférence"
+            ],
+            "neContientPas": [
+              "type=\"color\""
+            ],
+            "siEchec": "Avec le cookie, la page affiche le message, utilise la couleur en `background-color` et propose le bouton « Supprimer la préférence » à la place du formulaire."
+          },
+          {
+            "titre": "La couleur dans le style",
+            "requete": {
+              "cookies": {
+                "color": "#3366cc"
+              }
+            },
+            "contient": [
+              "#3366cc;"
+            ]
+          },
+          {
+            "titre": "Supprimer la préférence",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "delete": "1"
+              },
+              "cookies": {
+                "color": "#00ff00"
+              }
+            },
+            "cookies": {
+              "color": null
+            },
+            "redirection": "index.php"
+          },
+          {
+            "titre": "Cookie piégé",
+            "requete": {
+              "cookies": {
+                "color": "red;}</style><script>alert(1)</script>"
+              }
+            },
+            "neContientPas": [
+              "<script>alert(1)</script>"
+            ],
+            "siEchec": "La valeur du cookie vient du navigateur : échappe-la avec `htmlspecialchars` partout où tu l'affiches (message ET style)."
+          }
+        ]
+      },
+      "indices": [
+        "Trois cas en haut du fichier, avant tout HTML : suppression (POST avec `delete`), enregistrement (POST avec `color`), puis lecture du cookie dans `$color`.",
+        "Enregistrer : `setcookie('color', $_POST['color'], time() + 60 * 60 * 24 * 30);` puis `header('Location: index.php'); exit();`. Supprimer : même chose avec `''` et `time() - 3600`. Dans le HTML, un `if ($color)` choisit entre le message (avec le bouton) et le formulaire.",
+        {
+          "texte": "Le style :",
+          "code": "<style>\n    body {\n        background-color: <?= $color ? htmlspecialchars($color) : '#ffffff' ?>;\n    }\n</style>"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "const COOKIE_NAME = 'color';",
+        "const COOKIE_LIFETIME = 60 * 60 * 24 * 30;",
+        "",
+        "// Supprimer la préférence",
+        "if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete'])) {",
+        "    setcookie(COOKIE_NAME, '', time() - 3600);",
+        "    header('Location: index.php');",
+        "    exit();",
+        "}",
+        "",
+        "// Enregistrer la couleur choisie",
+        "if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['color'])) {",
+        "    setcookie(COOKIE_NAME, $_POST['color'], time() + COOKIE_LIFETIME);",
+        "    header('Location: index.php');",
+        "    exit();",
+        "}",
+        "",
+        "$color = $_COOKIE[COOKIE_NAME] ?? null;",
+        "?>",
+        "<!DOCTYPE html>",
+        "<html lang=\"fr\">",
+        "<head>",
+        "    <meta charset=\"utf-8\">",
+        "    <title>Couleur préférée</title>",
+        "    <style>",
+        "        body {",
+        "            background-color: <?= $color ? htmlspecialchars($color) : '#ffffff' ?>;",
+        "        }",
+        "    </style>",
+        "</head>",
+        "<body>",
+        "    <?php if ($color) { ?>",
+        "        <h1>Votre couleur préférée est : <?= htmlspecialchars($color) ?></h1>",
+        "        <form action=\"index.php\" method=\"POST\">",
+        "            <button type=\"submit\" name=\"delete\" value=\"1\">Supprimer la préférence</button>",
+        "        </form>",
+        "    <?php } else { ?>",
+        "        <h1>Choisissez votre couleur préférée :</h1>",
+        "        <form action=\"index.php\" method=\"POST\">",
+        "            <input type=\"color\" name=\"color\" required>",
+        "            <button type=\"submit\">Enregistrer</button>",
+        "        </form>",
+        "    <?php } ?>",
+        "</body>",
+        "</html>"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nconst COOKIE_NAME = 'color';\nconst COOKIE_LIFETIME = 60 * 60 * 24 * 30;\n\n// Supprimer la préférence\nif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete'])) {\n    setcookie(COOKIE_NAME, '', time() - 3600);\n    header('Location: index.php');\n    exit();\n}\n\n// Enregistrer la couleur choisie\nif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['color'])) {\n    setcookie(COOKIE_NAME, $_POST['color'], time() + 3600);\n    header('Location: index.php');\n    exit();\n}\n\n$color = $_COOKIE[COOKIE_NAME] ?? null;\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"utf-8\">\n    <title>Couleur préférée</title>\n    <style>\n        body {\n            background-color: <?= $color ? htmlspecialchars($color) : '#ffffff' ?>;\n        }\n    </style>\n</head>\n<body>\n    <?php if ($color) { ?>\n        <h1>Votre couleur préférée est : <?= htmlspecialchars($color) ?></h1>\n        <form action=\"index.php\" method=\"POST\">\n            <button type=\"submit\" name=\"delete\" value=\"1\">Supprimer la préférence</button>\n        </form>\n    <?php } else { ?>\n        <h1>Choisissez votre couleur préférée :</h1>\n        <form action=\"index.php\" method=\"POST\">\n            <input type=\"color\" name=\"color\" required>\n            <button type=\"submit\">Enregistrer</button>\n        </form>\n    <?php } ?>\n</body>\n</html>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nconst COOKIE_NAME = 'color';\nconst COOKIE_LIFETIME = 60 * 60 * 24 * 30;\n\n// Supprimer la préférence\nif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete'])) {\n    setcookie(COOKIE_NAME, '', time() - 3600);\n    header('Location: index.php');\n    exit();\n}\n\n// Enregistrer la couleur choisie\nif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['color'])) {\n    setcookie(COOKIE_NAME, $_POST['color'], time() + COOKIE_LIFETIME);\n}\n\n$color = $_COOKIE[COOKIE_NAME] ?? null;\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"utf-8\">\n    <title>Couleur préférée</title>\n    <style>\n        body {\n            background-color: <?= $color ? htmlspecialchars($color) : '#ffffff' ?>;\n        }\n    </style>\n</head>\n<body>\n    <?php if ($color) { ?>\n        <h1>Votre couleur préférée est : <?= htmlspecialchars($color) ?></h1>\n        <form action=\"index.php\" method=\"POST\">\n            <button type=\"submit\" name=\"delete\" value=\"1\">Supprimer la préférence</button>\n        </form>\n    <?php } else { ?>\n        <h1>Choisissez votre couleur préférée :</h1>\n        <form action=\"index.php\" method=\"POST\">\n            <input type=\"color\" name=\"color\" required>\n            <button type=\"submit\">Enregistrer</button>\n        </form>\n    <?php } ?>\n</body>\n</html>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nconst COOKIE_NAME = 'color';\nconst COOKIE_LIFETIME = 60 * 60 * 24 * 30;\n\n// Supprimer la préférence\nif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete'])) {\n    unset($_COOKIE[COOKIE_NAME]);\n    header('Location: index.php');\n    exit();\n}\n\n// Enregistrer la couleur choisie\nif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['color'])) {\n    setcookie(COOKIE_NAME, $_POST['color'], time() + COOKIE_LIFETIME);\n    header('Location: index.php');\n    exit();\n}\n\n$color = $_COOKIE[COOKIE_NAME] ?? null;\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"utf-8\">\n    <title>Couleur préférée</title>\n    <style>\n        body {\n            background-color: <?= $color ? htmlspecialchars($color) : '#ffffff' ?>;\n        }\n    </style>\n</head>\n<body>\n    <?php if ($color) { ?>\n        <h1>Votre couleur préférée est : <?= htmlspecialchars($color) ?></h1>\n        <form action=\"index.php\" method=\"POST\">\n            <button type=\"submit\" name=\"delete\" value=\"1\">Supprimer la préférence</button>\n        </form>\n    <?php } else { ?>\n        <h1>Choisissez votre couleur préférée :</h1>\n        <form action=\"index.php\" method=\"POST\">\n            <input type=\"color\" name=\"color\" required>\n            <button type=\"submit\">Enregistrer</button>\n        </form>\n    <?php } ?>\n</body>\n</html>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nconst COOKIE_NAME = 'color';\nconst COOKIE_LIFETIME = 60 * 60 * 24 * 30;\n\n// Supprimer la préférence\nif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete'])) {\n    setcookie(COOKIE_NAME, '', time() - 3600);\n    header('Location: index.php');\n    exit();\n}\n\n// Enregistrer la couleur choisie\nif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['color'])) {\n    setcookie(COOKIE_NAME, $_POST['color'], time() + COOKIE_LIFETIME);\n    header('Location: index.php');\n    exit();\n}\n\n$color = $_COOKIE[COOKIE_NAME] ?? null;\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"utf-8\">\n    <title>Couleur préférée</title>\n    <style>\n        body {\n            background-color: <?= $color ?? '#ffffff' ?>;\n        }\n    </style>\n</head>\n<body>\n    <?php if ($color) { ?>\n        <h1>Votre couleur préférée est : <?= htmlspecialchars($color) ?></h1>\n        <form action=\"index.php\" method=\"POST\">\n            <button type=\"submit\" name=\"delete\" value=\"1\">Supprimer la préférence</button>\n        </form>\n    <?php } else { ?>\n        <h1>Choisissez votre couleur préférée :</h1>\n        <form action=\"index.php\" method=\"POST\">\n            <input type=\"color\" name=\"color\" required>\n            <button type=\"submit\">Enregistrer</button>\n        </form>\n    <?php } ?>\n</body>\n</html>",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "Créer (30 jours), relire, supprimer (date passée), rediriger après chaque changement, et traiter la valeur du cookie comme une saisie."
+    },
+    {
+      "id": "u07-b2",
+      "titre": "Un site en trois langues",
+      "source": "Projet libre, critère 7 (gestion multilingue), sur le modèle de l'exemple de code « Gestion des langues avec des cookies » de la séance 6",
+      "notions": [
+        "i18n",
+        "cookies-php"
+      ],
+      "enonce": "Le projet libre exige que « la gestion multilingue (i18n) soit implémentée et fonctionne correctement sur toutes les pages », dans au moins deux langues. Entraîne-toi sur le modèle de l'exemple complet du cours.\n\nÉcris la page `public/index.php` :\n\n- la langue préférée est lue dans le cookie `lang` (langue par défaut : `fr`) ; seules `fr`, `en` et `it` sont acceptées, toute autre valeur donne `fr` ;\n- les textes viennent de `loadTranslation($lang)` (déjà écrite dans `src/i18n/load-translation.php`, avec les fichiers `translations/fr.php`, `en.php`, `it.php`) : clés `title`, `welcome`, `choose_language`, `submit` ;\n- la page affiche le titre (dans `<title>` et `<h1>`), le message de bienvenue, et un formulaire POST avec une liste `language` (la langue actuelle porte `selected`) ;\n- à l'envoi, la langue choisie est enregistrée dans le cookie `lang` (30 jours), puis redirection vers `index.php` ;\n- l'attribut `lang` de `<html>` vaut la langue affichée.",
+      "fichier": "public/index.php",
+      "fichiers": {
+        "src/i18n/load-translation.php": [
+          "<?php",
+          "function loadTranslation(string $lang): array {",
+          "    $langFile = __DIR__ . \"/translations/{$lang}.php\";",
+          "",
+          "    // Langue par défaut si le fichier n'existe pas",
+          "    if (!file_exists($langFile)) {",
+          "        $langFile = __DIR__ . \"/translations/fr.php\";",
+          "    }",
+          "",
+          "    return require $langFile;",
+          "}"
+        ],
+        "src/i18n/translations/fr.php": [
+          "<?php",
+          "return [",
+          "    'title' => 'Bienvenue',",
+          "    'welcome' => 'Bonjour et bienvenue sur notre site!',",
+          "    'choose_language' => 'Choisissez votre langue préférée:',",
+          "    'submit' => 'Changer la langue',",
+          "];"
+        ],
+        "src/i18n/translations/en.php": [
+          "<?php",
+          "return [",
+          "    'title' => 'Welcome',",
+          "    'welcome' => 'Hello and welcome to our website!',",
+          "    'choose_language' => 'Choose your preferred language:',",
+          "    'submit' => 'Change language',",
+          "];"
+        ],
+        "src/i18n/translations/it.php": [
+          "<?php",
+          "return [",
+          "    'title' => 'Benvenuto',",
+          "    'welcome' => 'Ciao e benvenuto nel nostro sito!',",
+          "    'choose_language' => 'Scegli la tua lingua preferita:',",
+          "    'submit' => 'Cambiare lingua',",
+          "];"
+        ]
+      },
+      "depart": [
+        "<?php",
+        "require_once __DIR__ . '/../src/i18n/load-translation.php';",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Sans cookie : français",
+            "requete": {
+              "methode": "GET"
+            },
+            "contient": [
+              "<html lang=\"fr\">",
+              "<h1>Bienvenue</h1>",
+              "Bonjour et bienvenue sur notre site!",
+              "name=\"language\"",
+              "value=\"fr\" selected"
+            ],
+            "redirection": false
+          },
+          {
+            "titre": "Cookie en : anglais",
+            "requete": {
+              "cookies": {
+                "lang": "en"
+              }
+            },
+            "contient": [
+              "<html lang=\"en\">",
+              "<title>Welcome</title>",
+              "Hello and welcome to our website!",
+              "value=\"en\" selected",
+              "Change language"
+            ]
+          },
+          {
+            "titre": "Cookie it : italien",
+            "requete": {
+              "cookies": {
+                "lang": "it"
+              }
+            },
+            "contient": [
+              "<h1>Benvenuto</h1>",
+              "Cambiare lingua"
+            ]
+          },
+          {
+            "titre": "Cookie inconnu : français",
+            "requete": {
+              "cookies": {
+                "lang": "xx"
+              }
+            },
+            "contient": [
+              "<html lang=\"fr\">",
+              "<h1>Bienvenue</h1>"
+            ],
+            "siEchec": "Le cookie peut contenir n'importe quoi : n'accepte que `fr`, `en` ou `it`, sinon la langue par défaut."
+          },
+          {
+            "titre": "Cookie piégé",
+            "requete": {
+              "cookies": {
+                "lang": "\"><script>alert(1)</script>"
+              }
+            },
+            "neContientPas": [
+              "<script>alert(1)</script>"
+            ]
+          },
+          {
+            "titre": "Choisir l'italien",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "language": "it"
+              }
+            },
+            "cookies": {
+              "lang": "it"
+            },
+            "dureeCookies": {
+              "lang": 2592000
+            },
+            "redirection": "index.php"
+          },
+          {
+            "titre": "Choix piégé",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "language": "../../etc"
+              }
+            },
+            "cookies": {
+              "lang": "fr"
+            },
+            "redirection": "index.php",
+            "siEchec": "Vérifie aussi la langue envoyée par le formulaire avant de l'enregistrer."
+          }
+        ]
+      },
+      "indices": [
+        "En haut : le traitement du POST (vérifier la langue, `setcookie`, `header`, `exit`), puis la lecture du cookie avec la langue par défaut, puis `$translations = loadTranslation($lang);`.",
+        "Une constante `LANGUAGES = ['fr', 'en', 'it']` et `in_array($lang, LANGUAGES)` pour vérifier. Dans le HTML, chaque texte vient de `$translations['…']`, échappé.",
+        {
+          "texte": "La lecture de la langue :",
+          "code": "$lang = $_COOKIE['lang'] ?? 'fr';\nif (!in_array($lang, ___)) {\n    $lang = 'fr';\n}\n$translations = loadTranslation($lang);"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "require_once __DIR__ . '/../src/i18n/load-translation.php';",
+        "",
+        "const COOKIE_NAME = 'lang';",
+        "const COOKIE_LIFETIME = 60 * 60 * 24 * 30;",
+        "const DEFAULT_LANG = 'fr';",
+        "const LANGUAGES = ['fr', 'en', 'it'];",
+        "",
+        "if ($_SERVER['REQUEST_METHOD'] === 'POST') {",
+        "    $lang = $_POST['language'] ?? DEFAULT_LANG;",
+        "    if (!in_array($lang, LANGUAGES)) {",
+        "        $lang = DEFAULT_LANG;",
+        "    }",
+        "    setcookie(COOKIE_NAME, $lang, time() + COOKIE_LIFETIME);",
+        "    header('Location: index.php');",
+        "    exit();",
+        "}",
+        "",
+        "$lang = $_COOKIE[COOKIE_NAME] ?? DEFAULT_LANG;",
+        "if (!in_array($lang, LANGUAGES)) {",
+        "    $lang = DEFAULT_LANG;",
+        "}",
+        "$translations = loadTranslation($lang);",
+        "?>",
+        "<!DOCTYPE html>",
+        "<html lang=\"<?= htmlspecialchars($lang) ?>\">",
+        "<head>",
+        "    <meta charset=\"utf-8\">",
+        "    <title><?= htmlspecialchars($translations['title']) ?></title>",
+        "</head>",
+        "<body>",
+        "    <h1><?= htmlspecialchars($translations['title']) ?></h1>",
+        "    <p><?= htmlspecialchars($translations['welcome']) ?></p>",
+        "",
+        "    <form method=\"POST\" action=\"index.php\">",
+        "        <label for=\"language\"><?= htmlspecialchars($translations['choose_language']) ?></label>",
+        "        <select name=\"language\" id=\"language\">",
+        "            <?php foreach (LANGUAGES as $code) { ?>",
+        "                <option value=\"<?= $code ?>\" <?= $lang === $code ? 'selected' : '' ?>><?= $code ?></option>",
+        "            <?php } ?>",
+        "        </select>",
+        "        <button type=\"submit\"><?= htmlspecialchars($translations['submit']) ?></button>",
+        "    </form>",
+        "</body>",
+        "</html>"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../src/i18n/load-translation.php';\n\nconst COOKIE_NAME = 'lang';\nconst COOKIE_LIFETIME = 60 * 60 * 24 * 30;\nconst DEFAULT_LANG = 'fr';\nconst LANGUAGES = ['fr', 'en', 'it'];\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $lang = $_POST['language'] ?? DEFAULT_LANG;\n    if (!in_array($lang, LANGUAGES)) {\n        $lang = DEFAULT_LANG;\n    }\n    setcookie(COOKIE_NAME, $lang, time() + COOKIE_LIFETIME);\n    header('Location: index.php');\n    exit();\n}\n\n$lang = $_COOKIE[COOKIE_NAME] ?? DEFAULT_LANG;\n$translations = loadTranslation($lang);\n?>\n<!DOCTYPE html>\n<html lang=\"<?= $lang ?>\">\n<head>\n    <meta charset=\"utf-8\">\n    <title><?= htmlspecialchars($translations['title']) ?></title>\n</head>\n<body>\n    <h1><?= htmlspecialchars($translations['title']) ?></h1>\n    <p><?= htmlspecialchars($translations['welcome']) ?></p>\n\n    <form method=\"POST\" action=\"index.php\">\n        <label for=\"language\"><?= htmlspecialchars($translations['choose_language']) ?></label>\n        <select name=\"language\" id=\"language\">\n            <?php foreach (LANGUAGES as $code) { ?>\n                <option value=\"<?= $code ?>\" <?= $lang === $code ? 'selected' : '' ?>><?= $code ?></option>\n            <?php } ?>\n        </select>\n        <button type=\"submit\"><?= htmlspecialchars($translations['submit']) ?></button>\n    </form>\n</body>\n</html>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../src/i18n/load-translation.php';\n\nconst COOKIE_NAME = 'lang';\nconst COOKIE_LIFETIME = 60 * 60 * 24 * 30;\nconst DEFAULT_LANG = 'fr';\nconst LANGUAGES = ['fr', 'en', 'it'];\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $lang = $_POST['language'] ?? DEFAULT_LANG;\n    if (!in_array($lang, LANGUAGES)) {\n        $lang = DEFAULT_LANG;\n    }\n    setcookie(COOKIE_NAME, $lang, time() + COOKIE_LIFETIME);\n    header('Location: index.php');\n    exit();\n}\n\n$lang = $_COOKIE[COOKIE_NAME] ?? DEFAULT_LANG;\nif (!in_array($lang, LANGUAGES)) {\n    $lang = DEFAULT_LANG;\n}\n$translations = loadTranslation($lang);\n?>\n<!DOCTYPE html>\n<html lang=\"<?= htmlspecialchars($lang) ?>\">\n<head>\n    <meta charset=\"utf-8\">\n    <title><?= htmlspecialchars($translations['title']) ?></title>\n</head>\n<body>\n    <h1>Bienvenue</h1>\n    <p><?= htmlspecialchars($translations['welcome']) ?></p>\n\n    <form method=\"POST\" action=\"index.php\">\n        <label for=\"language\"><?= htmlspecialchars($translations['choose_language']) ?></label>\n        <select name=\"language\" id=\"language\">\n            <?php foreach (LANGUAGES as $code) { ?>\n                <option value=\"<?= $code ?>\" <?= $lang === $code ? 'selected' : '' ?>><?= $code ?></option>\n            <?php } ?>\n        </select>\n        <button type=\"submit\"><?= htmlspecialchars($translations['submit']) ?></button>\n    </form>\n</body>\n</html>",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "La langue est une préférence (cookie), vérifiée comme une saisie ; chaque texte de la page passe par les traductions."
+    }
+  ],
+  "parcours": [
+    "u07-l1",
+    "u07-l2",
+    "jeu:u07-cookies",
+    "u07-l3",
+    "u07-l4",
+    "quiz",
+    "boss:u07-b1",
+    "boss:u07-b2"
+  ]
+}
