@@ -315,6 +315,7 @@ const TRADUCTIONS_PHP = [
   [/Undefined constant ([\w\\]+)::(\w+)/, m => ({ id:"constante-inconnue", texte:`La classe \`${m[1]}\` n'a pas de constante \`${m[2]}\`. Déclare-la (\`const ${m[2]} = …;\`) et vérifie l'orthographe.` })],
   [/Undefined constant "?([\w\\]+?)"?$/, m => ({ id:"constante-inconnue", texte:`\`${m[1]}\` n'existe pas. Si c'est une constante de la classe, écris \`self::${m[1].split("\\").pop()}\` ; si c'est une variable, il manque le \`$\` ; si c'est un texte, il faut des guillemets.` })],
   [/Non-static method ([\w\\]+)::(\w+)\(\) cannot be called statically/, m => ({ id:"static", texte:`\`${m[2]}()\` n'est pas static : appelle-la sur un objet avec \`->\` (\`$objet->${m[2]}()\`), pas avec \`::\`.` })],
+  [/Cannot use "parent" when current class scope has no parent/, () => ({ id:"parent-sans-extends", texte:"`parent::` n'existe que dans une classe qui hérite d'une autre : `class Fille extends Parent`. (Une interface s'implémente, elle n'a pas de constructeur parent.)" })],
   [/Cannot call constructor/, () => "Le parent n'a pas de constructeur : enlève `parent::__construct(…)`, ou ajoute un constructeur au parent."],
   [/Cannot redeclare ([\w\\]+)::(\w+)\(\)/, m => ({ id:"redeclare", texte:`La méthode \`${m[2]}()\` est écrite deux fois dans \`${m[1]}\`.` })],
   [/Cannot redeclare (?:function )?([\w\\]+)\(\)/, m => ({ id:"redeclare", texte:`La fonction \`${m[1]}()\` est déclarée deux fois (ou porte le nom d'une fonction qui existe déjà dans PHP) : renomme-la. Si un fichier est inclus deux fois, utilise \`require_once\`.` })],

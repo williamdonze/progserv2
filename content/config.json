@@ -43,7 +43,8 @@
   "seuilValidation": 0.8,
   "unites": [
     "content/unites/u01-rappels.json",
-    "content/unites/u02-classes.json"
+    "content/unites/u02-classes.json",
+    "content/unites/u03-heritage.json"
   ],
   "aVenir": [],
   "rangs": [

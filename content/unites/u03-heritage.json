@@ -1,0 +1,2627 @@
+{
+  "id": "u03",
+  "titre": "Interfaces, héritage, abstraction",
+  "sousTitre": "Séance 2 · implements, extends, abstract, require_once, static",
+  "objectif": "Appliquer les interfaces, l'héritage et les classes abstraites, organiser ses classes en fichiers avec require_once, et réaliser la bibliothèque et la calculatrice du cours.",
+  "icone": "↳",
+  "fiches": [
+    {
+      "id": "interfaces",
+      "titre": "Interfaces : le contrat",
+      "icone": "⧉",
+      "resume": "Une interface déclare des méthodes (leur signature, sans leur code). Une classe qui l'**implémente** (`implements`) doit toutes les écrire. On peut alors traiter des objets différents de la même façon : c'est le polymorphisme.",
+      "analogie": "**Le cahier des charges.** L'interface dit ce que toute maison doit avoir (« une porte qui s'ouvre ») sans dire comment la construire. Chaque plan (classe) qui signe le cahier des charges doit le respecter.",
+      "texte": "``` interface PaymentInterface { public function pay(float $amount): string; }\n\nclass Twint implements PaymentInterface { public function pay(float $amount): string { return \"Payé $amount CHF avec Twint\"; } } ```\n\n- Une classe peut implémenter **plusieurs** interfaces : `class A implements B, C`.\n- Si une méthode promise manque : erreur fatale (`must … implement the remaining methods`).\n- Une interface ne s'instancie pas : pas de `new PaymentInterface()`.\n- Par convention dans le cours, son nom finit par `Interface`.",
+      "pieges": [
+        "On **implémente** une interface (`implements`), on **étend** une classe (`extends`).",
+        "La méthode écrite doit avoir la même signature que celle promise (paramètres, types, retour)."
+      ]
+    },
+    {
+      "id": "heritage",
+      "titre": "Héritage : extends et parent::",
+      "icone": "↳",
+      "resume": "`class Manager extends Employee` : la classe fille hérite des attributs et méthodes de la classe parent, peut en ajouter et en redéfinir. Son constructeur appelle celui du parent avec `parent::__construct(…)`.",
+      "analogie": "**Une variante du plan.** Le plan « maison avec garage » reprend tout le plan « maison » et y ajoute un garage : on ne redessine pas les pièces déjà prévues.",
+      "texte": "- `protected` : visible dans la classe ET ses sous-classes. Un attribut `private` du parent n'est pas accessible dans la fille.\n- `parent::__construct(…)` : initialise les attributs hérités ; `parent::methode()` appelle la version du parent.\n- Une fille peut **redéfinir** une méthode du parent (même nom, même signature).\n- PHP n'a **pas d'héritage multiple** : une classe n'a qu'un seul parent (mais peut implémenter plusieurs interfaces).\n- Utilise l'héritage avec parcimonie : une hiérarchie trop profonde devient difficile à comprendre.",
+      "exemples": [
+        {
+          "titre": "Une classe fille",
+          "code": [
+            "class Employee {",
+            "    protected string $name;",
+            "",
+            "    public function __construct(string $name) {",
+            "        $this->name = $name;",
+            "    }",
+            "",
+            "    public function describe(): string {",
+            "        return $this->name;",
+            "    }",
+            "}",
+            "",
+            "class Manager extends Employee {",
+            "    private int $teamSize;",
+            "",
+            "    public function __construct(string $name, int $teamSize) {",
+            "        parent::__construct($name);",
+            "        $this->teamSize = $teamSize;",
+            "    }",
+            "",
+            "    public function describe(): string {",
+            "        return parent::describe() . \" (équipe de \" . $this->teamSize . \")\";",
+            "    }",
+            "}",
+            "",
+            "echo (new Manager(\"Ana\", 5))->describe();",
+            ""
+          ]
+        }
+      ],
+      "pieges": [
+        "Sans `parent::__construct(…)`, les attributs du parent ne sont jamais initialisés.",
+        "`private` dans le parent = invisible dans la fille : utilise `protected`."
+      ]
+    },
+    {
+      "id": "classes-abstraites",
+      "titre": "Classes abstraites",
+      "icone": "◌",
+      "resume": "Une classe `abstract` ne peut pas être instanciée : elle sert de base. Elle peut contenir des attributs, des méthodes avec du code, et des méthodes `abstract` (sans code) que chaque fille doit écrire.",
+      "analogie": "**La maison témoin à moitié finie.** Les murs et le toit sont là (le code commun), mais la cuisine est à choisir (les méthodes abstraites) : personne n'habite la maison témoin, on construit des maisons finies à partir d'elle.",
+      "texte": "Le cours la décrit comme un mélange entre une interface et une classe normale.\n\n- `abstract class Shape { … }` : `new Shape()` provoque `Cannot instantiate abstract class`.\n- `abstract public function calculateArea(): float;` : pas de corps, un point-virgule.\n- Une méthode concrète peut appeler une méthode abstraite : chaque fille fournira sa version.\n- Si une fille n'écrit pas toutes les méthodes abstraites : erreur fatale.",
+      "pieges": [
+        "Une méthode abstraite n'a pas d'accolades : `abstract public function send(): string;`.",
+        "On instancie les filles, jamais la classe abstraite."
+      ]
+    },
+    {
+      "id": "inclusion-classes",
+      "titre": "Un fichier par classe : require_once",
+      "icone": "⎘",
+      "resume": "Chaque classe dans son fichier (`src/Dog.php`), inclus avec `require_once __DIR__ . '/Pet.php';`. `require_once` évite d'inclure deux fois le même fichier (sinon : `Cannot declare class Pet, because the name is already in use`).",
+      "texte": "Structure du cours :\n\n``` ./ ├── public/ │   └── index.php └── src/ ├── Animal.php ├── Pet.php ├── Dog.php └── Cat.php ```\n\n`__DIR__` est le dossier du fichier courant : depuis `public/index.php`, `__DIR__ . '/../src/Dog.php'` remonte d'un dossier puis entre dans `src`.\n\nLe problème : `Dog.php` et `Cat.php` incluent tous les deux `Pet.php`. Avec `require`, `Pet.php` serait chargé deux fois et la classe déclarée deux fois. Avec `require_once`, chaque fichier n'est inclus qu'une seule fois.",
+      "pieges": [
+        "`__DIR__` n'a pas de `/` final : `__DIR__ . '/Pet.php'`.",
+        "Depuis `public/`, il faut remonter avec `/../` avant `src/`."
+      ]
+    },
+    {
+      "id": "statique",
+      "titre": "Bonus : attributs et méthodes static",
+      "icone": "∗",
+      "resume": "Un attribut `static` est partagé par tous les objets de la classe ; une méthode `static` s'appelle sans objet : `Product::getTotalProducts()`. Dans la classe, on écrit `self::$total` (avec le `$`).",
+      "texte": "Exemple « bonus » du cours, pas nécessaire pour les bases de la POO.\n\n- `$this` : l'objet courant (attributs d'instance) ;\n- `self` : la classe elle-même (constantes, attributs et méthodes `static`).\n\nUne méthode `static` n'a pas de `$this` : elle ne dépend d'aucun objet.",
+      "exemples": [
+        {
+          "titre": "Un compteur partagé",
+          "code": [
+            "class Visitor {",
+            "    private static int $count = 0;",
+            "",
+            "    public function __construct() {",
+            "        self::$count++;",
+            "    }",
+            "",
+            "    public static function getCount(): int {",
+            "        return self::$count;",
+            "    }",
+            "}",
+            "",
+            "new Visitor();",
+            "new Visitor();",
+            "new Visitor();",
+            "echo Visitor::getCount();",
+            ""
+          ]
+        }
+      ],
+      "pieges": [
+        "Attribut static : `self::$count` (avec `$`) ; constante : `self::MAX` (sans `$`)."
+      ]
+    }
+  ],
+  "lecons": [
+    {
+      "id": "u03-l1",
+      "titre": "Interfaces : le cahier des charges",
+      "duree": 6,
+      "notions": [
+        "interfaces"
+      ],
+      "cartes": [
+        {
+          "titre": "Un contrat",
+          "texte": "Une interface liste les méthodes qu'une classe **promet** d'avoir, sans leur code.",
+          "code": [
+            "interface PaymentInterface {",
+            "    public function pay(float $amount): string;",
+            "}"
+          ],
+          "analogie": "Le cahier des charges dit « il faut une porte », pas comment la fabriquer.",
+          "fiche": "interfaces"
+        },
+        {
+          "titre": "implements : signer le contrat",
+          "texte": "Chaque classe qui implémente l'interface écrit les méthodes promises, à sa façon.",
+          "code": [
+            "interface PaymentInterface {",
+            "    public function pay(float $amount): string;",
+            "}",
+            "",
+            "class Twint implements PaymentInterface {",
+            "    public function pay(float $amount): string {",
+            "        return \"Twint : $amount CHF\";",
+            "    }",
+            "}",
+            "",
+            "class CreditCard implements PaymentInterface {",
+            "    public function pay(float $amount): string {",
+            "        return \"Carte : $amount CHF (+ frais)\";",
+            "    }",
+            "}",
+            "",
+            "echo (new Twint())->pay(12.5);",
+            ""
+          ]
+        },
+        {
+          "titre": "Le polymorphisme",
+          "texte": "Des objets différents, une même façon de les utiliser : tous savent `pay()`.",
+          "code": [
+            "interface PaymentInterface {",
+            "    public function pay(float $amount): string;",
+            "}",
+            "class Twint implements PaymentInterface {",
+            "    public function pay(float $amount): string {",
+            "        return \"Twint : $amount CHF\";",
+            "    }",
+            "}",
+            "class Cash implements PaymentInterface {",
+            "    public function pay(float $amount): string {",
+            "        return \"Espèces : $amount CHF\";",
+            "    }",
+            "}",
+            "",
+            "$payments = [new Twint(), new Cash()];",
+            "foreach ($payments as $payment) {",
+            "    echo $payment->pay(20) . \"<br>\";",
+            "}",
+            ""
+          ]
+        },
+        {
+          "titre": "Promesse non tenue",
+          "texte": "Si une méthode promise manque, PHP refuse la classe.",
+          "code": [
+            "interface PaymentInterface {",
+            "    public function pay(float $amount): string;",
+            "}",
+            "",
+            "class Voucher implements PaymentInterface {",
+            "}",
+            ""
+          ],
+          "erreurVoulue": true,
+          "astuce": "Une classe peut implémenter plusieurs interfaces : `class Twint implements PaymentInterface, RefundInterface`."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u03-l1-e1",
+          "type": "qcm",
+          "notions": [
+            "interfaces"
+          ],
+          "question": "Que contient une interface ?",
+          "choix": [
+            "Les signatures des méthodes à écrire, sans leur code",
+            "Des attributs et leurs valeurs",
+            "Le code complet des méthodes",
+            "Un constructeur obligatoire"
+          ],
+          "bonne": 0,
+          "explication": "L'interface est un contrat : elle dit quoi, pas comment."
+        },
+        {
+          "id": "u03-l1-e2",
+          "type": "trous",
+          "notions": [
+            "interfaces"
+          ],
+          "question": "Complète : `Cash` signe le contrat `PaymentInterface`.",
+          "prelude": [
+            "interface PaymentInterface {",
+            "    public function pay(float $amount): string;",
+            "}"
+          ],
+          "code": [
+            "class Cash ___ PaymentInterface {",
+            "    public function pay(float $amount): string {",
+            "        return \"Espèces : $amount CHF\";",
+            "    }",
+            "}",
+            "",
+            "echo (new Cash())->pay(5);",
+            ""
+          ],
+          "solution": [
+            "implements"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Espèces : 5 CHF"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "On implémente une interface."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "extends"
+              ],
+              "attendu": "erreur",
+              "diagnostic": "extends-implements"
+            }
+          ],
+          "explication": "`implements` pour une interface ; `extends` est réservé à l'héritage de classes."
+        },
+        {
+          "id": "u03-l1-e3",
+          "type": "predire",
+          "notions": [
+            "interfaces"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "interface SoundInterface {",
+            "    public function sound(): string;",
+            "}",
+            "class Bell implements SoundInterface {",
+            "    public function sound(): string {",
+            "        return \"Ding\";",
+            "    }",
+            "}",
+            "class Drum implements SoundInterface {",
+            "    public function sound(): string {",
+            "        return \"Boum\";",
+            "    }",
+            "}",
+            "",
+            "foreach ([new Drum(), new Bell(), new Drum()] as $thing) {",
+            "    echo $thing->sound() . \" \";",
+            "}",
+            ""
+          ],
+          "explication": "Le polymorphisme : chaque objet répond à `sound()` à sa façon, dans l'ordre du tableau."
+        },
+        {
+          "id": "u03-l1-e4",
+          "type": "ecrire",
+          "notions": [
+            "interfaces"
+          ],
+          "question": "L'interface `GreeterInterface` est déjà écrite. Écris deux classes qui l'implémentent : `FrenchGreeter` (`greet(\"Ana\")` retourne « Bonjour Ana ! ») et `EnglishGreeter` (« Hello Ana! »).",
+          "prelude": [
+            "interface GreeterInterface {",
+            "    public function greet(string $name): string;",
+            "}"
+          ],
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Français",
+                "code": "return (new FrenchGreeter())->greet('Ana');",
+                "attendu": "Bonjour Ana !"
+              },
+              {
+                "titre": "Anglais",
+                "code": "return (new EnglishGreeter())->greet('Léo');",
+                "attendu": "Hello Léo!"
+              },
+              {
+                "titre": "Contrat signé",
+                "code": "return [new FrenchGreeter() instanceof GreeterInterface, new EnglishGreeter() instanceof GreeterInterface];",
+                "attendu": [
+                  true,
+                  true
+                ],
+                "siEchec": "Les deux classes doivent déclarer `implements GreeterInterface`."
+              }
+            ]
+          },
+          "indices": [
+            "`class FrenchGreeter implements GreeterInterface { … }`, puis la même chose pour l'anglais.",
+            "Chaque classe écrit `public function greet(string $name): string`, avec la même signature que l'interface.",
+            {
+              "texte": "Presque :",
+              "code": "class FrenchGreeter implements GreeterInterface {\n    public function greet(string $name): string {\n        return ___;\n    }\n}"
+            }
+          ],
+          "solution": [
+            "class FrenchGreeter implements GreeterInterface {",
+            "    public function greet(string $name): string {",
+            "        return \"Bonjour \" . $name . \" !\";",
+            "    }",
+            "}",
+            "",
+            "class EnglishGreeter implements GreeterInterface {",
+            "    public function greet(string $name): string {",
+            "        return \"Hello \" . $name . \"!\";",
+            "    }",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "class FrenchGreeter implements GreeterInterface {\n    public function greet(string $name): string {\n        return \"Bonjour \" . $name . \" !\";\n    }\n}\n\nclass EnglishGreeter implements GreeterInterface {\n    public function hello(string $name): string {\n        return \"Hello \" . $name . \"!\";\n    }\n}",
+              "attendu": "erreur",
+              "diagnostic": "methode-promise"
+            },
+            {
+              "code": "class FrenchGreeter implements GreeterInterface {\n    public function greet($name, $polite) {\n        return \"Bonjour \" . $name . \" !\";\n    }\n}",
+              "attendu": "erreur",
+              "diagnostic": "signature"
+            },
+            {
+              "code": "class FrenchGreeter {\n    public function greet(string $name): string {\n        return \"Bonjour \" . $name . \" !\";\n    }\n}\n\nclass EnglishGreeter {\n    public function greet(string $name): string {\n        return \"Hello \" . $name . \"!\";\n    }\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Deux classes, un contrat : partout où on attend un `GreeterInterface`, on peut donner l'une ou l'autre."
+        },
+        {
+          "id": "u03-l1-e5",
+          "type": "vf",
+          "notions": [
+            "interfaces"
+          ],
+          "question": "Une classe peut implémenter plusieurs interfaces.",
+          "bonne": true,
+          "explication": "`class A implements B, C` : c'est permis, contrairement à l'héritage multiple."
+        },
+        {
+          "id": "u03-l1-e6",
+          "type": "erreurs",
+          "notions": [
+            "interfaces"
+          ],
+          "question": "Traduis ces messages.",
+          "paires": [
+            [
+              "Class Voucher contains 1 abstract method and must therefore be declared abstract or implement the remaining methods (PaymentInterface::pay)",
+              "Il manque une méthode promise par l'interface"
+            ],
+            [
+              "Cannot instantiate interface PaymentInterface",
+              "On a fait new sur une interface"
+            ],
+            [
+              "Declaration of Cash::pay(int $a) must be compatible with PaymentInterface::pay(float $amount): string",
+              "La signature ne correspond pas au contrat"
+            ]
+          ],
+          "explication": "Les trois façons de ne pas respecter le contrat."
+        }
+      ]
+    },
+    {
+      "id": "u03-l2",
+      "titre": "Héritage : une variante du plan",
+      "duree": 7,
+      "notions": [
+        "heritage"
+      ],
+      "cartes": [
+        {
+          "titre": "extends : hériter",
+          "texte": "La classe fille reprend tout ce que la classe parent a de `public` et `protected`, et ajoute ce qui lui est propre.",
+          "code": [
+            "class Employee {",
+            "    protected string $name;",
+            "",
+            "    public function __construct(string $name) {",
+            "        $this->name = $name;",
+            "    }",
+            "",
+            "    public function getName(): string {",
+            "        return $this->name;",
+            "    }",
+            "}",
+            "",
+            "class Intern extends Employee {",
+            "    public function getBadge(): string {",
+            "        return \"Stagiaire : \" . $this->name;",
+            "    }",
+            "}",
+            "",
+            "$intern = new Intern(\"Mia\");",
+            "echo $intern->getName() . \"<br>\";",
+            "echo $intern->getBadge();",
+            ""
+          ],
+          "analogie": "Le plan « maison avec garage » reprend tout le plan « maison » et ajoute le garage.",
+          "fiche": "heritage"
+        },
+        {
+          "titre": "parent::__construct",
+          "texte": "Quand la fille a son propre constructeur, elle appelle celui du parent pour initialiser les attributs hérités.",
+          "code": [
+            "class Employee {",
+            "    protected string $name;",
+            "",
+            "    public function __construct(string $name) {",
+            "        $this->name = $name;",
+            "    }",
+            "}",
+            "",
+            "class Manager extends Employee {",
+            "    private int $teamSize;",
+            "",
+            "    public function __construct(string $name, int $teamSize) {",
+            "        parent::__construct($name);",
+            "        $this->teamSize = $teamSize;",
+            "    }",
+            "",
+            "    public function describe(): string {",
+            "        return $this->name . \" gère \" . $this->teamSize . \" personnes\";",
+            "    }",
+            "}",
+            "",
+            "echo (new Manager(\"Ana\", 5))->describe();",
+            ""
+          ]
+        },
+        {
+          "titre": "protected ou private ?",
+          "texte": "Un attribut `private` du parent est invisible dans la fille. Pour le partager avec les filles : `protected`.",
+          "code": [
+            "class Employee {",
+            "    private string $name = \"Ana\";",
+            "}",
+            "",
+            "class Manager extends Employee {",
+            "    public function shout(): string {",
+            "        return strtoupper($this->name);",
+            "    }",
+            "}",
+            "",
+            "echo (new Manager())->shout();",
+            ""
+          ],
+          "erreurVoulue": true
+        },
+        {
+          "titre": "Redéfinir une méthode",
+          "texte": "La fille peut réécrire une méthode du parent ; `parent::methode()` appelle encore la version du parent.",
+          "code": [
+            "class Employee {",
+            "    public function describe(): string {",
+            "        return \"Employé·e\";",
+            "    }",
+            "}",
+            "",
+            "class Manager extends Employee {",
+            "    public function describe(): string {",
+            "        return parent::describe() . \" (manager)\";",
+            "    }",
+            "}",
+            "",
+            "echo (new Manager())->describe();",
+            ""
+          ],
+          "piege": "PHP n'a pas d'héritage multiple : `class A extends B, C` est impossible."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u03-l2-e1",
+          "type": "predire",
+          "notions": [
+            "heritage"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "class Animal {",
+            "    protected string $name;",
+            "",
+            "    public function __construct(string $name) {",
+            "        $this->name = $name;",
+            "    }",
+            "",
+            "    public function present(): string {",
+            "        return \"Je suis \" . $this->name;",
+            "    }",
+            "}",
+            "",
+            "class Parrot extends Animal {",
+            "    public function present(): string {",
+            "        return parent::present() . \" et je parle !\";",
+            "    }",
+            "}",
+            "",
+            "echo (new Parrot(\"Coco\"))->present();",
+            ""
+          ],
+          "explication": "`Parrot` hérite du constructeur, redéfinit `present()` et réutilise la version du parent."
+        },
+        {
+          "id": "u03-l2-e2",
+          "type": "ecrire",
+          "notions": [
+            "heritage"
+          ],
+          "question": "La classe `Employee` est déjà écrite. Écris `Manager`, qui hérite d'`Employee` et ajoute un attribut privé `int $teamSize` : son constructeur reçoit `($name, $salary, $teamSize)`, et `getTeamSize(): int` le retourne.",
+          "prelude": [
+            "class Employee {",
+            "    protected string $name;",
+            "    protected float $salary;",
+            "",
+            "    public function __construct(string $name, float $salary) {",
+            "        $this->name = $name;",
+            "        $this->salary = $salary;",
+            "    }",
+            "",
+            "    public function getName(): string {",
+            "        return $this->name;",
+            "    }",
+            "",
+            "    public function getSalary(): float {",
+            "        return $this->salary;",
+            "    }",
+            "}"
+          ],
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Ana, 5 personnes",
+                "code": "$m = new Manager('Ana', 9000, 5);\nreturn [$m->getName(), $m->getSalary(), $m->getTeamSize()];",
+                "attendu": [
+                  "Ana",
+                  9000,
+                  5
+                ]
+              },
+              {
+                "titre": "Autre manager",
+                "code": "$m = new Manager('Léo', 7500.5, 12);\nreturn [$m->getName(), $m->getTeamSize()];",
+                "attendu": [
+                  "Léo",
+                  12
+                ]
+              },
+              {
+                "titre": "C'est bien un Employee",
+                "code": "return new Manager('Mia', 1, 1) instanceof Employee;",
+                "attendu": true,
+                "siEchec": "`Manager` doit hériter d'`Employee` : `class Manager extends Employee`."
+              }
+            ]
+          },
+          "indices": [
+            "`class Manager extends Employee { … }`.",
+            "Dans le constructeur, appelle d'abord `parent::__construct($name, $salary);`, puis range `$teamSize`.",
+            {
+              "texte": "Le constructeur :",
+              "code": "public function __construct(string $name, float $salary, int $teamSize) {\n    ___;\n    $this->teamSize = $teamSize;\n}"
+            }
+          ],
+          "solution": [
+            "class Manager extends Employee {",
+            "    private int $teamSize;",
+            "",
+            "    public function __construct(string $name, float $salary, int $teamSize) {",
+            "        parent::__construct($name, $salary);",
+            "        $this->teamSize = $teamSize;",
+            "    }",
+            "",
+            "    public function getTeamSize(): int {",
+            "        return $this->teamSize;",
+            "    }",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "class Manager extends Employee {\n    private int $teamSize;\n\n    public function __construct(string $name, float $salary, int $teamSize) {\n        $this->teamSize = $teamSize;\n    }\n\n    public function getTeamSize(): int {\n        return $this->teamSize;\n    }\n}",
+              "attendu": "echec",
+              "diagnostic": "attribut-vide"
+            },
+            {
+              "code": "class Manager extends Employee {\n    private int $teamSize;\n\n    public function __construct(string $name, float $salary, int $teamSize) {\n        parent::__construct($name);\n        $this->teamSize = $teamSize;\n    }\n\n    public function getTeamSize(): int {\n        return $this->teamSize;\n    }\n}",
+              "attendu": "echec",
+              "diagnostic": "arguments"
+            },
+            {
+              "code": "class Manager implements Employee {\n    private int $teamSize;\n\n    public function __construct(string $name, float $salary, int $teamSize) {\n        parent::__construct($name, $salary);\n        $this->teamSize = $teamSize;\n    }\n\n    public function getTeamSize(): int {\n        return $this->teamSize;\n    }\n}",
+              "attendu": "erreur",
+              "diagnostic": "parent-sans-extends"
+            }
+          ],
+          "explication": "La fille délègue au parent ce qu'il sait faire (`parent::__construct`), puis s'occupe de ce qui lui est propre."
+        },
+        {
+          "id": "u03-l2-e3",
+          "type": "trous",
+          "notions": [
+            "heritage"
+          ],
+          "question": "Complète le constructeur de la fille.",
+          "code": [
+            "class Vehicle2 {",
+            "    protected string $brand;",
+            "",
+            "    public function __construct(string $brand) {",
+            "        $this->brand = $brand;",
+            "    }",
+            "}",
+            "",
+            "class Bike extends Vehicle2 {",
+            "    public function __construct(string $brand) {",
+            "        ___::___($brand);",
+            "    }",
+            "",
+            "    public function getBrand(): string {",
+            "        return $this->brand;",
+            "    }",
+            "}",
+            "",
+            "echo (new Bike(\"Cilo\"))->getBrand();",
+            ""
+          ],
+          "solution": [
+            "parent",
+            "__construct"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Cilo"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le mot qui désigne la classe parent.",
+            "Le nom du constructeur."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "self",
+                "__construct"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "$this",
+                "__construct"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "`parent::__construct($brand)` initialise l'attribut hérité."
+        },
+        {
+          "id": "u03-l2-e4",
+          "type": "bug",
+          "notions": [
+            "heritage"
+          ],
+          "question": "Ce code affiche un avertissement et rien d'utile. Touche la ligne qui cause le problème.",
+          "code": [
+            "class Employee {",
+            "    private string $name = \"Ana\";",
+            "}",
+            "",
+            "class Manager extends Employee {",
+            "    public function getName(): string {",
+            "        return $this->name;",
+            "    }",
+            "}",
+            ""
+          ],
+          "ligne": 2,
+          "choix": [
+            "`private` rend l'attribut invisible dans la fille : il faut `protected`",
+            "Il faut `parent::$name`",
+            "Une fille ne peut pas avoir de getter",
+            "Le type `string` est interdit dans un parent"
+          ],
+          "bonne": 0,
+          "explication": "`private` : la classe seulement ; `protected` : la classe et ses sous-classes."
+        },
+        {
+          "id": "u03-l2-e5",
+          "type": "vf",
+          "notions": [
+            "heritage"
+          ],
+          "question": "En PHP, une classe peut hériter de deux classes : `class C extends A, B`.",
+          "bonne": false,
+          "explication": "Pas d'héritage multiple en PHP. Une classe peut par contre implémenter plusieurs interfaces."
+        },
+        {
+          "id": "u03-l2-e6",
+          "type": "qcm",
+          "notions": [
+            "heritage"
+          ],
+          "question": "À quoi sert `parent::describe()` dans une méthode `describe()` redéfinie ?",
+          "choix": [
+            "À réutiliser la version du parent, puis la compléter",
+            "À appeler la méthode de la fille",
+            "À créer un nouvel objet parent",
+            "À rien, c'est une erreur"
+          ],
+          "bonne": 0,
+          "explication": "On garde le comportement du parent et on y ajoute celui de la fille."
+        }
+      ]
+    },
+    {
+      "id": "u03-l3",
+      "titre": "Classes abstraites",
+      "duree": 6,
+      "notions": [
+        "classes-abstraites"
+      ],
+      "cartes": [
+        {
+          "titre": "Une base qu'on n'instancie pas",
+          "texte": "`abstract class` : une classe qui sert de base commune à ses filles. On ne fait jamais `new` dessus.",
+          "code": [
+            "abstract class Notification {",
+            "    protected string $recipient;",
+            "",
+            "    public function __construct(string $recipient) {",
+            "        $this->recipient = $recipient;",
+            "    }",
+            "",
+            "    abstract public function send(string $message): string;",
+            "",
+            "    public function getRecipient(): string {",
+            "        return $this->recipient;",
+            "    }",
+            "}"
+          ],
+          "analogie": "La maison témoin à moitié finie : murs et toit sont là, la cuisine est à choisir. On construit des maisons finies à partir d'elle.",
+          "fiche": "classes-abstraites"
+        },
+        {
+          "titre": "Méthode abstraite : à écrire par chaque fille",
+          "texte": "`abstract public function send(…): string;` n'a pas de corps. Chaque fille DOIT l'écrire.",
+          "code": [
+            "abstract class Notification {",
+            "    protected string $recipient;",
+            "",
+            "    public function __construct(string $recipient) {",
+            "        $this->recipient = $recipient;",
+            "    }",
+            "",
+            "    abstract public function send(string $message): string;",
+            "}",
+            "",
+            "class PushNotification extends Notification {",
+            "    public function send(string $message): string {",
+            "        return \"Push vers \" . $this->recipient . \" : \" . $message;",
+            "    }",
+            "}",
+            "",
+            "echo (new PushNotification(\"ana-phone\"))->send(\"Salut\");",
+            ""
+          ]
+        },
+        {
+          "titre": "new sur une classe abstraite",
+          "texte": "PHP refuse :",
+          "code": [
+            "abstract class Notification {",
+            "    abstract public function send(string $message): string;",
+            "}",
+            "",
+            "$n = new Notification();",
+            ""
+          ],
+          "erreurVoulue": true
+        },
+        {
+          "titre": "Interface ou classe abstraite ?",
+          "texte": "Une **interface** ne contient que des signatures ; une classe peut en implémenter plusieurs. Une **classe abstraite** peut aussi avoir des attributs et des méthodes avec du code ; une classe n'hérite que d'une seule.",
+          "astuce": "Le cours la décrit comme un mélange entre une interface et une classe normale."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u03-l3-e1",
+          "type": "qcm",
+          "notions": [
+            "classes-abstraites"
+          ],
+          "question": "`Notification` est abstraite. Que fait `new Notification(\"ana@example.com\")` ?",
+          "choix": [
+            "Une erreur : Cannot instantiate abstract class",
+            "Crée l'objet normalement",
+            "Crée un objet sans méthode send()",
+            "Crée un objet de la première classe fille"
+          ],
+          "bonne": 0,
+          "explication": "On instancie les filles (`EmailNotification`), jamais la classe abstraite."
+        },
+        {
+          "id": "u03-l3-e2",
+          "type": "ecrire",
+          "notions": [
+            "classes-abstraites",
+            "heritage"
+          ],
+          "question": "La classe abstraite `Notification` est déjà écrite. Écris ses deux filles : `EmailNotification` (`send(\"Salut\")` retourne « E-mail à ana@example.com : Salut ») et `SmsNotification` (« SMS au 0791234567 : Salut »).",
+          "prelude": [
+            "abstract class Notification {",
+            "    protected string $recipient;",
+            "",
+            "    public function __construct(string $recipient) {",
+            "        $this->recipient = $recipient;",
+            "    }",
+            "",
+            "    abstract public function send(string $message): string;",
+            "",
+            "    public function getRecipient(): string {",
+            "        return $this->recipient;",
+            "    }",
+            "}"
+          ],
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "E-mail",
+                "code": "return (new EmailNotification('ana@example.com'))->send('Salut');",
+                "attendu": "E-mail à ana@example.com : Salut"
+              },
+              {
+                "titre": "SMS",
+                "code": "return (new SmsNotification('0791234567'))->send('Salut');",
+                "attendu": "SMS au 0791234567 : Salut"
+              },
+              {
+                "titre": "Autre message",
+                "code": "return (new EmailNotification('leo@example.com'))->send('RDV à 14h');",
+                "attendu": "E-mail à leo@example.com : RDV à 14h"
+              },
+              {
+                "titre": "Héritent de Notification",
+                "code": "return [new EmailNotification('a') instanceof Notification, new SmsNotification('b') instanceof Notification];",
+                "attendu": [
+                  true,
+                  true
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "`class EmailNotification extends Notification { … }`.",
+            "Chaque fille écrit `send(string $message): string` et utilise l'attribut hérité `$this->recipient`.",
+            {
+              "texte": "Presque :",
+              "code": "public function send(string $message): string {\n    return \"E-mail à \" . ___ . \" : \" . ___;\n}"
+            }
+          ],
+          "solution": [
+            "class EmailNotification extends Notification {",
+            "    public function send(string $message): string {",
+            "        return \"E-mail à \" . $this->recipient . \" : \" . $message;",
+            "    }",
+            "}",
+            "",
+            "class SmsNotification extends Notification {",
+            "    public function send(string $message): string {",
+            "        return \"SMS au \" . $this->recipient . \" : \" . $message;",
+            "    }",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "class EmailNotification extends Notification {\n}\n\nclass SmsNotification extends Notification {\n}",
+              "attendu": "erreur",
+              "diagnostic": "methode-promise"
+            },
+            {
+              "code": "class EmailNotification extends Notification {\n    public function send(string $message): string {\n        return \"E-mail à \" . $recipient . \" : \" . $message;\n    }\n}\n\nclass SmsNotification extends Notification {\n    public function send(string $message): string {\n        return \"SMS au \" . $recipient . \" : \" . $message;\n    }\n}",
+              "attendu": "echec",
+              "diagnostic": "variable-inconnue"
+            }
+          ],
+          "explication": "La base commune (destinataire, constructeur) est écrite une fois ; chaque fille ne fournit que sa façon d'envoyer."
+        },
+        {
+          "id": "u03-l3-e3",
+          "type": "tri",
+          "notions": [
+            "classes-abstraites",
+            "interfaces"
+          ],
+          "question": "Interface, classe abstraite, ou les deux ?",
+          "categories": [
+            "Interface",
+            "Classe abstraite",
+            "Les deux"
+          ],
+          "items": [
+            [
+              "Peut contenir des attributs",
+              1
+            ],
+            [
+              "Peut contenir des méthodes avec du code",
+              1
+            ],
+            [
+              "Ne peut pas être instanciée",
+              2
+            ],
+            [
+              "Une classe peut en utiliser plusieurs",
+              0
+            ],
+            [
+              "Oblige les classes à écrire certaines méthodes",
+              2
+            ],
+            [
+              "S'utilise avec extends",
+              1
+            ]
+          ],
+          "explication": "L'interface est un pur contrat (implements, plusieurs possibles) ; la classe abstraite est une base partiellement construite (extends, une seule)."
+        },
+        {
+          "id": "u03-l3-e4",
+          "type": "pointer-code",
+          "notions": [
+            "classes-abstraites"
+          ],
+          "question": "Touche la méthode que chaque classe fille devra écrire.",
+          "code": [
+            "abstract class Shape2 {",
+            "    public function describe(): string {",
+            "        return \"Aire : \" . $this->area();",
+            "    }",
+            "",
+            "    ⟦abstract public function area(): float;⟧",
+            "}",
+            ""
+          ],
+          "explication": "La méthode `abstract`, sans corps, est à fournir par chaque fille. `describe()` l'utilise déjà."
+        },
+        {
+          "id": "u03-l3-e5",
+          "type": "predire",
+          "notions": [
+            "classes-abstraites"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "abstract class Drink {",
+            "    abstract public function getName(): string;",
+            "",
+            "    public function serve(): string {",
+            "        return \"Voici votre \" . $this->getName();",
+            "    }",
+            "}",
+            "",
+            "class Tea extends Drink {",
+            "    public function getName(): string {",
+            "        return \"thé\";",
+            "    }",
+            "}",
+            "",
+            "echo (new Tea())->serve();",
+            ""
+          ],
+          "explication": "`serve()` est écrite dans la classe abstraite ; elle appelle `getName()`, fournie par la fille."
+        },
+        {
+          "id": "u03-l3-e6",
+          "type": "vf",
+          "notions": [
+            "classes-abstraites"
+          ],
+          "question": "Une méthode abstraite s'écrit avec des accolades vides : `abstract public function area(): float {}`.",
+          "bonne": false,
+          "explication": "Une méthode abstraite n'a pas de corps : elle se termine par un point-virgule."
+        }
+      ]
+    },
+    {
+      "id": "u03-l4",
+      "titre": "Un fichier par classe : require_once",
+      "duree": 6,
+      "notions": [
+        "inclusion-classes"
+      ],
+      "cartes": [
+        {
+          "titre": "Ranger les classes",
+          "texte": "Dans le cours, chaque classe a son fichier dans `src/`, et le point d'entrée est `public/index.php`.",
+          "code": [
+            "./",
+            "├── public/",
+            "│   └── index.php",
+            "└── src/",
+            "    ├── Instrument.php",
+            "    ├── Guitar.php",
+            "    └── Piano.php",
+            ""
+          ],
+          "executable": false,
+          "fiche": "inclusion-classes"
+        },
+        {
+          "titre": "__DIR__ : le dossier du fichier",
+          "texte": "`__DIR__` vaut le dossier du fichier où il est écrit. Depuis `public/index.php`, on remonte avec `/..` pour atteindre `src/`.",
+          "code": [
+            "<?php",
+            "// public/index.php",
+            "require_once __DIR__ . '/../src/Guitar.php';",
+            "require_once __DIR__ . '/../src/Piano.php';",
+            ""
+          ],
+          "executable": false
+        },
+        {
+          "titre": "Le problème du double require",
+          "texte": "`Guitar.php` et `Piano.php` incluent tous les deux `Instrument.php`. Avec `require`, il serait chargé deux fois : `Cannot declare class Instrument, because the name is already in use`.",
+          "piege": "Ce n'est pas une faute dans `Instrument.php` : c'est l'inclusion en double."
+        },
+        {
+          "titre": "require_once règle tout",
+          "texte": "`require_once` n'inclut un fichier qu'une seule fois, même s'il est demandé plusieurs fois. Le cours l'utilise partout : dans `index.php` ET dans chaque fichier de classe.",
+          "code": [
+            "<?php",
+            "require_once __DIR__ . '/Instrument.php';",
+            "",
+            "class Guitar extends Instrument {",
+            "    public function play(): string {",
+            "        return \"Gling gling\";",
+            "    }",
+            "}"
+          ],
+          "executable": false
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u03-l4-e1",
+          "type": "qcm",
+          "notions": [
+            "inclusion-classes"
+          ],
+          "question": "« Cannot declare class Pet, because the name is already in use ». Que se passe-t-il le plus souvent ?",
+          "choix": [
+            "Le fichier Pet.php a été inclus deux fois avec require",
+            "La classe Pet a une faute de frappe",
+            "Pet.php est introuvable",
+            "Pet devrait être abstraite"
+          ],
+          "bonne": 0,
+          "explication": "Deux fichiers l'incluent avec `require` : la classe est déclarée deux fois. Remède : `require_once`."
+        },
+        {
+          "id": "u03-l4-e2",
+          "type": "qcm",
+          "notions": [
+            "inclusion-classes"
+          ],
+          "mono": true,
+          "question": "Dans `public/index.php`, quel chemin atteint `src/Dog.php` ?",
+          "choix": [
+            "__DIR__ . '/../src/Dog.php'",
+            "__DIR__ . '/src/Dog.php'",
+            "__DIR__ . 'src/Dog.php'",
+            "'/src/Dog.php'"
+          ],
+          "bonne": 0,
+          "explication": "`__DIR__` est `public` : on remonte (`/..`) puis on descend dans `src`."
+        },
+        {
+          "id": "u03-l4-e3",
+          "type": "ecrire",
+          "notions": [
+            "inclusion-classes"
+          ],
+          "question": "Les fichiers `src/Instrument.php`, `src/Guitar.php` et `src/Piano.php` sont déjà écrits. Dans `public/index.php`, inclus `Guitar.php` et `Piano.php`, puis affiche ce que joue chaque instrument, une ligne chacun (« Gling gling », puis « Plink plonk »).",
+          "fichier": "public/index.php",
+          "fichiers": {
+            "src/Instrument.php": [
+              "<?php",
+              "abstract class Instrument {",
+              "    abstract public function play(): string;",
+              "}"
+            ],
+            "src/Guitar.php": [
+              "<?php",
+              "require_once __DIR__ . '/Instrument.php';",
+              "",
+              "class Guitar extends Instrument {",
+              "    public function play(): string {",
+              "        return \"Gling gling\";",
+              "    }",
+              "}"
+            ],
+            "src/Piano.php": [
+              "<?php",
+              "require_once __DIR__ . '/Instrument.php';",
+              "",
+              "class Piano extends Instrument {",
+              "    public function play(): string {",
+              "        return \"Plink plonk\";",
+              "    }",
+              "}"
+            ]
+          },
+          "depart": [
+            "<?php",
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Gling gling",
+                  "Plink plonk"
+                ]
+              }
+            ],
+            "obligatoire": [
+              "require_once"
+            ]
+          },
+          "indices": [
+            "Deux `require_once` avec `__DIR__ . '/../src/…'`.",
+            "Puis `(new Guitar())->play()` et la même chose pour le piano, chacun suivi de `\"<br>\"`.",
+            {
+              "texte": "Le début :",
+              "code": "<?php\nrequire_once __DIR__ . '/../src/Guitar.php';\nrequire_once ___;"
+            }
+          ],
+          "solution": [
+            "<?php",
+            "require_once __DIR__ . '/../src/Guitar.php';",
+            "require_once __DIR__ . '/../src/Piano.php';",
+            "",
+            "echo (new Guitar())->play() . \"<br>\";",
+            "echo (new Piano())->play() . \"<br>\";",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "<?php\nrequire_once __DIR__ . '/src/Guitar.php';\nrequire_once __DIR__ . '/src/Piano.php';\n\necho (new Guitar())->play() . \"<br>\";\necho (new Piano())->play() . \"<br>\";",
+              "attendu": "erreur",
+              "diagnostic": "fichier-introuvable"
+            },
+            {
+              "code": "<?php\nrequire_once __DIR__ . '/../src/Guitar.php';\n\necho (new Guitar())->play() . \"<br>\";\necho (new Piano())->play() . \"<br>\";",
+              "attendu": "erreur",
+              "diagnostic": "classe-inconnue"
+            },
+            {
+              "code": "<?php\nrequire __DIR__ . '/../src/Guitar.php';\nrequire __DIR__ . '/../src/Instrument.php';\n\necho (new Guitar())->play() . \"<br>\";",
+              "attendu": "erreur",
+              "diagnostic": "redeclare"
+            }
+          ],
+          "explication": "Grâce à `require_once` dans chaque fichier, `Instrument.php` n'est chargé qu'une fois, même si Guitar et Piano le demandent tous les deux."
+        },
+        {
+          "id": "u03-l4-e4",
+          "type": "vf",
+          "notions": [
+            "inclusion-classes"
+          ],
+          "question": "`require_once` inclut un fichier une seule fois, même s'il est demandé par plusieurs fichiers.",
+          "bonne": true,
+          "explication": "C'est ce qui résout le problème des inclusions en double."
+        },
+        {
+          "id": "u03-l4-e5",
+          "type": "ordre",
+          "notions": [
+            "inclusion-classes"
+          ],
+          "question": "Avec `require_once` partout, dans quel ordre PHP charge-t-il les fichiers quand `index.php` inclut `Dog.php` puis `Cat.php` ? (Dog et Cat incluent Pet, qui inclut Animal.)",
+          "items": [
+            "index.php commence",
+            "Dog.php est inclus",
+            "Pet.php est inclus (demandé par Dog)",
+            "Animal.php est inclus (demandé par Pet)",
+            "Cat.php est inclus ; Pet.php ne l'est pas une seconde fois"
+          ],
+          "explication": "Chaque fichier n'est chargé qu'une fois : la deuxième demande de Pet.php est ignorée."
+        }
+      ]
+    },
+    {
+      "id": "u03-l5",
+      "titre": "Bonus : static",
+      "duree": 4,
+      "notions": [
+        "statique"
+      ],
+      "cartes": [
+        {
+          "titre": "Un attribut partagé",
+          "texte": "Un attribut `static` appartient à la **classe**, pas à chaque objet : tous les objets partagent la même valeur. Dans la classe : `self::$count`.",
+          "code": [
+            "class Visitor {",
+            "    private static int $count = 0;",
+            "",
+            "    public function __construct() {",
+            "        self::$count++;",
+            "    }",
+            "",
+            "    public static function getCount(): int {",
+            "        return self::$count;",
+            "    }",
+            "}",
+            "",
+            "new Visitor();",
+            "new Visitor();",
+            "echo Visitor::getCount();",
+            ""
+          ],
+          "fiche": "statique"
+        },
+        {
+          "titre": "Une méthode sans objet",
+          "texte": "Une méthode `static` s'appelle sur la classe : `Visitor::getCount()`. Elle n'a pas de `$this`.",
+          "code": [
+            "class Price {",
+            "    public static function withVat(float $price): float {",
+            "        return $price * 1.081;",
+            "    }",
+            "}",
+            "",
+            "echo Price::withVat(100);",
+            ""
+          ],
+          "astuce": "C'est un exemple « bonus » du cours : utile, mais pas nécessaire pour les bases."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u03-l5-e1",
+          "type": "predire",
+          "notions": [
+            "statique"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "class Ticket {",
+            "    private static int $next = 1;",
+            "    private int $number;",
+            "",
+            "    public function __construct() {",
+            "        $this->number = self::$next;",
+            "        self::$next++;",
+            "    }",
+            "",
+            "    public function getNumber(): int {",
+            "        return $this->number;",
+            "    }",
+            "}",
+            "",
+            "$a = new Ticket();",
+            "$b = new Ticket();",
+            "$c = new Ticket();",
+            "echo $a->getNumber() . $b->getNumber() . $c->getNumber();",
+            ""
+          ],
+          "explication": "`self::$next` est partagé : chaque nouveau ticket prend le numéro suivant (1, 2, 3)."
+        },
+        {
+          "id": "u03-l5-e2",
+          "type": "qcm",
+          "notions": [
+            "statique"
+          ],
+          "mono": true,
+          "question": "Comment appeler la méthode static `create()` de la classe `User` ?",
+          "choix": [
+            "User::create()",
+            "$user->create()",
+            "User->create()",
+            "self->create()"
+          ],
+          "bonne": 0,
+          "explication": "Une méthode static s'appelle sur la classe, avec `::`."
+        },
+        {
+          "id": "u03-l5-e3",
+          "type": "vf",
+          "notions": [
+            "statique"
+          ],
+          "question": "Dans une méthode `static`, on peut utiliser `$this`.",
+          "bonne": false,
+          "explication": "Une méthode static ne dépend d'aucun objet : il n'y a pas de `$this`."
+        },
+        {
+          "id": "u03-l5-e4",
+          "type": "tri",
+          "notions": [
+            "statique",
+            "constantes-classe"
+          ],
+          "mono": true,
+          "question": "Comment lire chaque élément, depuis l'intérieur de la classe ?",
+          "categories": [
+            "$this->…",
+            "self::…"
+          ],
+          "items": [
+            [
+              "Un attribut normal",
+              0
+            ],
+            [
+              "Une constante",
+              1
+            ],
+            [
+              "Un attribut static",
+              1
+            ],
+            [
+              "Une méthode normale",
+              0
+            ],
+            [
+              "Une méthode static",
+              1
+            ]
+          ],
+          "explication": "`$this` pour ce qui appartient à l'objet ; `self` pour ce qui appartient à la classe."
+        },
+        {
+          "id": "u03-l5-e5",
+          "type": "trous",
+          "notions": [
+            "statique"
+          ],
+          "question": "Complète le compteur partagé.",
+          "code": [
+            "class Download {",
+            "    private static int $total = 0;",
+            "",
+            "    public function __construct() {",
+            "        ___::$total++;",
+            "    }",
+            "",
+            "    public static function getTotal(): int {",
+            "        return self::$total;",
+            "    }",
+            "}",
+            "",
+            "new Download();",
+            "new Download();",
+            "echo Download::getTotal();",
+            ""
+          ],
+          "solution": [
+            "self"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "2"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "La classe elle-même, depuis l'intérieur."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "this"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "Un attribut static se lit et s'écrit avec `self::$total`."
+        }
+      ]
+    }
+  ],
+  "jeux": [
+    {
+      "id": "u03-trieur",
+      "titre": "Contrat, base ou variante ?",
+      "description": "Interface, classe abstraite, héritage : dix questions pour les distinguer.",
+      "tours": 10,
+      "questions": [
+        {
+          "id": "u03-j1",
+          "type": "qcm",
+          "notions": [
+            "interfaces"
+          ],
+          "mono": true,
+          "question": "Quel mot-clé pour une interface ?",
+          "choix": [
+            "implements",
+            "extends",
+            "use",
+            "abstract"
+          ],
+          "bonne": 0,
+          "explication": "On implémente une interface."
+        },
+        {
+          "id": "u03-j2",
+          "type": "qcm",
+          "notions": [
+            "heritage"
+          ],
+          "mono": true,
+          "question": "Quel mot-clé pour hériter d'une classe ?",
+          "choix": [
+            "extends",
+            "implements",
+            "inherits",
+            "parent"
+          ],
+          "bonne": 0,
+          "explication": "On étend une classe."
+        },
+        {
+          "id": "u03-j3",
+          "type": "vf",
+          "notions": [
+            "classes-abstraites"
+          ],
+          "question": "Une classe abstraite peut contenir des méthodes avec du code.",
+          "bonne": true,
+          "explication": "Elle mélange méthodes concrètes et méthodes abstraites."
+        },
+        {
+          "id": "u03-j4",
+          "type": "vf",
+          "notions": [
+            "interfaces"
+          ],
+          "question": "Une interface peut être instanciée avec new.",
+          "bonne": false,
+          "explication": "Ni une interface, ni une classe abstraite."
+        },
+        {
+          "id": "u03-j5",
+          "type": "qcm",
+          "notions": [
+            "heritage"
+          ],
+          "question": "Quelle visibilité partage un attribut avec les classes filles, mais pas avec l'extérieur ?",
+          "choix": [
+            "protected",
+            "private",
+            "public",
+            "static"
+          ],
+          "bonne": 0,
+          "explication": "`protected` : la classe et ses sous-classes."
+        },
+        {
+          "id": "u03-j6",
+          "type": "vf",
+          "notions": [
+            "heritage"
+          ],
+          "question": "`parent::__construct(…)` appelle le constructeur de la classe parent.",
+          "bonne": true,
+          "explication": "Pour initialiser les attributs hérités."
+        },
+        {
+          "id": "u03-j7",
+          "type": "qcm",
+          "notions": [
+            "inclusion-classes"
+          ],
+          "mono": true,
+          "question": "Quelle instruction évite d'inclure deux fois le même fichier ?",
+          "choix": [
+            "require_once",
+            "require",
+            "include",
+            "import"
+          ],
+          "bonne": 0,
+          "explication": "`require_once` ignore les demandes suivantes."
+        },
+        {
+          "id": "u03-j8",
+          "type": "vf",
+          "notions": [
+            "heritage"
+          ],
+          "question": "PHP permet l'héritage multiple.",
+          "bonne": false,
+          "explication": "Une seule classe parent ; plusieurs interfaces possibles."
+        },
+        {
+          "id": "u03-j9",
+          "type": "qcm",
+          "notions": [
+            "classes-abstraites"
+          ],
+          "question": "Une classe fille n'écrit pas une méthode abstraite de son parent. Que se passe-t-il ?",
+          "choix": [
+            "Une erreur fatale",
+            "La méthode retourne null",
+            "PHP écrit la méthode tout seul",
+            "Rien"
+          ],
+          "bonne": 0,
+          "explication": "Le contrat de la classe abstraite n'est pas respecté."
+        },
+        {
+          "id": "u03-j10",
+          "type": "qcm",
+          "notions": [
+            "interfaces"
+          ],
+          "question": "Traiter des objets de classes différentes de la même façon (ils ont tous `pay()`) s'appelle…",
+          "choix": [
+            "le polymorphisme",
+            "l'encapsulation",
+            "l'instanciation",
+            "la concaténation"
+          ],
+          "bonne": 0,
+          "explication": "C'est ce que permettent les interfaces."
+        },
+        {
+          "id": "u03-j11",
+          "type": "vf",
+          "notions": [
+            "statique"
+          ],
+          "question": "Un attribut `static` a une valeur différente pour chaque objet.",
+          "bonne": false,
+          "explication": "Il est partagé par tous les objets de la classe."
+        },
+        {
+          "id": "u03-j12",
+          "type": "qcm",
+          "notions": [
+            "inclusion-classes"
+          ],
+          "question": "Que vaut `__DIR__` ?",
+          "choix": [
+            "Le dossier du fichier où il est écrit",
+            "Le dossier racine du serveur",
+            "Le nom du fichier courant",
+            "Le dossier du navigateur"
+          ],
+          "bonne": 0,
+          "explication": "D'où `__DIR__ . '/../src/…'` depuis `public/`."
+        }
+      ]
+    }
+  ],
+  "quiz": {
+    "titre": "Quiz : interfaces, héritage, abstraction",
+    "questions": [
+      {
+        "id": "u03-q1",
+        "type": "qcm",
+        "notions": [
+          "interfaces"
+        ],
+        "question": "Selon le cours, une interface est…",
+        "choix": [
+          "un contrat qui définit les méthodes qu'une classe doit implémenter",
+          "une classe avec des attributs protégés",
+          "un fichier de configuration",
+          "une classe qu'on ne peut pas étendre"
+        ],
+        "bonne": 0,
+        "explication": "Elle garantit que certaines méthodes existent dans les classes qui l'implémentent."
+      },
+      {
+        "id": "u03-q2",
+        "type": "predire",
+        "notions": [
+          "interfaces"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "interface Speaker {",
+          "    public function speak(): string;",
+          "}",
+          "class Cat2 implements Speaker {",
+          "    public function speak(): string { return \"Miaou\"; }",
+          "}",
+          "class Cow implements Speaker {",
+          "    public function speak(): string { return \"Meuh\"; }",
+          "}",
+          "",
+          "$farm = [new Cow(), new Cat2()];",
+          "foreach ($farm as $animal) {",
+          "    echo $animal->speak() . \"<br>\";",
+          "}",
+          ""
+        ],
+        "explication": "Chaque objet répond à `speak()` à sa manière, dans l'ordre du tableau."
+      },
+      {
+        "id": "u03-q3",
+        "type": "bug",
+        "notions": [
+          "interfaces",
+          "heritage"
+        ],
+        "question": "Touche la ligne fautive.",
+        "code": [
+          "interface Speaker {",
+          "    public function speak(): string;",
+          "}",
+          "",
+          "class Dog2 extends Speaker {",
+          "    public function speak(): string {",
+          "        return \"Wouf\";",
+          "    }",
+          "}",
+          ""
+        ],
+        "ligne": 5,
+        "choix": [
+          "On implémente une interface : `implements`, pas `extends`",
+          "Il manque `abstract` devant la classe",
+          "La méthode doit être private",
+          "Il faut `parent::speak()`"
+        ],
+        "bonne": 0,
+        "explication": "`extends` pour une classe, `implements` pour une interface."
+      },
+      {
+        "id": "u03-q4",
+        "type": "predire",
+        "notions": [
+          "heritage"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "class Box {",
+          "    protected int $size;",
+          "",
+          "    public function __construct(int $size) {",
+          "        $this->size = $size;",
+          "    }",
+          "",
+          "    public function label(): string {",
+          "        return \"Boîte \" . $this->size;",
+          "    }",
+          "}",
+          "",
+          "class GiftBox extends Box {",
+          "    public function label(): string {",
+          "        return parent::label() . \" (cadeau)\";",
+          "    }",
+          "}",
+          "",
+          "echo (new GiftBox(3))->label();",
+          ""
+        ],
+        "explication": "La fille hérite du constructeur et complète `label()` du parent."
+      },
+      {
+        "id": "u03-q5",
+        "type": "qcm",
+        "notions": [
+          "heritage"
+        ],
+        "question": "Dans une classe fille, `$this->name` provoque « Undefined property ». Pourtant `name` existe dans le parent. Pourquoi ?",
+        "choix": [
+          "Il est private dans le parent",
+          "Il est protected dans le parent",
+          "La fille n'a pas de constructeur",
+          "Il faut écrire `$this->$name`"
+        ],
+        "bonne": 0,
+        "explication": "`private` n'est visible que dans la classe qui le déclare ; il faut `protected`."
+      },
+      {
+        "id": "u03-q6",
+        "type": "trous",
+        "notions": [
+          "heritage"
+        ],
+        "question": "Complète.",
+        "code": [
+          "class Person2 {",
+          "    protected string $name;",
+          "    public function __construct(string $name) {",
+          "        $this->name = $name;",
+          "    }",
+          "}",
+          "",
+          "class Student ___ Person2 {",
+          "    private string $school;",
+          "    public function __construct(string $name, string $school) {",
+          "        ___($name);",
+          "        $this->school = $school;",
+          "    }",
+          "    public function card(): string {",
+          "        return $this->name . \" · \" . $this->school;",
+          "    }",
+          "}",
+          "",
+          "echo (new Student(\"Ana\", \"HEIG-VD\"))->card();",
+          ""
+        ],
+        "solution": [
+          "extends",
+          "parent::__construct"
+        ],
+        "tests": {
+          "cas": [
+            {
+              "sortie": [
+                "Ana · HEIG-VD"
+              ]
+            }
+          ]
+        },
+        "indices": [
+          "Hériter d'une classe.",
+          "Appeler le constructeur du parent."
+        ],
+        "erreursTypiques": [
+          {
+            "trous": [
+              "implements",
+              "parent::__construct"
+            ],
+            "attendu": "erreur"
+          },
+          {
+            "trous": [
+              "extends",
+              "__construct"
+            ],
+            "attendu": "erreur"
+          }
+        ],
+        "explication": "`extends`, puis `parent::__construct($name)`."
+      },
+      {
+        "id": "u03-q7",
+        "type": "vf",
+        "notions": [
+          "classes-abstraites"
+        ],
+        "question": "Une classe abstraite peut être instanciée si elle n'a aucune méthode abstraite.",
+        "bonne": false,
+        "explication": "Le mot `abstract` sur la classe suffit à interdire `new`."
+      },
+      {
+        "id": "u03-q8",
+        "type": "qcm",
+        "notions": [
+          "classes-abstraites"
+        ],
+        "mono": true,
+        "question": "Quelle est la bonne déclaration d'une méthode abstraite ?",
+        "choix": [
+          "abstract public function area(): float;",
+          "abstract public function area(): float {}",
+          "public abstract area(): float;",
+          "function abstract area();"
+        ],
+        "bonne": 0,
+        "explication": "Pas de corps : la signature, puis un point-virgule."
+      },
+      {
+        "id": "u03-q9",
+        "type": "tri",
+        "notions": [
+          "classes-abstraites",
+          "interfaces",
+          "heritage"
+        ],
+        "question": "Range chaque phrase.",
+        "categories": [
+          "Interface",
+          "Classe abstraite"
+        ],
+        "items": [
+          [
+            "S'utilise avec implements",
+            0
+          ],
+          [
+            "S'utilise avec extends",
+            1
+          ],
+          [
+            "Une classe peut en utiliser plusieurs",
+            0
+          ],
+          [
+            "Peut avoir un constructeur et des attributs",
+            1
+          ]
+        ],
+        "explication": "Interface : pur contrat, plusieurs possibles. Classe abstraite : base partielle, une seule."
+      },
+      {
+        "id": "u03-q10",
+        "type": "qcm",
+        "notions": [
+          "inclusion-classes"
+        ],
+        "question": "Pourquoi le cours utilise-t-il `require_once` dans chaque fichier de classe ?",
+        "choix": [
+          "Pour qu'un fichier demandé par plusieurs autres ne soit chargé qu'une fois",
+          "Pour charger les fichiers plus vite",
+          "Pour que les classes deviennent abstraites",
+          "Parce que require n'existe plus"
+        ],
+        "bonne": 0,
+        "explication": "Sinon : `Cannot declare class …, because the name is already in use`."
+      },
+      {
+        "id": "u03-q11",
+        "type": "qcm",
+        "notions": [
+          "inclusion-classes"
+        ],
+        "mono": true,
+        "question": "Dans `src/Dog.php`, comment inclure `src/Pet.php` ?",
+        "choix": [
+          "require_once __DIR__ . '/Pet.php';",
+          "require_once __DIR__ . '/../src/Pet.php/';",
+          "require_once 'src/Pet';",
+          "use Pet.php;"
+        ],
+        "bonne": 0,
+        "explication": "Les deux fichiers sont dans le même dossier : `__DIR__ . '/Pet.php'`."
+      },
+      {
+        "id": "u03-q12",
+        "type": "erreurs",
+        "notions": [
+          "interfaces",
+          "classes-abstraites",
+          "inclusion-classes"
+        ],
+        "question": "Traduis ces messages.",
+        "paires": [
+          [
+            "Cannot instantiate abstract class Shape",
+            "new sur une classe abstraite"
+          ],
+          [
+            "Cannot declare class Pet, because the name is already in use",
+            "Fichier inclus deux fois"
+          ],
+          [
+            "Class Circle contains 1 abstract method and must therefore be declared abstract or implement the remaining methods",
+            "Une méthode abstraite n'est pas écrite"
+          ],
+          [
+            "Failed opening required '/app/src/Dgo.php'",
+            "Le chemin du fichier est faux"
+          ]
+        ],
+        "explication": "Lis le nom de la classe ou du fichier cité dans le message."
+      },
+      {
+        "id": "u03-q13",
+        "type": "ecrire",
+        "notions": [
+          "classes-abstraites",
+          "heritage"
+        ],
+        "question": "La classe abstraite `Shape2` est donnée. Écris `Square extends Shape2` : son constructeur reçoit `float $side` (attribut privé), et `area(): float` retourne le côté au carré.",
+        "prelude": [
+          "abstract class Shape2 {",
+          "    abstract public function area(): float;",
+          "",
+          "    public function describe(): string {",
+          "        return \"Aire : \" . $this->area();",
+          "    }",
+          "}",
+          ""
+        ],
+        "depart": [
+          ""
+        ],
+        "tests": {
+          "cas": [
+            {
+              "titre": "Côté 3",
+              "code": "return (new Square(3))->area();",
+              "attendu": 9
+            },
+            {
+              "titre": "describe() hérité",
+              "code": "return (new Square(1.5))->describe();",
+              "attendu": "Aire : 2.25"
+            },
+            {
+              "titre": "Côté 0",
+              "code": "return (new Square(0))->area();",
+              "attendu": 0
+            }
+          ]
+        },
+        "indices": [
+          "`class Square extends Shape2`, un attribut privé et un constructeur.",
+          "`area()` retourne `$this->side * $this->side`.",
+          {
+            "texte": "Presque :",
+            "code": "public function area(): float {\n    return ___;\n}"
+          }
+        ],
+        "solution": [
+          "class Square extends Shape2 {",
+          "    private float $side;",
+          "",
+          "    public function __construct(float $side) {",
+          "        $this->side = $side;",
+          "    }",
+          "",
+          "    public function area(): float {",
+          "        return $this->side * $this->side;",
+          "    }",
+          "}",
+          ""
+        ],
+        "erreursTypiques": [
+          {
+            "code": "class Square extends Shape2 {\n    private float $side;\n\n    public function __construct(float $side) {\n        $this->side = $side;\n    }\n}",
+            "attendu": "erreur",
+            "diagnostic": "methode-promise"
+          }
+        ],
+        "explication": "La fille fournit `area()` ; `describe()`, écrite dans la classe abstraite, l'utilise."
+      },
+      {
+        "id": "u03-q14",
+        "type": "vf",
+        "notions": [
+          "heritage"
+        ],
+        "question": "Le cours conseille d'éviter les hiérarchies de classes trop profondes.",
+        "bonne": true,
+        "explication": "« Restez simple » : une hiérarchie trop complexe devient difficile à comprendre et à maintenir."
+      },
+      {
+        "id": "u03-q15",
+        "type": "predire",
+        "notions": [
+          "statique"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "class Like {",
+          "    private static int $total = 0;",
+          "",
+          "    public static function add(): void {",
+          "        self::$total++;",
+          "    }",
+          "",
+          "    public static function getTotal(): int {",
+          "        return self::$total;",
+          "    }",
+          "}",
+          "",
+          "Like::add();",
+          "Like::add();",
+          "Like::add();",
+          "echo Like::getTotal();",
+          ""
+        ],
+        "explication": "L'attribut static est partagé : trois ajouts, total 3."
+      },
+      {
+        "id": "u03-q16",
+        "type": "qcm",
+        "notions": [
+          "interfaces"
+        ],
+        "question": "Une classe implémente une interface mais écrit `pay(int $amount)` au lieu de `pay(float $amount): string`. Que se passe-t-il ?",
+        "choix": [
+          "Une erreur : la déclaration doit être compatible avec l'interface",
+          "Ça marche, seul le nom compte",
+          "PHP convertit tout seul",
+          "La méthode est ignorée"
+        ],
+        "bonne": 0,
+        "explication": "La signature (paramètres, types, retour) doit respecter le contrat."
+      }
+    ]
+  },
+  "boss": [
+    {
+      "id": "u03-b1",
+      "titre": "Book (partie 1)",
+      "source": "Séance 2, exercice 3, partie 1",
+      "notions": [
+        "encapsulation",
+        "constructeur",
+        "inclusion-classes"
+      ],
+      "enonce": "Créer un système simple de gestion de bibliothèque pour comprendre les bases de la programmation orientée objet.\n\nLa structure attendue est la suivante :\n\n``` ./ ├── public/ │   └── index.php └── src/ ├── Book.php └── Library.php ```\n\nL'utilisation attendue est la suivante :\n\n``` <?php require_once __DIR__ . '/../src/Library.php'; require_once __DIR__ . '/../src/Book.php';\n\n$library = new Library(\"Bibliothèque Municipale\");\n\n$book1 = new Book(\"1984\", \"George Orwell\", \"978-0451524935\"); $book2 = new Book(\"Le Petit Prince\", \"Antoine de Saint-Exupéry\", \"978-2070408504\");\n\n$library->addBook($book1); $library->addBook($book2);\n\n$library->borrowBook(\"1984\"); echo $library->getLibraryStats(); ```\n\n**Partie 1** : créez une classe `Book` (fichier `src/Book.php`) avec les propriétés suivantes :\n\n- `title` (string, privé) ;\n- `author` (string, privé) ;\n- `isbn` (string, privé) ;\n- `isAvailable` (bool, privé, par défaut `true`).\n\nImplémentez les méthodes suivantes :\n\n- constructeur prenant le titre, l'auteur et l'ISBN ;\n- getters pour toutes les propriétés ;\n- `borrow()` : marque le livre comme emprunté (retourne `true` si succès, `false` si déjà emprunté) ;\n- `return()` : marque le livre comme disponible ;\n- `getInfo()` : retourne une chaîne avec les informations du livre.\n\n*Pour l'appli : le getter de `isAvailable` peut s'appeler `isAvailable()` ou `getIsAvailable()` ; `getInfo()` doit contenir au moins le titre et l'auteur.*",
+      "fichier": "src/Book.php",
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "1984 : getters",
+            "code": "$b = new Book('1984', 'George Orwell', '978-0451524935');\nreturn [$b->getTitle(), $b->getAuthor(), $b->getIsbn()];",
+            "attendu": [
+              "1984",
+              "George Orwell",
+              "978-0451524935"
+            ]
+          },
+          {
+            "titre": "Disponible par défaut",
+            "code": "$b = new Book('1984', 'George Orwell', '978-0451524935');\n$m = method_exists($b, 'isAvailable') ? 'isAvailable' : 'getIsAvailable';\nreturn $b->$m();",
+            "attendu": true,
+            "siEchec": "Un livre neuf est disponible : `isAvailable` vaut `true` par défaut (dans la déclaration ou dans le constructeur)."
+          },
+          {
+            "titre": "borrow() : succès",
+            "code": "$b = new Book('1984', 'George Orwell', '978-0451524935');\n$m = method_exists($b, 'isAvailable') ? 'isAvailable' : 'getIsAvailable';\nreturn [$b->borrow(), $b->$m()];",
+            "attendu": [
+              true,
+              false
+            ]
+          },
+          {
+            "titre": "borrow() deux fois : refus",
+            "code": "$b = new Book('1984', 'George Orwell', '978-0451524935');\n$b->borrow();\nreturn $b->borrow();",
+            "attendu": false,
+            "siEchec": "Un livre déjà emprunté ne peut pas l'être une seconde fois : `borrow()` retourne `false` sans rien changer."
+          },
+          {
+            "titre": "return() : de nouveau disponible",
+            "code": "$b = new Book('Le Petit Prince', 'Antoine de Saint-Exupéry', '978-2070408504');\n$m = method_exists($b, 'isAvailable') ? 'isAvailable' : 'getIsAvailable';\n$b->borrow();\n$b->return();\nreturn [$b->$m(), $b->borrow()];",
+            "attendu": [
+              true,
+              true
+            ]
+          },
+          {
+            "titre": "getInfo()",
+            "code": "$i = (new Book('Le Petit Prince', 'Antoine de Saint-Exupéry', '978-2070408504'))->getInfo();\nreturn str_contains($i, 'Le Petit Prince') && str_contains($i, 'Antoine de Saint-Exupéry');",
+            "attendu": true,
+            "siEchec": "`getInfo()` doit retourner une chaîne qui contient au moins le titre et l'auteur."
+          },
+          {
+            "titre": "Autre livre",
+            "code": "$b = new Book('Dune', 'Frank Herbert', '978-0441013593');\nreturn [$b->getTitle(), $b->getAuthor(), $b->getIsbn()];",
+            "attendu": [
+              "Dune",
+              "Frank Herbert",
+              "978-0441013593"
+            ]
+          },
+          {
+            "titre": "Règle : propriétés privées",
+            "code": "foreach ((new ReflectionClass('Book'))->getProperties() as $p) {\n    if (!$p->isPrivate()) return $p->getName() . \" n'est pas private\";\n}\nreturn 'ok';",
+            "attendu": "ok",
+            "siEchec": "Les quatre propriétés doivent être `private`."
+          },
+          {
+            "titre": "Règle : isAvailable est un bool",
+            "code": "return (string) (new ReflectionProperty('Book', 'isAvailable'))->getType();",
+            "attendu": "bool",
+            "siEchec": "La propriété `isAvailable` doit être déclarée `bool`."
+          }
+        ]
+      },
+      "indices": [
+        "Quatre propriétés privées typées, puis le constructeur (trois paramètres) ; `isAvailable` reçoit `true` par défaut.",
+        "`borrow()` vérifie d'abord si le livre est disponible : sinon, il retourne `false` tout de suite. `return()` remet simplement la propriété à `true`.",
+        {
+          "texte": "Le squelette de borrow() :",
+          "code": "public function borrow(): bool {\n    if (___) {\n        return false;\n    }\n    $this->isAvailable = ___;\n    return true;\n}"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "class Book {",
+        "    private string $title;",
+        "    private string $author;",
+        "    private string $isbn;",
+        "    private bool $isAvailable;",
+        "",
+        "    public function __construct(string $title, string $author, string $isbn) {",
+        "        $this->title = $title;",
+        "        $this->author = $author;",
+        "        $this->isbn = $isbn;",
+        "        $this->isAvailable = true;",
+        "    }",
+        "",
+        "    public function getTitle(): string {",
+        "        return $this->title;",
+        "    }",
+        "",
+        "    public function getAuthor(): string {",
+        "        return $this->author;",
+        "    }",
+        "",
+        "    public function getIsbn(): string {",
+        "        return $this->isbn;",
+        "    }",
+        "",
+        "    public function isAvailable(): bool {",
+        "        return $this->isAvailable;",
+        "    }",
+        "",
+        "    public function borrow(): bool {",
+        "        if (!$this->isAvailable) {",
+        "            return false;",
+        "        }",
+        "        $this->isAvailable = false;",
+        "        return true;",
+        "    }",
+        "",
+        "    public function return(): void {",
+        "        $this->isAvailable = true;",
+        "    }",
+        "",
+        "    public function getInfo(): string {",
+        "        $status = $this->isAvailable ? \"Available\" : \"Borrowed\";",
+        "        return $this->title . \" by \" . $this->author . \" (ISBN: \" . $this->isbn . \") - \" . $status;",
+        "    }",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nclass Book {\n    private string $title;\n    private string $author;\n    private string $isbn;\n    private bool $isAvailable;\n\n    public function __construct(string $title, string $author, string $isbn) {\n        $this->title = $title;\n        $this->author = $author;\n        $this->isbn = $isbn;\n        $this->isAvailable = true;\n    }\n\n    public function getTitle(): string {\n        return $this->title;\n    }\n\n    public function getAuthor(): string {\n        return $this->author;\n    }\n\n    public function getIsbn(): string {\n        return $this->isbn;\n    }\n\n    public function isAvailable(): bool {\n        return $this->isAvailable;\n    }\n\n    public function borrow(): bool {\n        $this->isAvailable = false;\n        return true;\n    }\n\n    public function return(): void {\n        $this->isAvailable = true;\n    }\n\n    public function getInfo(): string {\n        $status = $this->isAvailable ? \"Available\" : \"Borrowed\";\n        return $this->title . \" by \" . $this->author . \" (ISBN: \" . $this->isbn . \") - \" . $status;\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nclass Book {\n    private string $title;\n    private string $author;\n    private string $isbn;\n    private bool $isAvailable;\n\n    public function __construct(string $title, string $author, string $isbn) {\n        $this->title = $title;\n        $this->author = $author;\n        $this->isbn = $isbn;\n        \n    }\n\n    public function getTitle(): string {\n        return $this->title;\n    }\n\n    public function getAuthor(): string {\n        return $this->author;\n    }\n\n    public function getIsbn(): string {\n        return $this->isbn;\n    }\n\n    public function isAvailable(): bool {\n        return $this->isAvailable;\n    }\n\n    public function borrow(): bool {\n        if (!$this->isAvailable) {\n            return false;\n        }\n        $this->isAvailable = false;\n        return true;\n    }\n\n    public function return(): void {\n        $this->isAvailable = true;\n    }\n\n    public function getInfo(): string {\n        $status = $this->isAvailable ? \"Available\" : \"Borrowed\";\n        return $this->title . \" by \" . $this->author . \" (ISBN: \" . $this->isbn . \") - \" . $status;\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nclass Book {\n    public string $title;\n    private string $author;\n    private string $isbn;\n    private bool $isAvailable;\n\n    public function __construct(string $title, string $author, string $isbn) {\n        $this->title = $title;\n        $this->author = $author;\n        $this->isbn = $isbn;\n        $this->isAvailable = true;\n    }\n\n    public function getTitle(): string {\n        return $this->title;\n    }\n\n    public function getAuthor(): string {\n        return $this->author;\n    }\n\n    public function getIsbn(): string {\n        return $this->isbn;\n    }\n\n    public function isAvailable(): bool {\n        return $this->isAvailable;\n    }\n\n    public function borrow(): bool {\n        if (!$this->isAvailable) {\n            return false;\n        }\n        $this->isAvailable = false;\n        return true;\n    }\n\n    public function return(): void {\n        $this->isAvailable = true;\n    }\n\n    public function getInfo(): string {\n        $status = $this->isAvailable ? \"Available\" : \"Borrowed\";\n        return $this->title . \" by \" . $this->author . \" (ISBN: \" . $this->isbn . \") - \" . $status;\n    }\n}",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "`borrow()` protège l'état du livre : on ne prête pas deux fois le même exemplaire."
+    },
+    {
+      "id": "u03-b2",
+      "titre": "Library (partie 2)",
+      "source": "Séance 2, exercice 3, partie 2",
+      "notions": [
+        "encapsulation",
+        "tableaux-boucles",
+        "inclusion-classes"
+      ],
+      "enonce": "Créer un système simple de gestion de bibliothèque pour comprendre les bases de la programmation orientée objet.\n\nLa structure attendue est la suivante :\n\n``` ./ ├── public/ │   └── index.php └── src/ ├── Book.php └── Library.php ```\n\nL'utilisation attendue est la suivante :\n\n``` <?php require_once __DIR__ . '/../src/Library.php'; require_once __DIR__ . '/../src/Book.php';\n\n$library = new Library(\"Bibliothèque Municipale\");\n\n$book1 = new Book(\"1984\", \"George Orwell\", \"978-0451524935\"); $book2 = new Book(\"Le Petit Prince\", \"Antoine de Saint-Exupéry\", \"978-2070408504\");\n\n$library->addBook($book1); $library->addBook($book2);\n\n$library->borrowBook(\"1984\"); echo $library->getLibraryStats(); ```\n\n**Partie 2** : créez une classe `Library` (fichier `src/Library.php`) avec les propriétés suivantes :\n\n- `name` (string, privé) ;\n- `books` (array, privé).\n\nImplémentez les méthodes suivantes :\n\n- constructeur prenant le nom de la bibliothèque ;\n- `addBook(Book $book)` : ajoute un livre à la collection ;\n- `findBookByTitle(string $title)` : trouve un livre par son titre ;\n- `findBookByAuthor(string $author)` : trouve tous les livres d'un auteur ;\n- `borrowBook(string $title)` : emprunte un livre par son titre ;\n- `returnBook(string $title)` : retourne un livre par son titre ;\n- `getAvailableBooks()` : retourne la liste des livres disponibles ;\n- `getBorrowedBooks()` : retourne la liste des livres empruntés ;\n- `getLibraryStats()` : retourne les statistiques (nombre total, disponibles, empruntés).\n\nLa classe `Book` de la partie 1 est dans `src/Book.php` (déjà écrit).\n\n*Pour l'appli : `findBookByTitle` retourne `null` si aucun livre ne correspond ; `getLibraryStats()` retourne `Library: <nom><br>Total books: 3<br>Available books: 2<br>Borrowed books: 1<br>`.*",
+      "fichier": "src/Library.php",
+      "fichiers": {
+        "src/Book.php": [
+          "<?php",
+          "class Book {",
+          "    private string $title;",
+          "    private string $author;",
+          "    private string $isbn;",
+          "    private bool $isAvailable;",
+          "",
+          "    public function __construct(string $title, string $author, string $isbn) {",
+          "        $this->title = $title;",
+          "        $this->author = $author;",
+          "        $this->isbn = $isbn;",
+          "        $this->isAvailable = true;",
+          "    }",
+          "",
+          "    public function getTitle(): string {",
+          "        return $this->title;",
+          "    }",
+          "",
+          "    public function getAuthor(): string {",
+          "        return $this->author;",
+          "    }",
+          "",
+          "    public function getIsbn(): string {",
+          "        return $this->isbn;",
+          "    }",
+          "",
+          "    public function isAvailable(): bool {",
+          "        return $this->isAvailable;",
+          "    }",
+          "",
+          "    public function borrow(): bool {",
+          "        if (!$this->isAvailable) {",
+          "            return false;",
+          "        }",
+          "        $this->isAvailable = false;",
+          "        return true;",
+          "    }",
+          "",
+          "    public function return(): void {",
+          "        $this->isAvailable = true;",
+          "    }",
+          "",
+          "    public function getInfo(): string {",
+          "        $status = $this->isAvailable ? \"Available\" : \"Borrowed\";",
+          "        return $this->title . \" by \" . $this->author . \" (ISBN: \" . $this->isbn . \") - \" . $status;",
+          "    }",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        "require_once __DIR__ . '/Book.php';",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "L'utilisation de l'énoncé",
+            "code": "require_once '/app/src/Book.php';\n$library = new Library('Bibliothèque Municipale');\n$book1 = new Book('1984', 'George Orwell', '978-0451524935');\n$book2 = new Book('Le Petit Prince', 'Antoine de Saint-Exupéry', '978-2070408504');\n$library->addBook($book1);\n$library->addBook($book2);\n$library->borrowBook('1984');\nreturn $library->getLibraryStats();",
+            "attendu": "Library: Bibliothèque Municipale<br>Total books: 2<br>Available books: 1<br>Borrowed books: 1<br>"
+          },
+          {
+            "titre": "findBookByTitle : trouvé",
+            "code": "require_once '/app/src/Book.php';\n$library = new Library('Bibliothèque Municipale');\n$library->addBook(new Book('1984', 'George Orwell', '978-0451524935'));\n$library->addBook(new Book('Le Petit Prince', 'Antoine de Saint-Exupéry', '978-2070408504'));\n$library->addBook(new Book('Animal Farm', 'George Orwell', '978-0451526342'));\nreturn $library->findBookByTitle('Le Petit Prince')->getAuthor();",
+            "attendu": "Antoine de Saint-Exupéry"
+          },
+          {
+            "titre": "findBookByTitle : introuvable",
+            "code": "require_once '/app/src/Book.php';\n$library = new Library('Bibliothèque Municipale');\n$library->addBook(new Book('1984', 'George Orwell', '978-0451524935'));\n$library->addBook(new Book('Le Petit Prince', 'Antoine de Saint-Exupéry', '978-2070408504'));\n$library->addBook(new Book('Animal Farm', 'George Orwell', '978-0451526342'));\nreturn $library->findBookByTitle('Inconnu') ?: null;",
+            "attendu": null,
+            "siEchec": "Si aucun livre n'a ce titre, `findBookByTitle` retourne `null` (après la boucle, pas dedans)."
+          },
+          {
+            "titre": "findBookByAuthor : deux livres",
+            "code": "require_once '/app/src/Book.php';\n$library = new Library('Bibliothèque Municipale');\n$library->addBook(new Book('1984', 'George Orwell', '978-0451524935'));\n$library->addBook(new Book('Le Petit Prince', 'Antoine de Saint-Exupéry', '978-2070408504'));\n$library->addBook(new Book('Animal Farm', 'George Orwell', '978-0451526342'));\n$titres = fn($livres) => array_values(array_map(fn($b) => $b->getTitle(), $livres));\nreturn $titres($library->findBookByAuthor('George Orwell'));",
+            "attendu": [
+              "1984",
+              "Animal Farm"
+            ]
+          },
+          {
+            "titre": "findBookByAuthor : aucun",
+            "code": "require_once '/app/src/Book.php';\n$library = new Library('Bibliothèque Municipale');\n$library->addBook(new Book('1984', 'George Orwell', '978-0451524935'));\n$library->addBook(new Book('Le Petit Prince', 'Antoine de Saint-Exupéry', '978-2070408504'));\n$library->addBook(new Book('Animal Farm', 'George Orwell', '978-0451526342'));\nreturn count($library->findBookByAuthor('Victor Hugo'));",
+            "attendu": 0
+          },
+          {
+            "titre": "Emprunter, puis les listes",
+            "code": "require_once '/app/src/Book.php';\n$library = new Library('Bibliothèque Municipale');\n$library->addBook(new Book('1984', 'George Orwell', '978-0451524935'));\n$library->addBook(new Book('Le Petit Prince', 'Antoine de Saint-Exupéry', '978-2070408504'));\n$library->addBook(new Book('Animal Farm', 'George Orwell', '978-0451526342'));\n$titres = fn($livres) => array_values(array_map(fn($b) => $b->getTitle(), $livres));\n$library->borrowBook('Animal Farm');\nreturn [$titres($library->getAvailableBooks()), $titres($library->getBorrowedBooks())];",
+            "attendu": [
+              [
+                "1984",
+                "Le Petit Prince"
+              ],
+              [
+                "Animal Farm"
+              ]
+            ]
+          },
+          {
+            "titre": "Emprunter puis rendre",
+            "code": "require_once '/app/src/Book.php';\n$library = new Library('Bibliothèque Municipale');\n$library->addBook(new Book('1984', 'George Orwell', '978-0451524935'));\n$library->addBook(new Book('Le Petit Prince', 'Antoine de Saint-Exupéry', '978-2070408504'));\n$library->addBook(new Book('Animal Farm', 'George Orwell', '978-0451526342'));\n$library->borrowBook('1984');\n$library->returnBook('1984');\nreturn [count($library->getAvailableBooks()), count($library->getBorrowedBooks())];",
+            "attendu": [
+              3,
+              0
+            ]
+          },
+          {
+            "titre": "Emprunter un titre inconnu",
+            "code": "require_once '/app/src/Book.php';\n$library = new Library('Bibliothèque Municipale');\n$library->addBook(new Book('1984', 'George Orwell', '978-0451524935'));\n$library->addBook(new Book('Le Petit Prince', 'Antoine de Saint-Exupéry', '978-2070408504'));\n$library->addBook(new Book('Animal Farm', 'George Orwell', '978-0451526342'));\n$library->borrowBook('Inconnu');\nreturn count($library->getBorrowedBooks());",
+            "attendu": 0,
+            "siEchec": "Emprunter un titre absent ne doit rien casser : vérifie que le livre a été trouvé avant d'appeler `borrow()`."
+          },
+          {
+            "titre": "Bibliothèque vide",
+            "code": "$library = new Library('Vide');\nreturn [count($library->getAvailableBooks()), $library->getLibraryStats()];",
+            "attendu": [
+              0,
+              "Library: Vide<br>Total books: 0<br>Available books: 0<br>Borrowed books: 0<br>"
+            ]
+          },
+          {
+            "titre": "Règle : propriétés privées",
+            "code": "foreach ((new ReflectionClass('Library'))->getProperties() as $p) {\n    if (!$p->isPrivate()) return $p->getName() . \" n'est pas private\";\n}\nreturn 'ok';",
+            "attendu": "ok",
+            "siEchec": "`name` et `books` doivent être `private`."
+          }
+        ]
+      },
+      "indices": [
+        "`$books` commence comme un tableau vide ; `addBook` ajoute au bout (`$this->books[] = $book;`). Les recherches parcourent `$this->books` avec `foreach`.",
+        "`borrowBook` et `returnBook` réutilisent `findBookByTitle`, puis appellent `borrow()` / `return()` sur le livre trouvé (s'il existe). Les statistiques comptent avec `count`.",
+        {
+          "texte": "Le squelette de findBookByAuthor :",
+          "code": "$found = [];\nforeach ($this->books as $book) {\n    if (___) {\n        $found[] = $book;\n    }\n}\nreturn $found;"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "require_once __DIR__ . '/Book.php';",
+        "",
+        "class Library {",
+        "    private string $name;",
+        "    private array $books = [];",
+        "",
+        "    public function __construct(string $name) {",
+        "        $this->name = $name;",
+        "    }",
+        "",
+        "    public function addBook(Book $book): void {",
+        "        $this->books[] = $book;",
+        "    }",
+        "",
+        "    public function findBookByTitle(string $title): ?Book {",
+        "        foreach ($this->books as $book) {",
+        "            if ($book->getTitle() === $title) {",
+        "                return $book;",
+        "            }",
+        "        }",
+        "        return null;",
+        "    }",
+        "",
+        "    public function findBookByAuthor(string $author): array {",
+        "        $found = [];",
+        "        foreach ($this->books as $book) {",
+        "            if ($book->getAuthor() === $author) {",
+        "                $found[] = $book;",
+        "            }",
+        "        }",
+        "        return $found;",
+        "    }",
+        "",
+        "    public function borrowBook(string $title): bool {",
+        "        $book = $this->findBookByTitle($title);",
+        "        if ($book === null) {",
+        "            return false;",
+        "        }",
+        "        return $book->borrow();",
+        "    }",
+        "",
+        "    public function returnBook(string $title): bool {",
+        "        $book = $this->findBookByTitle($title);",
+        "        if ($book === null) {",
+        "            return false;",
+        "        }",
+        "        $book->return();",
+        "        return true;",
+        "    }",
+        "",
+        "    public function getAvailableBooks(): array {",
+        "        $available = [];",
+        "        foreach ($this->books as $book) {",
+        "            if ($book->isAvailable()) {",
+        "                $available[] = $book;",
+        "            }",
+        "        }",
+        "        return $available;",
+        "    }",
+        "",
+        "    public function getBorrowedBooks(): array {",
+        "        $borrowed = [];",
+        "        foreach ($this->books as $book) {",
+        "            if (!$book->isAvailable()) {",
+        "                $borrowed[] = $book;",
+        "            }",
+        "        }",
+        "        return $borrowed;",
+        "    }",
+        "",
+        "    public function getLibraryStats(): string {",
+        "        $total = count($this->books);",
+        "        $available = count($this->getAvailableBooks());",
+        "        $borrowed = count($this->getBorrowedBooks());",
+        "",
+        "        return \"Library: \" . $this->name . \"<br>\" .",
+        "            \"Total books: \" . $total . \"<br>\" .",
+        "            \"Available books: \" . $available . \"<br>\" .",
+        "            \"Borrowed books: \" . $borrowed . \"<br>\";",
+        "    }",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/Book.php';\n\nclass Library {\n    private string $name;\n    private array $books = [];\n\n    public function __construct(string $name) {\n        $this->name = $name;\n    }\n\n    public function addBook(Book $book): void {\n        $this->books[] = $book;\n    }\n\n    public function findBookByTitle(string $title): ?Book {\n        foreach ($this->books as $book) {\n            if ($book->getTitle() === $title) {\n                return $book;\n            }\n            return null;\n        }\n        return null;\n    }\n\n    public function findBookByAuthor(string $author): array {\n        $found = [];\n        foreach ($this->books as $book) {\n            if ($book->getAuthor() === $author) {\n                $found[] = $book;\n            }\n        }\n        return $found;\n    }\n\n    public function borrowBook(string $title): bool {\n        $book = $this->findBookByTitle($title);\n        if ($book === null) {\n            return false;\n        }\n        return $book->borrow();\n    }\n\n    public function returnBook(string $title): bool {\n        $book = $this->findBookByTitle($title);\n        if ($book === null) {\n            return false;\n        }\n        $book->return();\n        return true;\n    }\n\n    public function getAvailableBooks(): array {\n        $available = [];\n        foreach ($this->books as $book) {\n            if ($book->isAvailable()) {\n                $available[] = $book;\n            }\n        }\n        return $available;\n    }\n\n    public function getBorrowedBooks(): array {\n        $borrowed = [];\n        foreach ($this->books as $book) {\n            if (!$book->isAvailable()) {\n                $borrowed[] = $book;\n            }\n        }\n        return $borrowed;\n    }\n\n    public function getLibraryStats(): string {\n        $total = count($this->books);\n        $available = count($this->getAvailableBooks());\n        $borrowed = count($this->getBorrowedBooks());\n\n        return \"Library: \" . $this->name . \"<br>\" .\n            \"Total books: \" . $total . \"<br>\" .\n            \"Available books: \" . $available . \"<br>\" .\n            \"Borrowed books: \" . $borrowed . \"<br>\";\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/Book.php';\n\nclass Library {\n    private string $name;\n    private array $books = [];\n\n    public function __construct(string $name) {\n        $this->name = $name;\n    }\n\n    public function addBook(Book $book): void {\n        $this->books[] = $book;\n    }\n\n    public function findBookByTitle(string $title): ?Book {\n        foreach ($this->books as $book) {\n            if ($book->getTitle() === $title) {\n                return $book;\n            }\n        }\n        return null;\n    }\n\n    public function findBookByAuthor(string $author): array {\n        $found = [];\n        foreach ($this->books as $book) {\n            if ($book->getAuthor() === $author) {\n                $found[] = $book;\n            }\n        }\n        return $found;\n    }\n\n    public function borrowBook(string $title): bool {\n        return $this->findBookByTitle($title)->borrow();\n    }\n\n    public function returnBook(string $title): bool {\n        $book = $this->findBookByTitle($title);\n        if ($book === null) {\n            return false;\n        }\n        $book->return();\n        return true;\n    }\n\n    public function getAvailableBooks(): array {\n        $available = [];\n        foreach ($this->books as $book) {\n            if ($book->isAvailable()) {\n                $available[] = $book;\n            }\n        }\n        return $available;\n    }\n\n    public function getBorrowedBooks(): array {\n        $borrowed = [];\n        foreach ($this->books as $book) {\n            if (!$book->isAvailable()) {\n                $borrowed[] = $book;\n            }\n        }\n        return $borrowed;\n    }\n\n    public function getLibraryStats(): string {\n        $total = count($this->books);\n        $available = count($this->getAvailableBooks());\n        $borrowed = count($this->getBorrowedBooks());\n\n        return \"Library: \" . $this->name . \"<br>\" .\n            \"Total books: \" . $total . \"<br>\" .\n            \"Available books: \" . $available . \"<br>\" .\n            \"Borrowed books: \" . $borrowed . \"<br>\";\n    }\n}",
+          "attendu": "echec",
+          "diagnostic": "pas-un-objet"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/Book.php';\n\nclass Library {\n    private string $name;\n    private array $books = [];\n\n    public function __construct(string $name) {\n        $this->name = $name;\n    }\n\n    public function addBook(Book $book): void {\n        $this->books = [$book];\n    }\n\n    public function findBookByTitle(string $title): ?Book {\n        foreach ($this->books as $book) {\n            if ($book->getTitle() === $title) {\n                return $book;\n            }\n        }\n        return null;\n    }\n\n    public function findBookByAuthor(string $author): array {\n        $found = [];\n        foreach ($this->books as $book) {\n            if ($book->getAuthor() === $author) {\n                $found[] = $book;\n            }\n        }\n        return $found;\n    }\n\n    public function borrowBook(string $title): bool {\n        $book = $this->findBookByTitle($title);\n        if ($book === null) {\n            return false;\n        }\n        return $book->borrow();\n    }\n\n    public function returnBook(string $title): bool {\n        $book = $this->findBookByTitle($title);\n        if ($book === null) {\n            return false;\n        }\n        $book->return();\n        return true;\n    }\n\n    public function getAvailableBooks(): array {\n        $available = [];\n        foreach ($this->books as $book) {\n            if ($book->isAvailable()) {\n                $available[] = $book;\n            }\n        }\n        return $available;\n    }\n\n    public function getBorrowedBooks(): array {\n        $borrowed = [];\n        foreach ($this->books as $book) {\n            if (!$book->isAvailable()) {\n                $borrowed[] = $book;\n            }\n        }\n        return $borrowed;\n    }\n\n    public function getLibraryStats(): string {\n        $total = count($this->books);\n        $available = count($this->getAvailableBooks());\n        $borrowed = count($this->getBorrowedBooks());\n\n        return \"Library: \" . $this->name . \"<br>\" .\n            \"Total books: \" . $total . \"<br>\" .\n            \"Available books: \" . $available . \"<br>\" .\n            \"Borrowed books: \" . $borrowed . \"<br>\";\n    }\n}",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "Une bibliothèque est un objet qui contient un tableau d'objets : chaque méthode parcourt ce tableau et délègue au livre ce qu'il sait faire."
+    },
+    {
+      "id": "u03-b3",
+      "titre": "Calculator",
+      "source": "Séance 2, exercice 4",
+      "notions": [
+        "interfaces",
+        "encapsulation",
+        "inclusion-classes"
+      ],
+      "enonce": "Créer une classe `Calculator` pour effectuer des opérations mathématiques de base qui implémente l'interface `CalculatorInterface` suivante (déjà écrite dans `src/CalculatorInterface.php`) :\n\n``` interface CalculatorInterface { public function add(float $a, ?float $b): float; public function subtract(float $a, ?float $b): float; public function clear(): void; } ```\n\nGrâce aux paramètres optionnels, chaque méthode peut être appelée avec un ou deux arguments. Si un seul argument est fourni, l'opération doit être effectuée en utilisant le résultat de l'opération précédente (ou zéro si aucune opération n'a été effectuée).\n\nCela implique que la classe `Calculator` doit maintenir un état interne pour stocker le résultat de l'opération précédente.\n\nVoici un exemple d'utilisation :\n\n``` $calculator = new Calculator();\n\n// Premier calcul echo $calculator->getCurrentValue() . \"<br>\";   // 0 $calculator->add(7, 3);                         // 10 (7 + 3) echo $calculator->getCurrentValue() . \"<br>\";   // 10 $calculator->clear();\n\n// Deuxième calcul $calculator->add(5);                            // 5 (0 + 5) $calculator->add(10);                           // 15 (5 + 10) $calculator->subtract(3);                       // 12 (15 - 3) echo $calculator->getCurrentValue() . \"<br>\";   // 12 $calculator->clear();\n\n// Troisième calcul $calculator->subtract(10, 15);                  // -5 (10 - 15) $calculator->add(20);                           // 15 (-5 + 20) echo $calculator->getCurrentValue() . \"<br>\";   // 15 ```\n\n*Ton fichier est `src/Calculator.php`.*",
+      "fichier": "src/Calculator.php",
+      "fichiers": {
+        "src/CalculatorInterface.php": [
+          "<?php",
+          "interface CalculatorInterface {",
+          "    public function add(float $a, ?float $b): float;",
+          "    public function subtract(float $a, ?float $b): float;",
+          "    public function clear(): void;",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        "require_once __DIR__ . '/CalculatorInterface.php';",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Premier calcul de l'énoncé",
+            "code": "$c = new Calculator();\n$v0 = $c->getCurrentValue();\n$c->add(7, 3);\nreturn [$v0, $c->getCurrentValue()];",
+            "attendu": [
+              0,
+              10
+            ]
+          },
+          {
+            "titre": "Deuxième calcul (un seul argument)",
+            "code": "$c = new Calculator();\n$c->add(5);\n$c->add(10);\n$c->subtract(3);\nreturn $c->getCurrentValue();",
+            "attendu": 12,
+            "siEchec": "Avec un seul argument, on part du résultat précédent : `subtract(3)` après 15 donne 15 - 3 = 12 (et non 3 - 15)."
+          },
+          {
+            "titre": "Troisième calcul",
+            "code": "$c = new Calculator();\n$c->subtract(10, 15);\n$c->add(20);\nreturn $c->getCurrentValue();",
+            "attendu": 15
+          },
+          {
+            "titre": "clear() remet à zéro",
+            "code": "$c = new Calculator();\n$c->add(7, 3);\n$c->clear();\n$c->add(4);\nreturn $c->getCurrentValue();",
+            "attendu": 4
+          },
+          {
+            "titre": "Les méthodes retournent le résultat",
+            "code": "$c = new Calculator();\nreturn [$c->add(2.5, 2.5), $c->subtract(1), $c->add(0.5)];",
+            "attendu": [
+              5,
+              4,
+              4.5
+            ]
+          },
+          {
+            "titre": "Soustraire depuis zéro",
+            "code": "$c = new Calculator();\nreturn $c->subtract(4);",
+            "attendu": -4
+          },
+          {
+            "titre": "Implémente l'interface",
+            "code": "return (new Calculator()) instanceof CalculatorInterface;",
+            "attendu": true,
+            "siEchec": "La classe doit déclarer `implements CalculatorInterface` (et inclure le fichier de l'interface avec `require_once`)."
+          },
+          {
+            "titre": "Règle : état interne privé",
+            "code": "foreach ((new ReflectionClass('Calculator'))->getProperties() as $p) {\n    if (!$p->isPrivate()) return $p->getName() . \" n'est pas private\";\n}\nreturn 'ok';",
+            "attendu": "ok",
+            "siEchec": "L'état interne (le résultat courant) doit être une propriété `private`."
+          }
+        ]
+      },
+      "indices": [
+        "Une propriété privée garde le résultat courant (0 au départ). Pour qu'on puisse appeler `add(5)` avec un seul argument, donne au second paramètre la valeur par défaut `null` : `?float $b = null`.",
+        "Dans chaque opération : si `$b === null`, calcule avec le résultat précédent (`résultat - $a` pour la soustraction) ; sinon avec `$a` et `$b`. Range le résultat, puis retourne-le.",
+        {
+          "texte": "Le squelette de subtract :",
+          "code": "public function subtract(float $a, ?float $b = null): float {\n    if ($b === null) {\n        $this->currentValue = ___;\n    } else {\n        $this->currentValue = ___;\n    }\n    return $this->currentValue;\n}"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "require_once __DIR__ . '/CalculatorInterface.php';",
+        "",
+        "class Calculator implements CalculatorInterface {",
+        "    private float $currentValue = 0;",
+        "",
+        "    public function add(float $a, ?float $b = null): float {",
+        "        if ($b === null) {",
+        "            $this->currentValue = $this->currentValue + $a;",
+        "        } else {",
+        "            $this->currentValue = $a + $b;",
+        "        }",
+        "        return $this->currentValue;",
+        "    }",
+        "",
+        "    public function subtract(float $a, ?float $b = null): float {",
+        "        if ($b === null) {",
+        "            $this->currentValue = $this->currentValue - $a;",
+        "        } else {",
+        "            $this->currentValue = $a - $b;",
+        "        }",
+        "        return $this->currentValue;",
+        "    }",
+        "",
+        "    public function clear(): void {",
+        "        $this->currentValue = 0;",
+        "    }",
+        "",
+        "    public function getCurrentValue(): float {",
+        "        return $this->currentValue;",
+        "    }",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/CalculatorInterface.php';\n\nclass Calculator implements CalculatorInterface {\n    private float $currentValue = 0;\n\n    public function add(float $a, ?float $b = null): float {\n        if ($b === null) {\n            $this->currentValue = $this->currentValue + $a;\n        } else {\n            $this->currentValue = $a + $b;\n        }\n        return $this->currentValue;\n    }\n\n    public function subtract(float $a, ?float $b = null): float {\n        if ($b === null) {\n            $this->currentValue = $a - $this->currentValue;\n        } else {\n            $this->currentValue = $a - $b;\n        }\n        return $this->currentValue;\n    }\n\n    public function clear(): void {\n        $this->currentValue = 0;\n    }\n\n    public function getCurrentValue(): float {\n        return $this->currentValue;\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/CalculatorInterface.php';\n\nclass Calculator implements CalculatorInterface {\n    private float $currentValue = 0;\n\n    public function add(float $a, ?float $b): float {\n        if ($b === null) {\n            $this->currentValue = $this->currentValue + $a;\n        } else {\n            $this->currentValue = $a + $b;\n        }\n        return $this->currentValue;\n    }\n\n    public function subtract(float $a, ?float $b = null): float {\n        if ($b === null) {\n            $this->currentValue = $this->currentValue - $a;\n        } else {\n            $this->currentValue = $a - $b;\n        }\n        return $this->currentValue;\n    }\n\n    public function clear(): void {\n        $this->currentValue = 0;\n    }\n\n    public function getCurrentValue(): float {\n        return $this->currentValue;\n    }\n}",
+          "attendu": "echec",
+          "diagnostic": "arguments"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/CalculatorInterface.php';\n\nclass Calculator {\n    private float $currentValue = 0;\n\n    public function add(float $a, ?float $b = null): float {\n        if ($b === null) {\n            $this->currentValue = $this->currentValue + $a;\n        } else {\n            $this->currentValue = $a + $b;\n        }\n        return $this->currentValue;\n    }\n\n    public function subtract(float $a, ?float $b = null): float {\n        if ($b === null) {\n            $this->currentValue = $this->currentValue - $a;\n        } else {\n            $this->currentValue = $a - $b;\n        }\n        return $this->currentValue;\n    }\n\n    public function clear(): void {\n        $this->currentValue = 0;\n    }\n\n    public function getCurrentValue(): float {\n        return $this->currentValue;\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/CalculatorInterface.php';\n\nclass Calculator implements CalculatorInterface {\n    private float $currentValue = 0;\n\n    public function add(float $a, ?float $b = null): float {\n        if ($b === null) {\n            $this->currentValue = $this->currentValue + $a;\n        } else {\n            $this->currentValue = $a + $b;\n        }\n        return $this->currentValue;\n    }\n\n    public function subtract(float $a, ?float $b = null): float {\n        if ($b === null) {\n            $this->currentValue = $this->currentValue - $a;\n        } else {\n            $this->currentValue = $a - $b;\n        }\n        return $this->currentValue;\n    }\n\n\n    public function getCurrentValue(): float {\n        return $this->currentValue;\n    }\n}",
+          "attendu": "erreur",
+          "diagnostic": "methode-promise"
+        }
+      ],
+      "explication": "L'interface fixe le contrat ; `= null` rend le second argument facultatif, et la propriété privée garde la mémoire du calcul. Remarque : la solution publiée du cours calcule `3 - 15` pour `subtract(3)` ; l'énoncé, lui, annonce bien 12 (15 - 3)."
+    }
+  ],
+  "parcours": [
+    "u03-l1",
+    "u03-l2",
+    "u03-l3",
+    "jeu:u03-trieur",
+    "u03-l4",
+    "u03-l5",
+    "quiz",
+    "boss:u03-b1",
+    "boss:u03-b2",
+    "boss:u03-b3"
+  ]
+}
