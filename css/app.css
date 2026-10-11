@@ -134,13 +134,17 @@ main{padding-block:20px 110px}
 
 /* ---------- accueil ---------- */
 .home-hero{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;margin-bottom:18px}
-.mascot{display:block;width:96px;height:96px;margin:0 auto;flex:none}
+/* taille par défaut ; centrée par son conteneur (text-align, justify-items), jamais par des marges automatiques (elles écrasent l'en-tête du profil) */
+.mascot{width:96px;height:96px;flex:none;vertical-align:middle}
 .chargement{text-align:center;padding-top:80px}
 .chargement .mascot{width:120px;height:120px;animation:pop .6s cubic-bezier(.3,1.6,.5,1)}
 .chargement p{font-weight:800;color:var(--muted);margin-top:12px}
 .home-hero .mascot{width:84px;height:84px}
 .bubble{position:relative;background:var(--paper);border:2px solid var(--line);border-radius:18px;padding:12px 14px;font-weight:700}
-.bubble::before{content:"";position:absolute;left:-10px;top:24px;width:16px;height:16px;background:var(--paper);border-left:2px solid var(--line);border-bottom:2px solid var(--line);transform:rotate(45deg)}
+/* pointe de la bulle : deux triangles (le contour, puis le fond par-dessus), sans carré tourné qui laisse des marches à la jonction */
+.bubble::before,.bubble::after{content:"";position:absolute;border-style:solid;border-color:transparent;border-left-width:0}
+.bubble::before{left:-12px;top:22px;border-width:10px 12px 10px 0;border-right-color:var(--line)}
+.bubble::after{left:-9px;top:24.5px;border-width:7.5px 9px 7.5px 0;border-right-color:var(--paper)}
 .daily{display:flex;gap:14px;align-items:center;margin-bottom:28px}
 .daily .ico{flex:none;width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--gold-soft);color:var(--gold-deep)}
 .daily .ico svg{width:32px;height:32px}
