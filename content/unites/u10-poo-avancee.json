@@ -1,0 +1,2482 @@
+{
+  "id": "u10",
+  "titre": "POO avancée",
+  "sousTitre": "Séance 9 · namespaces, use, autoloader, traits",
+  "objectif": "Organiser ses classes avec des namespaces et un autoloader, partager du code avec des traits, et choisir entre interface, classe abstraite et trait.",
+  "icone": "#",
+  "fiches": [
+    {
+      "id": "namespaces",
+      "titre": "Les espaces de noms (namespaces)",
+      "icone": "#",
+      "resume": "Un **namespace** regroupe des classes, des fonctions et des constantes sous un même nom, pour **organiser** le code et **éviter les conflits de noms** (deux classes `User` dans deux contextes différents). On le déclare en haut du fichier (`namespace Media\\Books;`) et on importe une classe d'un autre namespace avec `use`.",
+      "analogie": "**Les hashtags** (l'analogie du cours). Comme des photos étiquetées avec un hashtag sur Instagram : les classes qui partagent le même namespace sont regroupées, et on les retrouve par leur étiquette.",
+      "texte": "- `namespace Media\\Books;` : la **première** instruction du fichier (après `<?php`). Le séparateur est la barre oblique inverse `\\`.\n- Bonne pratique du cours : le namespace suit les dossiers. `Media\\Books\\Book` est rangée dans `src/Media/Books/Book.php`.\n- `use Media\\Books\\Book;` en haut d'un autre fichier : on peut ensuite écrire `new Book(…)` au lieu du nom complet.\n- Le nom complet commence par `\\` : `new \\Media\\Books\\Book(…)` fonctionne sans `use`.\n- Une classe d'un **autre** namespace doit être importée, même pour `extends` : `use Animals\\Animal;` avant `class Pet extends Animal`.\n- Les namespaces ne sont pas obligatoires, mais ils aident à organiser les projets plus complexes.",
+      "exemples": [
+        {
+          "titre": "Deux classes User, sans conflit",
+          "executable": false,
+          "code": [
+            "<?php",
+            "// src/Shop/User.php",
+            "namespace Shop;",
+            "",
+            "class User { /* un client de la boutique */ }",
+            "",
+            "// src/Forum/User.php",
+            "namespace Forum;",
+            "",
+            "class User { /* un membre du forum */ }",
+            ""
+          ],
+          "note": "`Shop\\User` et `Forum\\User` sont deux classes différentes : chacune a son hashtag."
+        }
+      ],
+      "pieges": [
+        "Dans le fichier `namespace Media\\Films;`, écrire `extends Media` fait chercher `Media\\Films\\Media` : il faut un `use`.",
+        "La barre oblique inverse `\\`, pas `/` : `use Media/Books/Book;` est une erreur de syntaxe."
+      ]
+    },
+    {
+      "id": "autoloader",
+      "titre": "L'inclusion automatique (autoloader)",
+      "icone": "⚙",
+      "resume": "Au lieu d'un `require_once` par classe, l'**autoloader** charge le fichier d'une classe au moment où on l'utilise. Il suppose une convention : la classe `Media\\Books\\Book` est dans `src/Media/Books/Book.php`. On inclut l'autoloader **une seule fois** par fichier.",
+      "texte": "L'autoloader du cours (`utils/autoloader.php`) :\n\n``` spl_autoload_register(function ($class) { $relativePath = str_replace('\\\\', '/', $class); $file = __DIR__ . '/../src/' . $relativePath . '.php'; if (file_exists($file)) { require_once $file; } }); ```\n\n- `spl_autoload_register` enregistre une fonction que PHP appelle quand il rencontre une classe inconnue, avec son nom complet (`Media\\Books\\Book`).\n- `str_replace` transforme les `\\` du namespace en `/` de dossiers : `Media/Books/Book`.\n- On ajoute `src/` devant et `.php` derrière, puis on inclut le fichier s'il existe.\n\nLe cours le dit : pas besoin de comprendre chaque détail. L'important : l'autoloader va chercher les classes dans `src/` d'après leur namespace.",
+      "pieges": [
+        "Une classe rangée au mauvais endroit (namespace et dossier différents) n'est pas trouvée : « Class … not found ».",
+        "Il faut quand même inclure l'autoloader lui-même : `require_once __DIR__ . '/../utils/autoloader.php';`."
+      ]
+    },
+    {
+      "id": "traits",
+      "titre": "Les traits",
+      "icone": "🧩",
+      "resume": "Un **trait** regroupe des méthodes (et des propriétés) à **partager entre des classes qui ne sont pas liées par l'héritage**. On le déclare avec `trait NomTrait { … }` et on l'utilise **dans** la classe avec `use NomTrait;`. Une classe peut utiliser plusieurs traits.",
+      "texte": "``` trait ChargeTrait { private int $battery = 100;\n\npublic function charge(): string { $this->battery = 100; return \"Chargé à 100 % !\"; } }\n\nclass Phone { use ChargeTrait; }\n\nclass Scooter { use ChargeTrait; } ```\n\nUn téléphone et une trottinette n'ont pas de parent commun : le trait leur donne la même méthode `charge()` sans hiérarchie de classes compliquée.\n\n- Un trait n'est pas une classe : on ne peut pas faire `new ChargeTrait()`.\n- La classe qui utilise le trait garde ses propres méthodes et propriétés.\n- Les traits sont propres à PHP (d'autres langages font autrement).",
+      "pieges": [
+        "`class Phone extends ChargeTrait` est une erreur : on n'étend pas un trait, on l'utilise (`use` à l'intérieur de la classe).",
+        "`use` a deux rôles : en haut du fichier, il importe un namespace ; dans une classe, il ajoute un trait."
+      ]
+    },
+    {
+      "id": "interface-abstraite-trait",
+      "titre": "Interface, classe abstraite ou trait ?",
+      "icone": "⚖",
+      "resume": "**Interface** : un contrat (des méthodes à écrire). **Classe abstraite** : une implémentation partielle, qu'on étend (une seule). **Trait** : du code à partager entre des classes sans lien d'héritage (plusieurs possibles).",
+      "analogie": "**Le plan et la maison.** L'interface est le cahier des charges, la classe abstraite une maison témoin à moitié finie, le trait un kit d'équipement (une cuisine toute faite) qu'on installe dans des maisons très différentes.",
+      "texte": "| | interface | classe abstraite | trait | |---|---|---|---| | mot-clé | `implements` | `extends` | `use` (dans la classe) | | combien par classe ? | plusieurs | **une seule** | plusieurs | | contient du code ? | non (signatures) | oui (méthodes concrètes et abstraites) | oui (méthodes et propriétés) | | `new` possible ? | non | non | non |\n\nLe cours le résume : une classe peut implémenter plusieurs interfaces ou traits, mais qu'une seule classe abstraite. Les traits lèvent cette limite pour partager du code."
+    }
+  ],
+  "lecons": [
+    {
+      "id": "u10-l1",
+      "titre": "Les hashtags du code",
+      "duree": 5,
+      "notions": [
+        "namespaces"
+      ],
+      "cartes": [
+        {
+          "titre": "Un nom de famille pour les classes",
+          "texte": "Un **namespace** regroupe des classes sous un même nom. Il évite les conflits : `Shop\\User` (un client) et `Forum\\User` (un membre du forum) peuvent exister ensemble.",
+          "analogie": "Comme un hashtag sur une photo : les classes du même namespace sont regroupées, et on les retrouve par leur étiquette.",
+          "fiche": "namespaces"
+        },
+        {
+          "titre": "Déclarer son namespace",
+          "texte": "Tout en haut du fichier : `namespace Media\\Books;`. Bonne pratique : le namespace suit les dossiers, donc `Media\\Books\\Book` est dans `src/Media/Books/Book.php`.",
+          "code": [
+            "<?php",
+            "namespace Media\\Books;",
+            "",
+            "class Book {",
+            "    private string $title;",
+            "    private string $author;",
+            "",
+            "    public function __construct(string $title, string $author) {",
+            "        $this->title = $title;",
+            "        $this->author = $author;",
+            "    }",
+            "",
+            "    public function describe(): string {",
+            "        return \"{$this->title}, de {$this->author}\";",
+            "    }",
+            "}"
+          ],
+          "executable": false
+        },
+        {
+          "titre": "Importer avec use",
+          "texte": "Pour utiliser `Book` ailleurs : `use Media\\Books\\Book;` en haut du fichier, puis `new Book(…)`. Sans `use`, il faut le nom complet : `new \\Media\\Books\\Book(…)`."
+        },
+        {
+          "titre": "Même pour extends",
+          "texte": "Une classe qui hérite d'une classe rangée dans **un autre** namespace doit l'importer : `use Animals\\Animal;` avant `class Pet extends Animal`. Sinon PHP la cherche dans le namespace du fichier.",
+          "astuce": "Les namespaces ne sont pas obligatoires, mais ils aident dans les projets plus complexes (comme ton projet libre)."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u10-l1-e1",
+          "type": "qcm",
+          "notions": [
+            "namespaces"
+          ],
+          "question": "À quoi servent les namespaces ?",
+          "choix": [
+            "Regrouper les classes sous un même nom et éviter les conflits de noms",
+            "Accélérer l'exécution du code",
+            "Protéger les attributs comme `private`",
+            "Remplacer les classes abstraites"
+          ],
+          "bonne": 0,
+          "explication": "Organiser et éviter les homonymes, comme des hashtags."
+        },
+        {
+          "id": "u10-l1-e2",
+          "type": "assoc",
+          "notions": [
+            "namespaces"
+          ],
+          "question": "Dans quel fichier ranger chaque classe ?",
+          "paires": [
+            [
+              "Media\\Books\\Book",
+              "src/Media/Books/Book.php"
+            ],
+            [
+              "Media\\Films\\Film",
+              "src/Media/Films/Film.php"
+            ],
+            [
+              "Shop\\User",
+              "src/Shop/User.php"
+            ],
+            [
+              "Shop\\Cart\\Item",
+              "src/Shop/Cart/Item.php"
+            ]
+          ],
+          "explication": "Le namespace suit les dossiers sous `src/`, et le fichier porte le nom de la classe."
+        },
+        {
+          "id": "u10-l1-e3",
+          "type": "trous",
+          "notions": [
+            "namespaces"
+          ],
+          "question": "`public/index.php` affiche un livre de `src/Media/Books/Book.php`. Complète.",
+          "fichier": "public/index.php",
+          "fichiers": {
+            "src/Media/Books/Book.php": [
+              "<?php",
+              "namespace Media\\Books;",
+              "",
+              "class Book {",
+              "    private string $title;",
+              "    private string $author;",
+              "",
+              "    public function __construct(string $title, string $author) {",
+              "        $this->title = $title;",
+              "        $this->author = $author;",
+              "    }",
+              "",
+              "    public function describe(): string {",
+              "        return \"{$this->title}, de {$this->author}\";",
+              "    }",
+              "}"
+            ]
+          },
+          "code": [
+            "<?php",
+            "require_once __DIR__ . '/../src/Media/Books/Book.php';",
+            "",
+            "___ Media\\Books\\Book;",
+            "",
+            "$book = new ___(\"Dune\", \"Frank Herbert\");",
+            "echo $book->describe();",
+            ""
+          ],
+          "solution": [
+            "use",
+            "Book"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Dune, de Frank Herbert"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le premier trou importe la classe d'un autre namespace.",
+            "Une fois importée, la classe s'utilise par son nom court."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "namespace",
+                "Book"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "use",
+                "Books"
+              ],
+              "attendu": "erreur",
+              "diagnostic": "classe-inconnue"
+            }
+          ],
+          "explication": "`use Media\\Books\\Book;` puis `new Book(…)`."
+        },
+        {
+          "id": "u10-l1-e4",
+          "type": "predire",
+          "notions": [
+            "namespaces"
+          ],
+          "question": "Deux classes `User`, dans deux namespaces. Qu'affiche `public/index.php` ?",
+          "fichier": "public/index.php",
+          "fichiers": {
+            "src/Shop/User.php": [
+              "<?php",
+              "namespace Shop;",
+              "",
+              "class User {",
+              "    public function role(): string {",
+              "        return \"client\";",
+              "    }",
+              "}"
+            ],
+            "src/Forum/User.php": [
+              "<?php",
+              "namespace Forum;",
+              "",
+              "class User {",
+              "    public function role(): string {",
+              "        return \"membre\";",
+              "    }",
+              "}"
+            ]
+          },
+          "code": [
+            "<?php",
+            "require_once __DIR__ . '/../src/Shop/User.php';",
+            "require_once __DIR__ . '/../src/Forum/User.php';",
+            "",
+            "$client = new \\Shop\\User();",
+            "$membre = new \\Forum\\User();",
+            "echo $client->role() . \" / \" . $membre->role();",
+            ""
+          ],
+          "choix": [
+            "client / membre",
+            "membre / membre",
+            "Une erreur : la classe User existe deux fois",
+            "client / client"
+          ],
+          "bonne": 0,
+          "explication": "Avec leur nom complet, les deux `User` ne se confondent pas : c'est le but des namespaces."
+        },
+        {
+          "id": "u10-l1-e5",
+          "type": "bug",
+          "notions": [
+            "namespaces",
+            "heritage"
+          ],
+          "question": "`src/Media/Films/Documentary.php` plante avec « Class \"Media\\Films\\Media\" not found ». Touche la ligne qu'il faudrait corriger.",
+          "code": [
+            "<?php",
+            "namespace Media\\Films;",
+            "",
+            "class Documentary extends Media {",
+            "    public function type(): string {",
+            "        return \"documentaire\";",
+            "    }",
+            "}",
+            ""
+          ],
+          "ligne": 4,
+          "choix": [
+            "`Media` est dans un autre namespace : il faut `use …\\Media;` avant la classe (ou son nom complet)",
+            "Une classe d'un namespace ne peut pas hériter",
+            "Le namespace doit venir après la classe",
+            "Il manque `abstract`"
+          ],
+          "bonne": 0,
+          "explication": "Sans `use`, PHP cherche `Media` dans le namespace du fichier (`Media\\Films`). Le message le dit : `Media\\Films\\Media`."
+        },
+        {
+          "id": "u10-l1-e6",
+          "type": "parsons",
+          "notions": [
+            "namespaces"
+          ],
+          "question": "Remets dans l'ordre le début du fichier `src/Pets/Rabbit.php`, qui hérite de `Animals\\Animal`.",
+          "lignes": [
+            "<?php",
+            "namespace Pets;",
+            "use Animals\\Animal;",
+            "class Rabbit extends Animal {",
+            "}"
+          ],
+          "distracteurs": [
+            "use Pets;",
+            "namespace Animals\\Animal;"
+          ],
+          "explication": "Le namespace du fichier d'abord, puis les imports, puis la classe."
+        },
+        {
+          "id": "u10-l1-e7",
+          "type": "vf",
+          "notions": [
+            "namespaces"
+          ],
+          "question": "Les namespaces sont obligatoires en PHP.",
+          "bonne": false,
+          "explication": "Ils ne sont pas obligatoires, mais aident à organiser les projets plus complexes."
+        }
+      ]
+    },
+    {
+      "id": "u10-l2",
+      "titre": "L'autoloader",
+      "duree": 5,
+      "notions": [
+        "autoloader",
+        "namespaces"
+      ],
+      "cartes": [
+        {
+          "titre": "Trop de require_once",
+          "texte": "Un `require_once` par classe devient vite fastidieux quand le projet grandit. L'**autoloader** charge automatiquement le fichier d'une classe au moment où on l'utilise.",
+          "fiche": "autoloader"
+        },
+        {
+          "titre": "Une convention",
+          "texte": "Pour que ça marche, la classe `Media\\Books\\Book` doit être dans `src/Media/Books/Book.php` : le namespace donne le chemin, le nom de la classe donne le nom du fichier."
+        },
+        {
+          "titre": "Le code du cours",
+          "texte": "`spl_autoload_register` enregistre une fonction que PHP appelle avec le nom complet de la classe inconnue. Elle remplace les `\\` par des `/`, ajoute `src/` et `.php`, et inclut le fichier s'il existe. Le cours le dit : l'important n'est pas chaque détail, mais ce qu'il fait.",
+          "code": [
+            "<?php",
+            "// Charge les classes automatiquement",
+            "spl_autoload_register(function ($class) {",
+            "    // Convertit les séparateurs de namespace en séparateurs de répertoires",
+            "    $relativePath = str_replace('\\\\', '/', $class);",
+            "",
+            "    // Construit le chemin complet du fichier",
+            "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+            "",
+            "    // Vérifie si le fichier existe avant de l'inclure",
+            "    if (file_exists($file)) {",
+            "        // Inclut le fichier de classe",
+            "        require_once $file;",
+            "    }",
+            "});"
+          ],
+          "executable": false
+        },
+        {
+          "titre": "L'utiliser",
+          "texte": "Un seul `require_once` (celui de l'autoloader), puis les `use` : `require_once __DIR__ . '/../utils/autoloader.php';` puis `use Media\\Books\\Book;`. Le cours fait aussi inclure l'autoloader en haut des fichiers de classes qui en utilisent d'autres (une classe parente, un trait)."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u10-l2-e1",
+          "type": "predire",
+          "notions": [
+            "autoloader"
+          ],
+          "question": "Quel chemin cette ligne de l'autoloader produit-elle ?",
+          "code": [
+            "$class = 'Shop\\Cart\\Item';",
+            "$relativePath = str_replace('\\\\', '/', $class);",
+            "echo 'src/' . $relativePath . '.php';",
+            ""
+          ],
+          "choix": [
+            "src/Shop/Cart/Item.php",
+            "src/Shop\\Cart\\Item.php",
+            "src/Item.php",
+            "Shop/Cart/Item"
+          ],
+          "bonne": 0,
+          "explication": "Les `\\` du namespace deviennent des `/` de dossiers."
+        },
+        {
+          "id": "u10-l2-e2",
+          "type": "qcm",
+          "notions": [
+            "autoloader"
+          ],
+          "question": "Avec l'autoloader du cours, `new Games\\Board\\Chess()` charge quel fichier ?",
+          "choix": [
+            "src/Games/Board/Chess.php",
+            "src/Chess.php",
+            "Games/Board/Chess.php",
+            "utils/Chess.php"
+          ],
+          "bonne": 0,
+          "explication": "`__DIR__ . '/../src/'` + `Games/Board/Chess` + `.php`."
+        },
+        {
+          "id": "u10-l2-e3",
+          "type": "trous",
+          "notions": [
+            "autoloader"
+          ],
+          "question": "Complète l'autoloader (dans `utils/autoloader.php`), puis vérifie qu'il trouve la classe `Media\\Films\\Film`.",
+          "fichier": "utils/autoloader.php",
+          "fichiers": {
+            "src/Media/Films/Film.php": [
+              "<?php",
+              "namespace Media\\Films;",
+              "",
+              "class Film {",
+              "    private string $title;",
+              "    private int $year;",
+              "",
+              "    public function __construct(string $title, int $year) {",
+              "        $this->title = $title;",
+              "        $this->year = $year;",
+              "    }",
+              "",
+              "    public function describe(): string {",
+              "        return \"{$this->title} ({$this->year})\";",
+              "    }",
+              "}"
+            ]
+          },
+          "code": [
+            "<?php",
+            "___(function ($class) {",
+            "    $relativePath = str_replace('\\\\', '/', $class);",
+            "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+            "    if (___($file)) {",
+            "        require_once $file;",
+            "    }",
+            "});",
+            ""
+          ],
+          "solution": [
+            "spl_autoload_register",
+            "file_exists"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "La classe est trouvée",
+                "code": "return (new Media\\Films\\Film(\"Wall-E\", 2008))->describe();",
+                "attendu": "Wall-E (2008)"
+              },
+              {
+                "titre": "Une classe qui n'existe pas",
+                "code": "return class_exists('Media\\Films\\Series');",
+                "attendu": false
+              }
+            ]
+          },
+          "indices": [
+            "Le premier trou est la fonction qui enregistre l'autoloader.",
+            "Le second vérifie que le fichier existe avant de l'inclure."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "spl_autoload_register",
+                "is_string"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "autoload",
+                "file_exists"
+              ],
+              "attendu": "erreur",
+              "diagnostic": "fonction-inconnue"
+            }
+          ],
+          "explication": "`spl_autoload_register(…)` et `file_exists($file)` : sans cette vérification, une classe inexistante ferait planter le `require_once`."
+        },
+        {
+          "id": "u10-l2-e4",
+          "type": "qcm",
+          "notions": [
+            "autoloader",
+            "namespaces"
+          ],
+          "question": "La classe `Media\\Films\\Film` est rangée dans `src/Films/Film.php`. Que se passe-t-il avec l'autoloader du cours ?",
+          "choix": [
+            "« Class \"Media\\Films\\Film\" not found » : il la cherche dans src/Media/Films/Film.php",
+            "Il la trouve quand même",
+            "Il crée le fichier manquant",
+            "Il charge tous les fichiers de src/"
+          ],
+          "bonne": 0,
+          "explication": "La convention est stricte : namespace = dossiers."
+        },
+        {
+          "id": "u10-l2-e5",
+          "type": "ecrire",
+          "notions": [
+            "autoloader",
+            "namespaces"
+          ],
+          "question": "Écris `public/index.php` : inclus l'autoloader, importe `Media\\Books\\Book` et `Media\\Films\\Film`, puis affiche le livre « Matilda » de Roald Dahl et le film « Matilda » de 1996, chacun suivi de `<br>`.",
+          "fichier": "public/index.php",
+          "fichiers": {
+            "utils/autoloader.php": [
+              "<?php",
+              "// Charge les classes automatiquement",
+              "spl_autoload_register(function ($class) {",
+              "    // Convertit les séparateurs de namespace en séparateurs de répertoires",
+              "    $relativePath = str_replace('\\\\', '/', $class);",
+              "",
+              "    // Construit le chemin complet du fichier",
+              "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+              "",
+              "    // Vérifie si le fichier existe avant de l'inclure",
+              "    if (file_exists($file)) {",
+              "        // Inclut le fichier de classe",
+              "        require_once $file;",
+              "    }",
+              "});"
+            ],
+            "src/Media/Books/Book.php": [
+              "<?php",
+              "namespace Media\\Books;",
+              "",
+              "class Book {",
+              "    private string $title;",
+              "    private string $author;",
+              "",
+              "    public function __construct(string $title, string $author) {",
+              "        $this->title = $title;",
+              "        $this->author = $author;",
+              "    }",
+              "",
+              "    public function describe(): string {",
+              "        return \"{$this->title}, de {$this->author}\";",
+              "    }",
+              "}"
+            ],
+            "src/Media/Films/Film.php": [
+              "<?php",
+              "namespace Media\\Films;",
+              "",
+              "class Film {",
+              "    private string $title;",
+              "    private int $year;",
+              "",
+              "    public function __construct(string $title, int $year) {",
+              "        $this->title = $title;",
+              "        $this->year = $year;",
+              "    }",
+              "",
+              "    public function describe(): string {",
+              "        return \"{$this->title} ({$this->year})\";",
+              "    }",
+              "}"
+            ]
+          },
+          "depart": [
+            "<?php",
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Matilda, de Roald Dahl",
+                  "Matilda (1996)"
+                ]
+              }
+            ],
+            "obligatoire": [
+              "use"
+            ],
+            "interdit": [
+              "src/Media"
+            ]
+          },
+          "indices": [
+            "Un seul `require_once` : celui de l'autoloader (`__DIR__ . '/../utils/autoloader.php'`).",
+            "Deux `use`, puis deux objets et deux `echo … . \"<br>\";`.",
+            {
+              "texte": "Le début :",
+              "code": "require_once __DIR__ . '/../utils/autoloader.php';\n\nuse Media\\Books\\___;\nuse ___;"
+            }
+          ],
+          "solution": [
+            "<?php",
+            "require_once __DIR__ . '/../utils/autoloader.php';",
+            "",
+            "use Media\\Books\\Book;",
+            "use Media\\Films\\Film;",
+            "",
+            "$book = new Book(\"Matilda\", \"Roald Dahl\");",
+            "$film = new Film(\"Matilda\", 1996);",
+            "",
+            "echo $book->describe() . \"<br>\";",
+            "echo $film->describe() . \"<br>\";"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "<?php\n\n\nuse Media\\Books\\Book;\nuse Media\\Films\\Film;\n\n$book = new Book(\"Matilda\", \"Roald Dahl\");\n$film = new Film(\"Matilda\", 1996);\n\necho $book->describe() . \"<br>\";\necho $film->describe() . \"<br>\";",
+              "attendu": "erreur",
+              "diagnostic": "classe-inconnue"
+            },
+            {
+              "code": "<?php\nrequire_once __DIR__ . '/../utils/autoloader.php';\n\nuse Media\\Books\\Book;\n\n\n$book = new Book(\"Matilda\", \"Roald Dahl\");\n$film = new Film(\"Matilda\", 1996);\n\necho $book->describe() . \"<br>\";\necho $film->describe() . \"<br>\";",
+              "attendu": "erreur",
+              "diagnostic": "classe-inconnue"
+            }
+          ],
+          "explication": "L'autoloader charge `Book.php` et `Film.php` tout seul, grâce aux namespaces."
+        },
+        {
+          "id": "u10-l2-e6",
+          "type": "vf",
+          "notions": [
+            "autoloader"
+          ],
+          "question": "Avec un autoloader, on n'écrit plus un `require_once` pour chaque fichier de classe.",
+          "bonne": true,
+          "explication": "On inclut seulement l'autoloader ; il charge le reste à la demande."
+        }
+      ]
+    },
+    {
+      "id": "u10-l3",
+      "titre": "Les traits",
+      "duree": 5,
+      "notions": [
+        "traits"
+      ],
+      "cartes": [
+        {
+          "titre": "Partager sans hériter",
+          "texte": "Un **trait** contient des méthodes (et des propriétés) à partager entre des classes **qui ne sont pas liées par l'héritage**. Un téléphone et une trottinette n'ont pas de parent commun, mais tous deux se rechargent.",
+          "fiche": "traits"
+        },
+        {
+          "titre": "La syntaxe",
+          "texte": "`trait ChargeTrait { … }` pour le déclarer ; `use ChargeTrait;` **à l'intérieur** de la classe pour l'utiliser. La classe reçoit les méthodes et les propriétés du trait, et garde les siennes.",
+          "code": [
+            "trait ChargeTrait {",
+            "    private int $battery = 100;",
+            "",
+            "    public function spend(int $percent): void {",
+            "        $this->battery -= $percent;",
+            "    }",
+            "",
+            "    public function getBattery(): string {",
+            "        return \"Batterie : {$this->battery} %\";",
+            "    }",
+            "}",
+            "",
+            "class Phone {",
+            "    use ChargeTrait;",
+            "}",
+            "",
+            "class Scooter {",
+            "    use ChargeTrait;",
+            "",
+            "    public function ride(): string {",
+            "        $this->spend(30);",
+            "        return \"En route !\";",
+            "    }",
+            "}",
+            "",
+            "$phone = new Phone();",
+            "$phone->spend(15);",
+            "echo $phone->getBattery() . \"\\n\";",
+            "",
+            "$scooter = new Scooter();",
+            "echo $scooter->ride() . \"\\n\";",
+            "echo $scooter->getBattery() . \"\\n\";"
+          ]
+        },
+        {
+          "titre": "Plusieurs traits",
+          "texte": "Une classe peut utiliser plusieurs traits (`use DrinkTrait;` puis `use SmellTrait;`), alors qu'elle n'étend qu'une seule classe.",
+          "astuce": "`use` en haut du fichier importe un namespace ; `use` dans une classe ajoute un trait."
+        },
+        {
+          "titre": "Ce n'est pas une classe",
+          "texte": "On ne peut pas faire `new ChargeTrait()` : un trait sert uniquement à partager du code entre des classes. Avec les namespaces, il se range aussi dans `src/` (par exemple `src/Traits/ChargeTrait.php`, namespace `Traits`)."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u10-l3-e1",
+          "type": "predire",
+          "notions": [
+            "traits"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "trait GreetTrait {",
+            "    public function greet(): string {",
+            "        return \"Bonjour, je suis \" . $this->name;",
+            "    }",
+            "}",
+            "",
+            "class Robot {",
+            "    use GreetTrait;",
+            "    private string $name = \"R2\";",
+            "}",
+            "",
+            "$robot = new Robot();",
+            "echo $robot->greet();",
+            ""
+          ],
+          "choix": [
+            "Bonjour, je suis R2",
+            "Bonjour, je suis ",
+            "Une erreur : le trait ne connaît pas $name",
+            "Bonjour, je suis $name"
+          ],
+          "bonne": 0,
+          "explication": "Les méthodes du trait sont copiées dans la classe : `$this` est le robot, qui a bien un `$name`."
+        },
+        {
+          "id": "u10-l3-e2",
+          "type": "trous",
+          "notions": [
+            "traits"
+          ],
+          "question": "Complète : `Bike` et `Drone` partagent la méthode `lights()`.",
+          "code": [
+            "___ LightTrait {",
+            "    public function lights(): string {",
+            "        return \"Lumières allumées\";",
+            "    }",
+            "}",
+            "",
+            "class Bike {",
+            "    ___ LightTrait;",
+            "}",
+            "",
+            "class Drone {",
+            "    use LightTrait;",
+            "}",
+            "",
+            "echo (new Bike())->lights() . \" / \" . (new Drone())->lights();",
+            ""
+          ],
+          "solution": [
+            "trait",
+            "use"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Lumières allumées / Lumières allumées"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le premier mot déclare un trait.",
+            "Dans la classe, le même mot que dans `Drone`."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "class",
+                "use"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "trait",
+                "extends"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "`trait LightTrait { … }` puis `use LightTrait;` dans chaque classe."
+        },
+        {
+          "id": "u10-l3-e3",
+          "type": "bug",
+          "notions": [
+            "traits"
+          ],
+          "question": "Ce code plante. Touche la ligne fautive.",
+          "code": [
+            "trait SoundTrait {",
+            "    public function beep(): string {",
+            "        return \"Bip !\";",
+            "    }",
+            "}",
+            "",
+            "class Alarm extends SoundTrait {",
+            "}",
+            "",
+            "echo (new Alarm())->beep();",
+            ""
+          ],
+          "ligne": 7,
+          "choix": [
+            "On n'étend pas un trait : on écrit `use SoundTrait;` dans la classe",
+            "Un trait ne peut pas contenir de méthode publique",
+            "`beep` doit être abstraite",
+            "Il manque `new SoundTrait()`"
+          ],
+          "bonne": 0,
+          "explication": "« Class Alarm cannot extend trait SoundTrait » : un trait s'utilise, il ne s'étend pas."
+        },
+        {
+          "id": "u10-l3-e4",
+          "type": "predire",
+          "notions": [
+            "traits"
+          ],
+          "question": "Avec le trait `ChargeTrait` de la leçon, qu'affiche ce code ?",
+          "code": [
+            "trait ChargeTrait {",
+            "    private int $battery = 100;",
+            "",
+            "    public function spend(int $percent): void {",
+            "        $this->battery -= $percent;",
+            "    }",
+            "",
+            "    public function getBattery(): string {",
+            "        return \"Batterie : {$this->battery} %\";",
+            "    }",
+            "}",
+            "",
+            "class Phone {",
+            "    use ChargeTrait;",
+            "}",
+            "",
+            "class Scooter {",
+            "    use ChargeTrait;",
+            "",
+            "    public function ride(): string {",
+            "        $this->spend(30);",
+            "        return \"En route !\";",
+            "    }",
+            "}",
+            "",
+            "",
+            "$phone = new Phone();",
+            "$phone->spend(15);",
+            "$scooter = new Scooter();",
+            "$scooter->ride();",
+            "echo $scooter->getBattery();"
+          ],
+          "choix": [
+            "Batterie : 70 %",
+            "Batterie : 85 %",
+            "Batterie : 55 %",
+            "Batterie : 100 %"
+          ],
+          "bonne": 0,
+          "explication": "Chaque objet a sa propre batterie : le téléphone descend à 85 %, la trottinette (100 − 30) à 70 %."
+        },
+        {
+          "id": "u10-l3-e5",
+          "type": "ecrire",
+          "notions": [
+            "traits"
+          ],
+          "question": "Écris le trait `LikeTrait` : une propriété privée `$likes` (entier, 0 au départ), une méthode `like(): void` qui ajoute un « j'aime », et `getLikes(): int` qui les retourne. Les tests l'utiliseront dans des classes `Photo` et `Comment`.",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Une photo aimée deux fois",
+                "code": "class Photo { use LikeTrait; }\n$p = new Photo();\n$p->like();\n$p->like();\nreturn $p->getLikes();",
+                "attendu": 2
+              },
+              {
+                "titre": "Un commentaire jamais aimé",
+                "code": "class Comment { use LikeTrait; }\nreturn (new Comment())->getLikes();",
+                "attendu": 0
+              },
+              {
+                "titre": "Chaque objet compte les siens",
+                "code": "class Story { use LikeTrait; }\n$a = new Story();\n$b = new Story();\n$a->like();\nreturn [$a->getLikes(), $b->getLikes()];",
+                "attendu": [
+                  1,
+                  0
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "`trait LikeTrait { … }` contient une propriété et deux méthodes, comme une classe.",
+            "`like()` fait `$this->likes++;`, `getLikes()` retourne `$this->likes`.",
+            {
+              "texte": "Presque :",
+              "code": "trait LikeTrait {\n    private int $likes = ___;\n\n    public function like(): void {\n        ___\n    }\n\n    public function getLikes(): int {\n        ___\n    }\n}"
+            }
+          ],
+          "solution": [
+            "trait LikeTrait {",
+            "    private int $likes = 0;",
+            "",
+            "    public function like(): void {",
+            "        $this->likes++;",
+            "    }",
+            "",
+            "    public function getLikes(): int {",
+            "        return $this->likes;",
+            "    }",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "class LikeTrait {\n    private int $likes = 0;\n\n    public function like(): void {\n        $this->likes++;\n    }\n\n    public function getLikes(): int {\n        return $this->likes;\n    }\n}",
+              "attendu": "erreur",
+              "diagnostic": "pas-un-trait"
+            },
+            {
+              "code": "trait LikeTrait {\n    private int $likes = 0;\n\n    public function like(): void {\n        $likes++;\n    }\n\n    public function getLikes(): int {\n        return $this->likes;\n    }\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Un trait s'écrit comme une classe, mais il ne s'instancie pas : il se range dans d'autres classes."
+        },
+        {
+          "id": "u10-l3-e6",
+          "type": "vf",
+          "notions": [
+            "traits"
+          ],
+          "question": "On peut créer un objet avec `new LikeTrait()`.",
+          "bonne": false,
+          "explication": "Un trait n'est pas une classe : il sert uniquement à partager du code."
+        }
+      ]
+    },
+    {
+      "id": "u10-l4",
+      "titre": "Interface, abstraite ou trait ?",
+      "duree": 5,
+      "notions": [
+        "interface-abstraite-trait",
+        "interfaces",
+        "classes-abstraites",
+        "traits"
+      ],
+      "cartes": [
+        {
+          "titre": "L'interface, un contrat",
+          "texte": "Une interface définit un **contrat** : les méthodes que les classes doivent écrire (`implements`). Une classe peut en implémenter plusieurs.",
+          "analogie": "Le cahier des charges de la maison.",
+          "fiche": "interface-abstraite-trait"
+        },
+        {
+          "titre": "La classe abstraite, à moitié finie",
+          "texte": "Une classe abstraite fournit une **implémentation partielle** (méthodes concrètes et abstraites). Elle ne s'instancie pas ; ses enfants (`extends`, **une seule** parente) écrivent les méthodes abstraites. Idéal pour une hiérarchie : personnages, assassin·es, ninjas.",
+          "analogie": "La maison témoin à moitié finie."
+        },
+        {
+          "titre": "Le trait, un kit à installer",
+          "texte": "Un trait partage du **code** entre des classes **sans lien d'héritage**, et une classe peut en utiliser plusieurs.",
+          "analogie": "Un kit d'équipement (une cuisine toute faite) qu'on installe dans des maisons très différentes."
+        },
+        {
+          "titre": "Comment choisir",
+          "texte": "- Garantir que des classes **ont** certaines méthodes → interface.\n- Des classes **sont** des variantes d'un même modèle, avec du code commun → classe abstraite.\n- Des classes sans rapport **font** la même chose (boire, sentir, se recharger) → trait."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u10-l4-e1",
+          "type": "tri",
+          "notions": [
+            "interface-abstraite-trait"
+          ],
+          "question": "Interface, classe abstraite ou trait ?",
+          "categories": [
+            "Interface",
+            "Classe abstraite",
+            "Trait"
+          ],
+          "items": [
+            [
+              "S'utilise avec implements",
+              0
+            ],
+            [
+              "Une seule par classe",
+              1
+            ],
+            [
+              "S'ajoute avec use dans la classe",
+              2
+            ],
+            [
+              "Ne contient que des signatures de méthodes",
+              0
+            ],
+            [
+              "Implémentation partielle pour une hiérarchie",
+              1
+            ],
+            [
+              "Partage du code entre classes sans lien d'héritage",
+              2
+            ]
+          ],
+          "explication": "Contrat, maison témoin, kit à installer."
+        },
+        {
+          "id": "u10-l4-e2",
+          "type": "qcm",
+          "notions": [
+            "interface-abstraite-trait"
+          ],
+          "question": "Un `Chat`, une `Plante` et un `Robot` doivent tous avoir la même méthode `drink()`, avec le même code. Que choisir ?",
+          "choix": [
+            "Un trait",
+            "Une classe abstraite parente commune",
+            "Une interface",
+            "Copier la méthode dans chaque classe"
+          ],
+          "bonne": 0,
+          "explication": "Pas de lien d'héritage logique entre eux, et du code à partager : c'est le cas d'usage du trait."
+        },
+        {
+          "id": "u10-l4-e3",
+          "type": "qcm",
+          "notions": [
+            "interface-abstraite-trait"
+          ],
+          "question": "Des voitures, des camions et des motos partagent des attributs (marque, vitesse) et du code, mais chacun démarre à sa façon. Que choisir pour leur parent commun ?",
+          "choix": [
+            "Une classe abstraite `Vehicle`, avec une méthode abstraite `start()`",
+            "Un trait `Vehicle`",
+            "Rien : chaque classe recopie tout",
+            "Un namespace `Vehicle`"
+          ],
+          "bonne": 0,
+          "explication": "Des variantes d'un même modèle, avec du code commun et une méthode propre à chacun : classe abstraite."
+        },
+        {
+          "id": "u10-l4-e4",
+          "type": "predire",
+          "notions": [
+            "interface-abstraite-trait"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "interface Speaker {",
+            "    public function speak(): string;",
+            "}",
+            "",
+            "trait WaveTrait {",
+            "    public function wave(): string {",
+            "        return \"*salue*\";",
+            "    }",
+            "}",
+            "",
+            "abstract class Character implements Speaker {",
+            "    protected string $name;",
+            "",
+            "    public function __construct(string $name) {",
+            "        $this->name = $name;",
+            "    }",
+            "}",
+            "",
+            "class Pirate extends Character {",
+            "    use WaveTrait;",
+            "",
+            "    public function speak(): string {",
+            "        return \"{$this->name} : Ohé !\";",
+            "    }",
+            "}",
+            "",
+            "$pirate = new Pirate(\"Anne\");",
+            "echo $pirate->speak() . \" \" . $pirate->wave();",
+            ""
+          ],
+          "choix": [
+            "Anne : Ohé ! *salue*",
+            "Anne : Ohé !",
+            "Une erreur : Character n'écrit pas speak()",
+            "*salue* Anne : Ohé !"
+          ],
+          "bonne": 0,
+          "explication": "La classe abstraite peut laisser `speak()` à ses enfants ; `Pirate` l'écrit, et reçoit `wave()` du trait."
+        },
+        {
+          "id": "u10-l4-e5",
+          "type": "vf",
+          "notions": [
+            "interface-abstraite-trait"
+          ],
+          "question": "Une classe peut étendre une seule classe abstraite, mais utiliser plusieurs traits.",
+          "bonne": true,
+          "explication": "« Une classe peut implémenter plusieurs interfaces ou traits, mais qu'une seule classe abstraite. »"
+        },
+        {
+          "id": "u10-l4-e6",
+          "type": "assoc",
+          "notions": [
+            "interface-abstraite-trait",
+            "namespaces"
+          ],
+          "question": "Associe chaque mot-clé à son rôle.",
+          "paires": [
+            [
+              "implements",
+              "Respecter le contrat d'une interface"
+            ],
+            [
+              "extends",
+              "Hériter d'une classe (abstraite ou non)"
+            ],
+            [
+              "use (dans une classe)",
+              "Ajouter un trait"
+            ],
+            [
+              "use (en haut du fichier)",
+              "Importer une classe d'un namespace"
+            ],
+            [
+              "namespace",
+              "Déclarer l'espace de noms du fichier"
+            ]
+          ],
+          "explication": "Attention aux deux `use` : l'un importe, l'autre ajoute un trait."
+        }
+      ]
+    }
+  ],
+  "jeux": [
+    {
+      "id": "u10-hashtags",
+      "titre": "La chasse aux hashtags",
+      "description": "Questions éclair sur les namespaces, l'autoloader et les traits.",
+      "tours": 10,
+      "questions": [
+        {
+          "id": "u10-j1",
+          "type": "qcm",
+          "notions": [
+            "namespaces"
+          ],
+          "mono": true,
+          "question": "Quel séparateur dans un namespace ?",
+          "choix": [
+            "\\",
+            "/",
+            ".",
+            "::"
+          ],
+          "bonne": 0,
+          "explication": "La barre oblique inverse : `Media\\Books`."
+        },
+        {
+          "id": "u10-j2",
+          "type": "qcm",
+          "notions": [
+            "namespaces"
+          ],
+          "mono": true,
+          "question": "Quel mot importe une classe d'un autre namespace ?",
+          "choix": [
+            "use",
+            "import",
+            "require",
+            "include"
+          ],
+          "bonne": 0,
+          "explication": "`use Media\\Books\\Book;`."
+        },
+        {
+          "id": "u10-j3",
+          "type": "qcm",
+          "notions": [
+            "autoloader"
+          ],
+          "mono": true,
+          "question": "Quelle fonction enregistre un autoloader ?",
+          "choix": [
+            "spl_autoload_register",
+            "autoload",
+            "register_class",
+            "require_all"
+          ],
+          "bonne": 0,
+          "explication": "`spl_autoload_register(function ($class) { … });`."
+        },
+        {
+          "id": "u10-j4",
+          "type": "vf",
+          "notions": [
+            "namespaces"
+          ],
+          "question": "`namespace App;` doit être la première instruction du fichier.",
+          "bonne": true,
+          "explication": "Juste après `<?php`."
+        },
+        {
+          "id": "u10-j5",
+          "type": "qcm",
+          "notions": [
+            "traits"
+          ],
+          "mono": true,
+          "question": "Quel mot déclare un trait ?",
+          "choix": [
+            "trait",
+            "class",
+            "interface",
+            "use"
+          ],
+          "bonne": 0,
+          "explication": "`trait NomTrait { … }`."
+        },
+        {
+          "id": "u10-j6",
+          "type": "vf",
+          "notions": [
+            "traits"
+          ],
+          "question": "Une classe peut utiliser plusieurs traits.",
+          "bonne": true,
+          "explication": "Par exemple `use DrinkTrait;` et `use SmellTrait;`."
+        },
+        {
+          "id": "u10-j7",
+          "type": "vf",
+          "notions": [
+            "interface-abstraite-trait"
+          ],
+          "question": "Une classe peut étendre deux classes abstraites.",
+          "bonne": false,
+          "explication": "Une seule classe parente."
+        },
+        {
+          "id": "u10-j8",
+          "type": "qcm",
+          "notions": [
+            "autoloader"
+          ],
+          "question": "La classe `Pets\\Dog` est chargée depuis…",
+          "choix": [
+            "src/Pets/Dog.php",
+            "src/Dog.php",
+            "Pets/Dog/index.php",
+            "utils/Dog.php"
+          ],
+          "bonne": 0,
+          "explication": "Le namespace donne les dossiers, la classe le fichier."
+        },
+        {
+          "id": "u10-j9",
+          "type": "qcm",
+          "notions": [
+            "namespaces"
+          ],
+          "question": "Que fait `new \\Shop\\User()` ?",
+          "choix": [
+            "Crée un User du namespace Shop, avec son nom complet",
+            "Une erreur de syntaxe",
+            "Crée un User du namespace du fichier",
+            "Importe la classe"
+          ],
+          "bonne": 0,
+          "explication": "Le `\\` initial désigne le nom complet, sans `use`."
+        },
+        {
+          "id": "u10-j10",
+          "type": "vf",
+          "notions": [
+            "autoloader"
+          ],
+          "question": "L'autoloader du cours vérifie que le fichier existe avant de l'inclure.",
+          "bonne": true,
+          "explication": "`if (file_exists($file))`."
+        },
+        {
+          "id": "u10-j11",
+          "type": "qcm",
+          "notions": [
+            "traits"
+          ],
+          "question": "Où écrit-on `use DrinkTrait;` pour ajouter le trait ?",
+          "choix": [
+            "À l'intérieur de la classe",
+            "Avant `<?php`",
+            "Dans l'autoloader",
+            "Après la fin de la classe"
+          ],
+          "bonne": 0,
+          "explication": "Dans le corps de la classe, en général tout en haut."
+        },
+        {
+          "id": "u10-j12",
+          "type": "qcm",
+          "notions": [
+            "namespaces"
+          ],
+          "question": "Quelle analogie le cours utilise-t-il pour les namespaces ?",
+          "choix": [
+            "Les hashtags sur Instagram",
+            "Un ticket de la Poste",
+            "Un signal d'alarme",
+            "Une recette de cuisine"
+          ],
+          "bonne": 0,
+          "explication": "On étiquette les classes pour les regrouper et les retrouver."
+        }
+      ]
+    }
+  ],
+  "quiz": {
+    "titre": "Quiz : POO avancée",
+    "questions": [
+      {
+        "id": "u10-q1",
+        "type": "qcm",
+        "notions": [
+          "namespaces"
+        ],
+        "question": "Dans `src/Zoo/Birds/Parrot.php`, quel namespace déclarer ?",
+        "choix": [
+          "namespace Zoo\\Birds;",
+          "namespace Zoo\\Birds\\Parrot;",
+          "namespace src\\Zoo\\Birds;",
+          "namespace Zoo/Birds;"
+        ],
+        "bonne": 0,
+        "explication": "Les dossiers sous `src/`, sans le nom de la classe."
+      },
+      {
+        "id": "u10-q2",
+        "type": "bug",
+        "notions": [
+          "namespaces"
+        ],
+        "question": "Ce fichier plante. Touche la ligne fautive.",
+        "code": [
+          "<?php",
+          "require_once __DIR__ . '/../utils/autoloader.php';",
+          "",
+          "use Zoo/Birds/Parrot;",
+          "",
+          "$coco = new Parrot();",
+          "echo $coco->talk();",
+          ""
+        ],
+        "ligne": 4,
+        "choix": [
+          "Le séparateur des namespaces est `\\`, pas `/`",
+          "`use` doit venir avant `require_once`",
+          "Il manque `namespace`",
+          "`Parrot` doit être en minuscules"
+        ],
+        "bonne": 0,
+        "explication": "`use Zoo\\Birds\\Parrot;`. Les `/` sont pour les dossiers, et c'est l'autoloader qui fait la conversion."
+      },
+      {
+        "id": "u10-q3",
+        "type": "predire",
+        "notions": [
+          "traits"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "trait CounterTrait {",
+          "    private int $count = 0;",
+          "",
+          "    public function add(): int {",
+          "        $this->count++;",
+          "        return $this->count;",
+          "    }",
+          "}",
+          "",
+          "class Door {",
+          "    use CounterTrait;",
+          "}",
+          "",
+          "class Window {",
+          "    use CounterTrait;",
+          "}",
+          "",
+          "$door = new Door();",
+          "$window = new Window();",
+          "$door->add();",
+          "$door->add();",
+          "echo $door->add() . \" \" . $window->add();",
+          ""
+        ],
+        "choix": [
+          "3 1",
+          "4 4",
+          "3 3",
+          "1 1"
+        ],
+        "bonne": 0,
+        "explication": "La propriété du trait est copiée dans chaque objet : la porte en est à 3, la fenêtre à 1."
+      },
+      {
+        "id": "u10-q4",
+        "type": "trous",
+        "notions": [
+          "namespaces",
+          "heritage"
+        ],
+        "question": "`src/Pets/Hamster.php` hérite de `Animals\\Animal` (fournie). Complète.",
+        "fichier": "src/Pets/Hamster.php",
+        "fichiers": {
+          "src/Animals/Animal.php": [
+            "<?php",
+            "namespace Animals;",
+            "",
+            "abstract class Animal {",
+            "    protected string $name;",
+            "",
+            "    public function __construct(string $name) {",
+            "        $this->name = $name;",
+            "    }",
+            "",
+            "    abstract public function makeSound(): string;",
+            "}",
+            ""
+          ]
+        },
+        "code": [
+          "<?php",
+          "___ Pets;",
+          "",
+          "require_once __DIR__ . '/../Animals/Animal.php';",
+          "",
+          "___ Animals\\Animal;",
+          "",
+          "class Hamster extends Animal {",
+          "    public function makeSound(): string {",
+          "        return \"{$this->name} : Couic !\";",
+          "    }",
+          "}",
+          ""
+        ],
+        "solution": [
+          "namespace",
+          "use"
+        ],
+        "tests": {
+          "cas": [
+            {
+              "code": "return (new Pets\\Hamster(\"Noisette\"))->makeSound();",
+              "attendu": "Noisette : Couic !"
+            },
+            {
+              "titre": "Un autre hamster",
+              "code": "return (new Pets\\Hamster(\"Caramel\"))->makeSound();",
+              "attendu": "Caramel : Couic !"
+            }
+          ]
+        },
+        "indices": [
+          "Le premier trou déclare l'étiquette du fichier.",
+          "Le second importe la classe parente rangée sous une autre étiquette."
+        ],
+        "erreursTypiques": [
+          {
+            "trous": [
+              "use",
+              "use"
+            ],
+            "attendu": "erreur"
+          },
+          {
+            "trous": [
+              "namespace",
+              "namespace"
+            ],
+            "attendu": "erreur"
+          }
+        ],
+        "explication": "`namespace Pets;` pour le fichier, `use Animals\\Animal;` pour la parente."
+      },
+      {
+        "id": "u10-q5",
+        "type": "qcm",
+        "notions": [
+          "autoloader"
+        ],
+        "question": "Que fait `str_replace('\\\\', '/', $class)` dans l'autoloader ?",
+        "choix": [
+          "Il transforme le namespace en chemin de dossiers",
+          "Il supprime le namespace",
+          "Il échappe les caractères spéciaux",
+          "Il vérifie que la classe existe"
+        ],
+        "bonne": 0,
+        "explication": "`Media\\Books\\Book` devient `Media/Books/Book`."
+      },
+      {
+        "id": "u10-q6",
+        "type": "tri",
+        "notions": [
+          "interface-abstraite-trait"
+        ],
+        "question": "Que choisir ?",
+        "categories": [
+          "Interface",
+          "Classe abstraite",
+          "Trait"
+        ],
+        "items": [
+          [
+            "Toutes les formes doivent avoir une méthode area()",
+            0
+          ],
+          [
+            "Mages et guerriers partagent nom, âge, arme et un constructeur",
+            1
+          ],
+          [
+            "Un chien et un basilic boivent de l'eau de la même façon",
+            2
+          ]
+        ],
+        "explication": "Contrat ; modèle commun d'une hiérarchie ; code partagé sans lien d'héritage."
+      },
+      {
+        "id": "u10-q7",
+        "type": "vf",
+        "notions": [
+          "traits"
+        ],
+        "question": "Les traits permettent de partager du code entre des classes qui ne sont pas liées par l'héritage.",
+        "bonne": true,
+        "explication": "C'est leur raison d'être."
+      },
+      {
+        "id": "u10-q8",
+        "type": "corriger",
+        "notions": [
+          "traits",
+          "namespaces"
+        ],
+        "question": "`src/Plants/Fern.php` doit utiliser le trait `Traits\\DrinkTrait` (fourni), mais plante. Corrige-le.",
+        "fichier": "src/Plants/Fern.php",
+        "fichiers": {
+          "utils/autoloader.php": [
+            "<?php",
+            "// Charge les classes automatiquement",
+            "spl_autoload_register(function ($class) {",
+            "    // Convertit les séparateurs de namespace en séparateurs de répertoires",
+            "    $relativePath = str_replace('\\\\', '/', $class);",
+            "",
+            "    // Construit le chemin complet du fichier",
+            "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+            "",
+            "    // Vérifie si le fichier existe avant de l'inclure",
+            "    if (file_exists($file)) {",
+            "        // Inclut le fichier de classe",
+            "        require_once $file;",
+            "    }",
+            "});"
+          ],
+          "src/Traits/DrinkTrait.php": [
+            "<?php",
+            "namespace Traits;",
+            "",
+            "trait DrinkTrait {",
+            "    public function drink(): string {",
+            "        return \"Glou glou\";",
+            "    }",
+            "}",
+            ""
+          ]
+        },
+        "depart": [
+          "<?php",
+          "namespace Plants;",
+          "",
+          "require_once __DIR__ . '/../../utils/autoloader.php';",
+          "",
+          "class Fern extends DrinkTrait {",
+          "}",
+          ""
+        ],
+        "tests": {
+          "cas": [
+            {
+              "code": "return (new Plants\\Fern())->drink();",
+              "attendu": "Glou glou"
+            }
+          ]
+        },
+        "indices": [
+          "Deux problèmes : comment ajoute-t-on un trait à une classe ? Et dans quel namespace est-il rangé ?",
+          "Importe le trait en haut (`use Traits\\DrinkTrait;`), puis ajoute-le dans la classe.",
+          {
+            "texte": "Presque :",
+            "code": "use Traits\\___;\n\nclass Fern {\n    ___ DrinkTrait;\n}"
+          }
+        ],
+        "solution": [
+          "<?php",
+          "namespace Plants;",
+          "",
+          "require_once __DIR__ . '/../../utils/autoloader.php';",
+          "",
+          "use Traits\\DrinkTrait;",
+          "",
+          "class Fern {",
+          "    use DrinkTrait;",
+          "}",
+          ""
+        ],
+        "erreursTypiques": [
+          {
+            "code": "<?php\nnamespace Plants;\n\nrequire_once __DIR__ . '/../../utils/autoloader.php';\n\nclass Fern {\n    use DrinkTrait;\n}\n",
+            "attendu": "erreur",
+            "diagnostic": "classe-inconnue"
+          }
+        ],
+        "explication": "Deux `use` : l'un importe le trait (haut du fichier), l'autre l'ajoute dans la classe."
+      },
+      {
+        "id": "u10-q9",
+        "type": "qcm",
+        "notions": [
+          "interface-abstraite-trait"
+        ],
+        "question": "Selon le cours, quelle limite les traits permettent-ils de lever ?",
+        "choix": [
+          "Une classe ne peut étendre qu'une seule classe (abstraite)",
+          "Une classe ne peut avoir qu'un constructeur",
+          "Une interface ne peut pas contenir de code",
+          "Un namespace ne peut contenir qu'une classe"
+        ],
+        "bonne": 0,
+        "explication": "Une seule classe parente, mais plusieurs traits."
+      },
+      {
+        "id": "u10-q10",
+        "type": "erreurs",
+        "notions": [
+          "namespaces",
+          "traits",
+          "autoloader"
+        ],
+        "question": "Traduis.",
+        "paires": [
+          [
+            "Class \"Media\\Films\\Media\" not found",
+            "PHP cherche la classe dans le namespace du fichier : il manque un use"
+          ],
+          [
+            "Class Alarm cannot extend trait SoundTrait",
+            "Un trait s'ajoute avec use dans la classe, pas avec extends"
+          ],
+          [
+            "Cannot instantiate trait LikeTrait",
+            "On a écrit new sur un trait"
+          ],
+          [
+            "Call to undefined method Plants\\Cactus::drink()",
+            "La classe n'utilise pas le trait qui contient cette méthode"
+          ]
+        ],
+        "explication": "Les messages nomment toujours la classe ou le trait en cause, avec son namespace."
+      },
+      {
+        "id": "u10-q11",
+        "type": "predire",
+        "notions": [
+          "classes-abstraites",
+          "heritage"
+        ],
+        "question": "Révision : qu'affiche ce code ?",
+        "code": [
+          "abstract class Drink {",
+          "    abstract protected function base(): string;",
+          "",
+          "    public function serve(): string {",
+          "        return \"Voici un \" . $this->base();",
+          "    }",
+          "}",
+          "",
+          "class Tea extends Drink {",
+          "    protected function base(): string {",
+          "        return \"thé\";",
+          "    }",
+          "}",
+          "",
+          "echo (new Tea())->serve();",
+          ""
+        ],
+        "choix": [
+          "Voici un thé",
+          "Voici un ",
+          "Une erreur : base() est protected",
+          "Une erreur : Drink est abstraite"
+        ],
+        "bonne": 0,
+        "explication": "La méthode concrète `serve()` du parent appelle `base()`, écrite par l'enfant : c'est l'implémentation partielle."
+      },
+      {
+        "id": "u10-q12",
+        "type": "qcm",
+        "notions": [
+          "sessions",
+          "autorisation"
+        ],
+        "question": "Révision : où ranger le rôle d'un utilisateur connecté ?",
+        "choix": [
+          "Dans $_SESSION, côté serveur",
+          "Dans un cookie",
+          "Dans un champ caché du formulaire",
+          "Dans l'URL"
+        ],
+        "bonne": 0,
+        "explication": "Le dossier reste au guichet : le client ne peut pas le modifier."
+      },
+      {
+        "id": "u10-q13",
+        "type": "parsons",
+        "notions": [
+          "traits",
+          "namespaces"
+        ],
+        "question": "Remets dans l'ordre `src/Plants/Mint.php`, une plante qui utilise `Traits\\SmellTrait`.",
+        "lignes": [
+          "<?php",
+          "namespace Plants;",
+          "require_once __DIR__ . '/../../utils/autoloader.php';",
+          "use Traits\\SmellTrait;",
+          "class Mint {",
+          "    use SmellTrait;",
+          "}"
+        ],
+        "distracteurs": [
+          "class Mint extends SmellTrait {",
+          "namespace Traits\\SmellTrait;"
+        ],
+        "explication": "Namespace, autoloader, import, puis le trait dans la classe."
+      },
+      {
+        "id": "u10-q14",
+        "type": "vf",
+        "notions": [
+          "namespaces"
+        ],
+        "question": "Sans `use`, on peut toujours utiliser une classe d'un autre namespace avec son nom complet (`new \\Shop\\User()`).",
+        "bonne": true,
+        "explication": "Le `use` évite seulement de répéter le nom complet."
+      },
+      {
+        "id": "u10-q15",
+        "type": "qcm",
+        "notions": [
+          "injection-sql"
+        ],
+        "question": "Révision : quelle ligne protège contre l'injection SQL ?",
+        "choix": [
+          "$stmt->bindValue(':name', $name);",
+          "echo htmlspecialchars($name);",
+          "$name = trim($name);",
+          "setcookie('name', $name);"
+        ],
+        "bonne": 0,
+        "explication": "Le paramètre lié reste dans sa case."
+      }
+    ]
+  },
+  "boss": [
+    {
+      "id": "u10-b1",
+      "titre": "Les personnages : la classe mère",
+      "source": "Séance 9, exercice 1 (src/Characters/AbstractCharacter.php)",
+      "notions": [
+        "namespaces",
+        "classes-abstraites"
+      ],
+      "enonce": "**L'exercice 1 du cours (séance 9)** : « Mettre en place une hiérarchie de classes pour représenter la structure de personnages de jeux vidéos appartenant aux classes suivantes : Assassin.es (`Assassins`), Mages (`Mages`), Guerrier.es (`Warriors`). Utiliser les classes abstraites et les namespaces pour organiser le code. »\n\nLa hiérarchie : `public/index.php`, `src/Characters/AbstractCharacter.php`, `src/Characters/Assassins/` (`AbstractAssassin.php`, `Ninja.php`, `Spy.php`), `src/Characters/Mages/` (`AbstractMage.php`, `Witch.php`, `Wizard.php`), `src/Characters/Warriors/` (`AbstractWarrior.php`, `Pyrotechnician.php`, `Soldier.php`), `utils/autoloader.php`.\n\n« La classe abstraite `AbstractCharacter` doit définir les propriétés et méthodes communes à tous les personnages, telles que : `name` (string, protégé), `age` (int, protégé), `weapon` (string, protégé), `universe` (string, protégé) : l'univers fictif d'origine du personnage, `attack()` (méthode abstraite) : chaque sous-classe doit implémenter sa propre version de cette méthode. »\n\n« Chaque sous-classe doit implémenter le constructeur pour initialiser les propriétés spécifiques et la méthode `attack()` pour retourner une chaîne décrivant l'attaque du personnage. »\n\nLa sortie attendue de l'exemple du cours :\n\n``` Ibuki (Street Fighter) silently attacks with a katana! Agent 47 (Hitman) silently attacks with a silenced pistol! Gandalf (Lord of the Rings) casts a spell with a magic staff! Hermione Granger (Harry Potter) casts a spell with a magic wand! Master Chief (Halo) attacks with a assault rifle! Jinx (Arcane) attacks with a fireworks! ```\n\n**Ta mission ici** : le fichier `src/Characters/AbstractCharacter.php`, dans le namespace `Characters` (il suit les dossiers sous `src/`). Les tests créent des personnages qui en héritent.",
+      "fichier": "src/Characters/AbstractCharacter.php",
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Ibuki (Street Fighter)",
+            "code": "$c = new class(\"Ibuki\", 19, \"katana\", \"Street Fighter\") extends Characters\\AbstractCharacter {\n    public function attack(): string {\n        return \"{$this->name}, {$this->age} ans, {$this->weapon} ({$this->universe})\";\n    }\n};\nreturn $c->attack();",
+            "attendu": "Ibuki, 19 ans, katana (Street Fighter)"
+          },
+          {
+            "titre": "Un autre personnage",
+            "code": "$c = new class(\"Lara Croft\", 28, \"bow\", \"Tomb Raider\") extends Characters\\AbstractCharacter {\n    public function attack(): string {\n        return \"{$this->name}, {$this->age} ans, {$this->weapon} ({$this->universe})\";\n    }\n};\nreturn $c->attack();",
+            "attendu": "Lara Croft, 28 ans, bow (Tomb Raider)"
+          },
+          {
+            "titre": "La classe est abstraite",
+            "code": "return (new ReflectionClass('Characters\\AbstractCharacter'))->isAbstract();",
+            "attendu": true
+          },
+          {
+            "titre": "attack() est abstraite",
+            "code": "return (new ReflectionMethod('Characters\\AbstractCharacter', 'attack'))->isAbstract();",
+            "attendu": true
+          },
+          {
+            "titre": "Les quatre propriétés sont protégées",
+            "code": "$r = new ReflectionClass('Characters\\AbstractCharacter');\n$res = [];\nforeach (['name', 'age', 'weapon', 'universe'] as $p) {\n    $res[] = $r->hasProperty($p) && $r->getProperty($p)->isProtected();\n}\nreturn $res;",
+            "attendu": [
+              true,
+              true,
+              true,
+              true
+            ]
+          }
+        ]
+      },
+      "indices": [
+        "Le fichier commence par `namespace Characters;`, puis `abstract class AbstractCharacter`.",
+        "Quatre propriétés `protected` typées, un constructeur à quatre paramètres (`$name`, `$age`, `$weapon`, `$universe`), et `abstract public function attack(): string;` (sans corps).",
+        {
+          "texte": "Le squelette :",
+          "code": "namespace ___;\n\nabstract class AbstractCharacter {\n    protected string $name;\n    // … les trois autres\n\n    public function __construct(string $name, int $age, string $weapon, string $universe) {\n        // … quatre affectations avec $this->\n    }\n\n    ___ public function attack(): string;\n}"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "",
+        "namespace Characters;",
+        "",
+        "abstract class AbstractCharacter {",
+        "    protected string $name;",
+        "    protected int $age;",
+        "    protected string $weapon;",
+        "    protected string $universe;",
+        "",
+        "    public function __construct(string $name, int $age, string $weapon, string $universe) {",
+        "        $this->name = $name;",
+        "        $this->age = $age;",
+        "        $this->weapon = $weapon;",
+        "        $this->universe = $universe;",
+        "    }",
+        "",
+        "    abstract public function attack(): string;",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\n\n\n\nabstract class AbstractCharacter {\n    protected string $name;\n    protected int $age;\n    protected string $weapon;\n    protected string $universe;\n\n    public function __construct(string $name, int $age, string $weapon, string $universe) {\n        $this->name = $name;\n        $this->age = $age;\n        $this->weapon = $weapon;\n        $this->universe = $universe;\n    }\n\n    abstract public function attack(): string;\n}",
+          "attendu": "erreur",
+          "diagnostic": "classe-inconnue"
+        },
+        {
+          "code": "<?php\n\nnamespace Characters;\n\nabstract class AbstractCharacter {\n    private string $name;\n    protected int $age;\n    protected string $weapon;\n    protected string $universe;\n\n    public function __construct(string $name, int $age, string $weapon, string $universe) {\n        $this->name = $name;\n        $this->age = $age;\n        $this->weapon = $weapon;\n        $this->universe = $universe;\n    }\n\n    abstract public function attack(): string;\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\n\nnamespace Characters;\n\nabstract class AbstractCharacter {\n    protected string $name;\n    protected int $age;\n    protected string $weapon;\n    protected string $universe;\n\n    public function __construct(string $name, int $age, string $weapon, string $universe) {\n        $this->name = $name;\n        $this->age = $age;\n        $this->weapon = $weapon;\n        $this->universe = $universe;\n    }\n\n    public function attack(): string {\n    return \"\";\n}\n}",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "La classe mère regroupe ce qui est commun ; `attack()` est abstraite car chaque famille attaque à sa façon."
+    },
+    {
+      "id": "u10-b2",
+      "titre": "Les assassin·es : le ninja",
+      "source": "Séance 9, exercice 1 (src/Characters/Assassins/Ninja.php)",
+      "notions": [
+        "namespaces",
+        "autoloader",
+        "heritage"
+      ],
+      "enonce": "**L'exercice 1 du cours (séance 9)** : « Mettre en place une hiérarchie de classes pour représenter la structure de personnages de jeux vidéos appartenant aux classes suivantes : Assassin.es (`Assassins`), Mages (`Mages`), Guerrier.es (`Warriors`). Utiliser les classes abstraites et les namespaces pour organiser le code. »\n\nLa hiérarchie : `public/index.php`, `src/Characters/AbstractCharacter.php`, `src/Characters/Assassins/` (`AbstractAssassin.php`, `Ninja.php`, `Spy.php`), `src/Characters/Mages/` (`AbstractMage.php`, `Witch.php`, `Wizard.php`), `src/Characters/Warriors/` (`AbstractWarrior.php`, `Pyrotechnician.php`, `Soldier.php`), `utils/autoloader.php`.\n\n« La classe abstraite `AbstractCharacter` doit définir les propriétés et méthodes communes à tous les personnages, telles que : `name` (string, protégé), `age` (int, protégé), `weapon` (string, protégé), `universe` (string, protégé) : l'univers fictif d'origine du personnage, `attack()` (méthode abstraite) : chaque sous-classe doit implémenter sa propre version de cette méthode. »\n\n« Chaque sous-classe doit implémenter le constructeur pour initialiser les propriétés spécifiques et la méthode `attack()` pour retourner une chaîne décrivant l'attaque du personnage. »\n\nLa sortie attendue de l'exemple du cours :\n\n``` Ibuki (Street Fighter) silently attacks with a katana! Agent 47 (Hitman) silently attacks with a silenced pistol! Gandalf (Lord of the Rings) casts a spell with a magic staff! Hermione Granger (Harry Potter) casts a spell with a magic wand! Master Chief (Halo) attacks with a assault rifle! Jinx (Arcane) attacks with a fireworks! ```\n\n**Ta mission ici** : `src/Characters/Assassins/Ninja.php`. La classe `AbstractAssassin` est écrite (fichier fourni) : à toi le `Ninja`, dont l'arme est toujours un `katana`. On le crée avec `new Ninja(\"Ibuki\", 19, \"Street Fighter\")` (nom, âge, univers).\n\nComme dans la théorie du cours, un fichier de classe qui hérite d'une autre classe inclut l'autoloader en haut (`require_once __DIR__ . '/../../../utils/autoloader.php';`).",
+      "fichier": "src/Characters/Assassins/Ninja.php",
+      "fichiers": {
+        "utils/autoloader.php": [
+          "<?php",
+          "// Charge les classes automatiquement",
+          "spl_autoload_register(function ($class) {",
+          "    // Convertit les séparateurs de namespace en séparateurs de répertoires",
+          "    $relativePath = str_replace('\\\\', '/', $class);",
+          "",
+          "    // Construit le chemin complet du fichier",
+          "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+          "",
+          "    // Vérifie si le fichier existe avant de l'inclure",
+          "    if (file_exists($file)) {",
+          "        // Inclut le fichier de classe",
+          "        require_once $file;",
+          "    }",
+          "});"
+        ],
+        "src/Characters/AbstractCharacter.php": [
+          "<?php",
+          "",
+          "namespace Characters;",
+          "",
+          "abstract class AbstractCharacter {",
+          "    protected string $name;",
+          "    protected int $age;",
+          "    protected string $weapon;",
+          "    protected string $universe;",
+          "",
+          "    public function __construct(string $name, int $age, string $weapon, string $universe) {",
+          "        $this->name = $name;",
+          "        $this->age = $age;",
+          "        $this->weapon = $weapon;",
+          "        $this->universe = $universe;",
+          "    }",
+          "",
+          "    abstract public function attack(): string;",
+          "}"
+        ],
+        "src/Characters/Assassins/AbstractAssassin.php": [
+          "<?php",
+          "",
+          "namespace Characters\\Assassins;",
+          "",
+          "require_once __DIR__ . '/../../../utils/autoloader.php';",
+          "",
+          "use Characters\\AbstractCharacter;",
+          "",
+          "abstract class AbstractAssassin extends AbstractCharacter {",
+          "    public function __construct(string $name, int $age, string $weapon, string $universe) {",
+          "        parent::__construct($name, $age, $weapon, $universe);",
+          "    }",
+          "",
+          "    public function attack(): string {",
+          "        return \"{$this->name} ({$this->universe}) silently attacks with a {$this->weapon}!\";",
+          "    }",
+          "}"
+        ],
+        "src/Characters/Assassins/Spy.php": [
+          "<?php",
+          "",
+          "namespace Characters\\Assassins;",
+          "",
+          "class Spy extends AbstractAssassin {",
+          "    public function __construct(string $name, int $age, string $universe) {",
+          "        parent::__construct($name, $age, \"silenced pistol\", $universe);",
+          "    }",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Ibuki (Street Fighter)",
+            "code": "require_once '/app/utils/autoloader.php';\nreturn (new Characters\\Assassins\\Ninja(\"Ibuki\", 19, \"Street Fighter\"))->attack();",
+            "attendu": "Ibuki (Street Fighter) silently attacks with a katana!"
+          },
+          {
+            "titre": "Un autre ninja",
+            "code": "require_once '/app/utils/autoloader.php';\nreturn (new Characters\\Assassins\\Ninja(\"Kakashi\", 30, \"Naruto\"))->attack();",
+            "attendu": "Kakashi (Naruto) silently attacks with a katana!"
+          },
+          {
+            "titre": "Le ninja est un assassin et un personnage",
+            "code": "require_once '/app/utils/autoloader.php';\n$n = new Characters\\Assassins\\Ninja(\"Ibuki\", 19, \"Street Fighter\");\nreturn [$n instanceof Characters\\Assassins\\AbstractAssassin, $n instanceof Characters\\AbstractCharacter];",
+            "attendu": [
+              true,
+              true
+            ]
+          },
+          {
+            "titre": "L'espion fonctionne toujours",
+            "code": "require_once '/app/utils/autoloader.php';\nrequire_once '/app/src/Characters/Assassins/Ninja.php';\nreturn (new Characters\\Assassins\\Spy(\"Agent 47\", 40, \"Hitman\"))->attack();",
+            "attendu": "Agent 47 (Hitman) silently attacks with a silenced pistol!"
+          }
+        ]
+      },
+      "indices": [
+        "Regarde `Spy.php` : le ninja lui ressemble beaucoup, avec une autre arme.",
+        "`namespace Characters\\Assassins;`, l'autoloader, puis `class Ninja extends AbstractAssassin` avec un constructeur à trois paramètres qui appelle `parent::__construct(…)` avec `\"katana\"`.",
+        {
+          "texte": "Le constructeur :",
+          "code": "public function __construct(string $name, int $age, string $universe) {\n    parent::__construct($name, $age, ___, $universe);\n}"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "",
+        "namespace Characters\\Assassins;",
+        "",
+        "require_once __DIR__ . '/../../../utils/autoloader.php';",
+        "",
+        "class Ninja extends AbstractAssassin {",
+        "    public function __construct(string $name, int $age, string $universe) {",
+        "        parent::__construct($name, $age, \"katana\", $universe);",
+        "    }",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\n\nnamespace Characters\\Assassins;\n\n\n\nclass Ninja extends AbstractAssassin {\n    public function __construct(string $name, int $age, string $universe) {\n        parent::__construct($name, $age, \"katana\", $universe);\n    }\n}",
+          "attendu": "erreur",
+          "diagnostic": "classe-inconnue"
+        },
+        {
+          "code": "<?php\n\nnamespace Characters;\n\nrequire_once __DIR__ . '/../../../utils/autoloader.php';\n\nclass Ninja extends AbstractAssassin {\n    public function __construct(string $name, int $age, string $universe) {\n        parent::__construct($name, $age, \"katana\", $universe);\n    }\n}",
+          "attendu": "erreur",
+          "diagnostic": "classe-inconnue"
+        },
+        {
+          "code": "<?php\n\nnamespace Characters\\Assassins;\n\nrequire_once __DIR__ . '/../../../utils/autoloader.php';\n\nclass Ninja extends AbstractAssassin {\n    public function __construct(string $name, int $age, string $universe) {\n        parent::__construct($name, $age, $universe, \"katana\");\n    }\n}",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "Le ninja ne réécrit pas `attack()` : il l'hérite d'`AbstractAssassin`, et fixe seulement son arme."
+    },
+    {
+      "id": "u10-b3",
+      "titre": "Les mages",
+      "source": "Séance 9, exercice 1 (src/Characters/Mages/AbstractMage.php)",
+      "notions": [
+        "namespaces",
+        "autoloader",
+        "classes-abstraites",
+        "heritage"
+      ],
+      "enonce": "**L'exercice 1 du cours (séance 9)** : « Mettre en place une hiérarchie de classes pour représenter la structure de personnages de jeux vidéos appartenant aux classes suivantes : Assassin.es (`Assassins`), Mages (`Mages`), Guerrier.es (`Warriors`). Utiliser les classes abstraites et les namespaces pour organiser le code. »\n\nLa hiérarchie : `public/index.php`, `src/Characters/AbstractCharacter.php`, `src/Characters/Assassins/` (`AbstractAssassin.php`, `Ninja.php`, `Spy.php`), `src/Characters/Mages/` (`AbstractMage.php`, `Witch.php`, `Wizard.php`), `src/Characters/Warriors/` (`AbstractWarrior.php`, `Pyrotechnician.php`, `Soldier.php`), `utils/autoloader.php`.\n\n« La classe abstraite `AbstractCharacter` doit définir les propriétés et méthodes communes à tous les personnages, telles que : `name` (string, protégé), `age` (int, protégé), `weapon` (string, protégé), `universe` (string, protégé) : l'univers fictif d'origine du personnage, `attack()` (méthode abstraite) : chaque sous-classe doit implémenter sa propre version de cette méthode. »\n\n« Chaque sous-classe doit implémenter le constructeur pour initialiser les propriétés spécifiques et la méthode `attack()` pour retourner une chaîne décrivant l'attaque du personnage. »\n\nLa sortie attendue de l'exemple du cours :\n\n``` Ibuki (Street Fighter) silently attacks with a katana! Agent 47 (Hitman) silently attacks with a silenced pistol! Gandalf (Lord of the Rings) casts a spell with a magic staff! Hermione Granger (Harry Potter) casts a spell with a magic wand! Master Chief (Halo) attacks with a assault rifle! Jinx (Arcane) attacks with a fireworks! ```\n\n**Ta mission ici** : `src/Characters/Mages/AbstractMage.php`, la classe abstraite de tous les mages. `Wizard` et `Witch` sont écrites (fichiers fournis) et en héritent. Un mage attaque en lançant un sort : regarde la sortie attendue du cours.",
+      "fichier": "src/Characters/Mages/AbstractMage.php",
+      "fichiers": {
+        "utils/autoloader.php": [
+          "<?php",
+          "// Charge les classes automatiquement",
+          "spl_autoload_register(function ($class) {",
+          "    // Convertit les séparateurs de namespace en séparateurs de répertoires",
+          "    $relativePath = str_replace('\\\\', '/', $class);",
+          "",
+          "    // Construit le chemin complet du fichier",
+          "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+          "",
+          "    // Vérifie si le fichier existe avant de l'inclure",
+          "    if (file_exists($file)) {",
+          "        // Inclut le fichier de classe",
+          "        require_once $file;",
+          "    }",
+          "});"
+        ],
+        "src/Characters/AbstractCharacter.php": [
+          "<?php",
+          "",
+          "namespace Characters;",
+          "",
+          "abstract class AbstractCharacter {",
+          "    protected string $name;",
+          "    protected int $age;",
+          "    protected string $weapon;",
+          "    protected string $universe;",
+          "",
+          "    public function __construct(string $name, int $age, string $weapon, string $universe) {",
+          "        $this->name = $name;",
+          "        $this->age = $age;",
+          "        $this->weapon = $weapon;",
+          "        $this->universe = $universe;",
+          "    }",
+          "",
+          "    abstract public function attack(): string;",
+          "}"
+        ],
+        "src/Characters/Mages/Wizard.php": [
+          "<?php",
+          "",
+          "namespace Characters\\Mages;",
+          "",
+          "class Wizard extends AbstractMage {",
+          "    public function __construct(string $name, int $age, string $universe) {",
+          "        parent::__construct($name, $age, \"magic staff\", $universe);",
+          "    }",
+          "}"
+        ],
+        "src/Characters/Mages/Witch.php": [
+          "<?php",
+          "",
+          "namespace Characters\\Mages;",
+          "",
+          "class Witch extends AbstractMage {",
+          "    public function __construct(string $name, int $age, string $universe) {",
+          "        parent::__construct($name, $age, \"magic wand\", $universe);",
+          "    }",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Gandalf (Lord of the Rings)",
+            "code": "require_once '/app/utils/autoloader.php';\nreturn (new Characters\\Mages\\Wizard(\"Gandalf\", 100, \"Lord of the Rings\"))->attack();",
+            "attendu": "Gandalf (Lord of the Rings) casts a spell with a magic staff!"
+          },
+          {
+            "titre": "Hermione Granger (Harry Potter)",
+            "code": "require_once '/app/utils/autoloader.php';\nreturn (new Characters\\Mages\\Witch(\"Hermione Granger\", 30, \"Harry Potter\"))->attack();",
+            "attendu": "Hermione Granger (Harry Potter) casts a spell with a magic wand!"
+          },
+          {
+            "titre": "D'autres mages",
+            "code": "require_once '/app/utils/autoloader.php';\nreturn [(new Characters\\Mages\\Wizard(\"Merlin\", 500, \"Kaamelott\"))->attack(), (new Characters\\Mages\\Witch(\"Sabrina\", 16, \"Sabrina\"))->attack()];",
+            "attendu": [
+              "Merlin (Kaamelott) casts a spell with a magic staff!",
+              "Sabrina (Sabrina) casts a spell with a magic wand!"
+            ]
+          },
+          {
+            "titre": "AbstractMage est abstraite et hérite d'AbstractCharacter",
+            "code": "require_once '/app/utils/autoloader.php';\n$r = new ReflectionClass('Characters\\Mages\\AbstractMage');\nreturn [$r->isAbstract(), $r->getParentClass() ? $r->getParentClass()->getName() : null];",
+            "attendu": [
+              true,
+              "Characters\\AbstractCharacter"
+            ]
+          }
+        ]
+      },
+      "indices": [
+        "Même namespace que les mages (`Characters\\Mages`), l'autoloader, puis un `use` pour la classe mère, rangée dans un autre namespace.",
+        "`abstract class AbstractMage extends AbstractCharacter`, un constructeur à quatre paramètres qui appelle `parent::__construct`, et `attack()` qui retourne la phrase du cours.",
+        {
+          "texte": "La méthode attack() :",
+          "code": "public function attack(): string {\n    return \"{$this->name} (___) casts a spell with a ___!\";\n}"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "",
+        "namespace Characters\\Mages;",
+        "",
+        "require_once __DIR__ . '/../../../utils/autoloader.php';",
+        "",
+        "use Characters\\AbstractCharacter;",
+        "",
+        "abstract class AbstractMage extends AbstractCharacter {",
+        "    public function __construct(string $name, int $age, string $weapon, string $universe) {",
+        "        parent::__construct($name, $age, $weapon, $universe);",
+        "    }",
+        "",
+        "    public function attack(): string {",
+        "        return \"{$this->name} ({$this->universe}) casts a spell with a {$this->weapon}!\";",
+        "    }",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\n\nnamespace Characters\\Mages;\n\nrequire_once __DIR__ . '/../../../utils/autoloader.php';\n\n\n\nabstract class AbstractMage extends AbstractCharacter {\n    public function __construct(string $name, int $age, string $weapon, string $universe) {\n        parent::__construct($name, $age, $weapon, $universe);\n    }\n\n    public function attack(): string {\n        return \"{$this->name} ({$this->universe}) casts a spell with a {$this->weapon}!\";\n    }\n}",
+          "attendu": "erreur",
+          "diagnostic": "classe-inconnue"
+        },
+        {
+          "code": "<?php\n\nnamespace Characters\\Mages;\n\nrequire_once __DIR__ . '/../../../utils/autoloader.php';\n\nuse Characters\\AbstractCharacter;\n\nabstract class AbstractMage extends AbstractCharacter {\n    public function __construct(string $name, int $age, string $weapon, string $universe) {\n        parent::__construct($name, $age, $weapon, $universe);\n    }\n\n    public function attack(): string {\n        return \"{$this->name} ({$this->universe}) attacks with a {$this->weapon}!\";\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\n\nnamespace Characters\\Mages;\n\nrequire_once __DIR__ . '/../../../utils/autoloader.php';\n\nuse Characters\\AbstractCharacter;\n\nabstract class AbstractMage extends AbstractCharacter {\n    public function __construct(string $name, int $age, string $weapon, string $universe) {\n        \n    }\n\n    public function attack(): string {\n        return \"{$this->name} ({$this->universe}) casts a spell with a {$this->weapon}!\";\n    }\n}",
+          "attendu": "erreur"
+        }
+      ],
+      "explication": "Une classe abstraite intermédiaire écrit `attack()` une fois pour tous les mages ; chaque mage ne fixe que son arme."
+    },
+    {
+      "id": "u10-b4",
+      "titre": "Les plantes : sentir",
+      "source": "Séance 9, exercice 2 (src/Traits/SmellTrait.php)",
+      "notions": [
+        "traits",
+        "namespaces"
+      ],
+      "enonce": "**L'exercice 2 du cours (séance 9)** : « Réaliser une hiérarchie de classes pour représenter des plantes et leurs caractéristiques. Utiliser les traits pour partager des comportements communs entre certaines classes de plantes. »\n\n« Les traits `DrinkTrait` et `SmellTrait` doivent définir des méthodes pour respectivement boire et sentir les plantes. Les classes de plantes doivent utiliser les traits appropriés pour partager (ou non) ces comportements :\n\n- Seuls le basilic, l'orchidée et la rose peuvent boire de l'eau.\n- Seuls le basilic et la rose peuvent sentir quelque chose.\n- Le cactus ne peut ni boire ni sentir quoi que ce soit.\n- L'orchidée ne sent rien, mais peut boire de l'eau. »\n\nLa sortie attendue du cours :\n\n``` Cette plante (Basilic) boit de l'eau. Cette plante (Basilic) sent une odeur agréable. Cette plante (Rose) boit de l'eau. Cette plante (Rose) sent une odeur agréable. Cette plante (Orchidée) boit de l'eau. ```\n\n(Les traits sont rangés dans `src/Traits/`, namespace `Traits`, comme dans la solution du cours, pour que l'autoloader les trouve.)\n\n**Ta mission ici** : le trait `src/Traits/SmellTrait.php`. `DrinkTrait`, le basilic, la rose et le cactus sont écrits (fichiers fournis).",
+      "fichier": "src/Traits/SmellTrait.php",
+      "fichiers": {
+        "utils/autoloader.php": [
+          "<?php",
+          "// Charge les classes automatiquement",
+          "spl_autoload_register(function ($class) {",
+          "    // Convertit les séparateurs de namespace en séparateurs de répertoires",
+          "    $relativePath = str_replace('\\\\', '/', $class);",
+          "",
+          "    // Construit le chemin complet du fichier",
+          "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+          "",
+          "    // Vérifie si le fichier existe avant de l'inclure",
+          "    if (file_exists($file)) {",
+          "        // Inclut le fichier de classe",
+          "        require_once $file;",
+          "    }",
+          "});"
+        ],
+        "src/Traits/DrinkTrait.php": [
+          "<?php",
+          "",
+          "namespace Traits;",
+          "",
+          "trait DrinkTrait {",
+          "    private string $name;",
+          "",
+          "    public function drink(): string {",
+          "        return \"Cette plante ({$this->name}) boit de l'eau.\";",
+          "    }",
+          "}"
+        ],
+        "src/Plants/Basilic.php": [
+          "<?php",
+          "",
+          "namespace Plants;",
+          "",
+          "use Traits\\DrinkTrait;",
+          "use Traits\\SmellTrait;",
+          "",
+          "class Basilic {",
+          "    use DrinkTrait;",
+          "    use SmellTrait;",
+          "",
+          "    public function __construct() {",
+          "        $this->name = \"Basilic\";",
+          "    }",
+          "}"
+        ],
+        "src/Plants/Rose.php": [
+          "<?php",
+          "",
+          "namespace Plants;",
+          "",
+          "use Traits\\DrinkTrait;",
+          "use Traits\\SmellTrait;",
+          "",
+          "class Rose {",
+          "    use DrinkTrait;",
+          "    use SmellTrait;",
+          "",
+          "    public function __construct() {",
+          "        $this->name = \"Rose\";",
+          "    }",
+          "}"
+        ],
+        "src/Plants/Cactus.php": [
+          "<?php",
+          "",
+          "namespace Plants;",
+          "",
+          "class Cactus {",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Le basilic boit et sent",
+            "code": "require_once '/app/utils/autoloader.php';\n$b = new Plants\\Basilic();\nreturn [$b->drink(), $b->smell()];",
+            "attendu": [
+              "Cette plante (Basilic) boit de l'eau.",
+              "Cette plante (Basilic) sent une odeur agréable."
+            ]
+          },
+          {
+            "titre": "La rose sent",
+            "code": "require_once '/app/utils/autoloader.php';\nreturn (new Plants\\Rose())->smell();",
+            "attendu": "Cette plante (Rose) sent une odeur agréable."
+          },
+          {
+            "titre": "Le cactus ne sent rien",
+            "code": "require_once '/app/utils/autoloader.php';\nreturn method_exists(new Plants\\Cactus(), 'smell');",
+            "attendu": false
+          },
+          {
+            "titre": "Une autre plante qui sent (la menthe)",
+            "code": "require_once '/app/utils/autoloader.php';\n$m = new class {\n    use Traits\\SmellTrait;\n\n    public function __construct() {\n        $this->name = \"Menthe\";\n    }\n};\nreturn $m->smell();",
+            "attendu": "Cette plante (Menthe) sent une odeur agréable."
+          }
+        ]
+      },
+      "indices": [
+        "Regarde `DrinkTrait.php` : `SmellTrait` a la même forme.",
+        "`namespace Traits;`, `trait SmellTrait`, la même propriété `$name` que `DrinkTrait` (même visibilité et même type, sinon PHP refuse les deux traits dans la même classe), et une méthode `smell()`.",
+        {
+          "texte": "La méthode :",
+          "code": "public function smell(): string {\n    return \"Cette plante ({$this->name}) ___\";\n}"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "",
+        "namespace Traits;",
+        "",
+        "trait SmellTrait {",
+        "    private string $name;",
+        "",
+        "    public function smell(): string {",
+        "        return \"Cette plante ({$this->name}) sent une odeur agréable.\";",
+        "    }",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\n\nnamespace Traits;\n\nclass SmellTrait {\n    private string $name;\n\n    public function smell(): string {\n        return \"Cette plante ({$this->name}) sent une odeur agréable.\";\n    }\n}",
+          "attendu": "erreur"
+        },
+        {
+          "code": "<?php\n\nnamespace Traits;\n\ntrait SmellTrait {\n    protected string $name;\n\n    public function smell(): string {\n        return \"Cette plante ({$this->name}) sent une odeur agréable.\";\n    }\n}",
+          "attendu": "erreur",
+          "diagnostic": "trait-propriete"
+        },
+        {
+          "code": "<?php\n\nnamespace Plants;\n\ntrait SmellTrait {\n    private string $name;\n\n    public function smell(): string {\n        return \"Cette plante ({$this->name}) sent une odeur agréable.\";\n    }\n}",
+          "attendu": "erreur",
+          "diagnostic": "classe-inconnue"
+        }
+      ],
+      "explication": "Le basilic et la rose reçoivent `smell()` du trait ; le cactus ne l'utilise pas, donc il ne sent rien."
+    },
+    {
+      "id": "u10-b5",
+      "titre": "Les plantes : l'orchidée",
+      "source": "Séance 9, exercice 2 (src/Plants/Orchid.php)",
+      "notions": [
+        "traits",
+        "namespaces",
+        "autoloader"
+      ],
+      "enonce": "**L'exercice 2 du cours (séance 9)** : « Réaliser une hiérarchie de classes pour représenter des plantes et leurs caractéristiques. Utiliser les traits pour partager des comportements communs entre certaines classes de plantes. »\n\n« Les traits `DrinkTrait` et `SmellTrait` doivent définir des méthodes pour respectivement boire et sentir les plantes. Les classes de plantes doivent utiliser les traits appropriés pour partager (ou non) ces comportements :\n\n- Seuls le basilic, l'orchidée et la rose peuvent boire de l'eau.\n- Seuls le basilic et la rose peuvent sentir quelque chose.\n- Le cactus ne peut ni boire ni sentir quoi que ce soit.\n- L'orchidée ne sent rien, mais peut boire de l'eau. »\n\nLa sortie attendue du cours :\n\n``` Cette plante (Basilic) boit de l'eau. Cette plante (Basilic) sent une odeur agréable. Cette plante (Rose) boit de l'eau. Cette plante (Rose) sent une odeur agréable. Cette plante (Orchidée) boit de l'eau. ```\n\n(Les traits sont rangés dans `src/Traits/`, namespace `Traits`, comme dans la solution du cours, pour que l'autoloader les trouve.)\n\n**Ta mission ici** : `src/Plants/Orchid.php`. L'orchidée boit, mais ne sent rien. `DrinkTrait` est écrit (fichier fourni). Comme dans la théorie du cours, un fichier de classe qui utilise un trait d'un autre fichier inclut l'autoloader en haut.",
+      "fichier": "src/Plants/Orchid.php",
+      "fichiers": {
+        "utils/autoloader.php": [
+          "<?php",
+          "// Charge les classes automatiquement",
+          "spl_autoload_register(function ($class) {",
+          "    // Convertit les séparateurs de namespace en séparateurs de répertoires",
+          "    $relativePath = str_replace('\\\\', '/', $class);",
+          "",
+          "    // Construit le chemin complet du fichier",
+          "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+          "",
+          "    // Vérifie si le fichier existe avant de l'inclure",
+          "    if (file_exists($file)) {",
+          "        // Inclut le fichier de classe",
+          "        require_once $file;",
+          "    }",
+          "});"
+        ],
+        "src/Traits/DrinkTrait.php": [
+          "<?php",
+          "",
+          "namespace Traits;",
+          "",
+          "trait DrinkTrait {",
+          "    private string $name;",
+          "",
+          "    public function drink(): string {",
+          "        return \"Cette plante ({$this->name}) boit de l'eau.\";",
+          "    }",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "L'orchidée boit",
+            "code": "require_once '/app/utils/autoloader.php';\nreturn (new Plants\\Orchid())->drink();",
+            "attendu": "Cette plante (Orchidée) boit de l'eau."
+          },
+          {
+            "titre": "L'orchidée ne sent rien",
+            "code": "require_once '/app/utils/autoloader.php';\nreturn method_exists(new Plants\\Orchid(), 'smell');",
+            "attendu": false
+          },
+          {
+            "titre": "Deux orchidées",
+            "code": "require_once '/app/utils/autoloader.php';\nreturn [(new Plants\\Orchid())->drink(), (new Plants\\Orchid())->drink()];",
+            "attendu": [
+              "Cette plante (Orchidée) boit de l'eau.",
+              "Cette plante (Orchidée) boit de l'eau."
+            ]
+          }
+        ]
+      },
+      "indices": [
+        "`namespace Plants;`, l'autoloader, puis l'import du trait (`use Traits\\DrinkTrait;`).",
+        "Dans la classe : `use DrinkTrait;` et un constructeur qui donne son nom à la plante (`$this->name`).",
+        {
+          "texte": "La classe :",
+          "code": "class Orchid {\n    use ___;\n\n    public function __construct() {\n        $this->name = ___;\n    }\n}"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "",
+        "namespace Plants;",
+        "",
+        "require_once __DIR__ . '/../../utils/autoloader.php';",
+        "",
+        "use Traits\\DrinkTrait;",
+        "",
+        "class Orchid {",
+        "    use DrinkTrait;",
+        "",
+        "    public function __construct() {",
+        "        $this->name = \"Orchidée\";",
+        "    }",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\n\nnamespace Plants;\n\nrequire_once __DIR__ . '/../../utils/autoloader.php';\n\n\n\nclass Orchid {\n    use DrinkTrait;\n\n    public function __construct() {\n        $this->name = \"Orchidée\";\n    }\n}",
+          "attendu": "erreur",
+          "diagnostic": "classe-inconnue"
+        },
+        {
+          "code": "<?php\n\nnamespace Plants;\n\nrequire_once __DIR__ . '/../../utils/autoloader.php';\n\nuse Traits\\DrinkTrait;\n\nclass Orchid extends DrinkTrait {\n\n    public function __construct() {\n        $this->name = \"Orchidée\";\n    }\n}",
+          "attendu": "erreur"
+        },
+        {
+          "code": "<?php\n\nnamespace Plants;\n\nrequire_once __DIR__ . '/../../utils/autoloader.php';\n\nuse Traits\\DrinkTrait;\n\nclass Orchid {\n    use DrinkTrait;\n\n    public function __construct() {\n        $name = \"Orchidée\";\n    }\n}",
+          "attendu": "erreur"
+        }
+      ],
+      "explication": "L'orchidée n'utilise que `DrinkTrait` : elle boit, et `smell()` n'existe pas pour elle."
+    }
+  ],
+  "parcours": [
+    "u10-l1",
+    "u10-l2",
+    "jeu:u10-hashtags",
+    "u10-l3",
+    "u10-l4",
+    "quiz",
+    "boss:u10-b1",
+    "boss:u10-b2",
+    "boss:u10-b3",
+    "boss:u10-b4",
+    "boss:u10-b5"
+  ]
+}

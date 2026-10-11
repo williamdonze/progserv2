@@ -50,7 +50,8 @@
     "content/unites/u06-securite.json",
     "content/unites/u07-cookies.json",
     "content/unites/u08-sessions.json",
-    "content/unites/u09-examen-blanc.json"
+    "content/unites/u09-examen-blanc.json",
+    "content/unites/u10-poo-avancee.json"
   ],
   "aVenir": [],
   "rangs": [
