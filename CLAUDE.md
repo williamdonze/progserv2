@@ -6,11 +6,27 @@ Il descend de **Pampre** (le « Duolingo du vin », https://github.com/williamdo
 
 ## Ce cours
 
-*(À remplir par `/nouveau-cours` dans le dépôt d'un cours : nom, source des supports et date, modules, unités, analogies récurrentes, état.)*
+**ProgServ2** : l'appli de révision du cours **Programmation serveur 2 (ProgServ2)** de la HEIG-VD (L. Delafontaine, 2026-2027), en **PHP**. Supports : le dépôt `heig-vd-progserv2-course` (zip envoyé le 11.10.2026, licence CC BY-SA 4.0), copiés dans `docs/cours/` (théorie, présentations, exercices, évaluations). Programme, exercices du cours, difficultés : `docs/programme.md`.
 
-Dans le modèle : `config.app` d'exemple (« Mon cours »), modules `code-js` et `dom` activés, deux unités d'exemple :
-- `u01-apprendre` : une unité **sans code** (bien apprendre : récupération active, répétition espacée, entrelacement), avec un boss « étude de cas » ;
-- `u02-catalogue` : **un exercice de chaque type**, pris dans ProgWeb 2, avec un boss de code et un boss DOM. Référence vivante des types.
+- **Identité** : clé `progserv2` (définitive), mascotte **Elly**, un éléphant (`forme: "elephant"`, la mascotte de PHP) dans le cadre `<? ?>`, violet PHP (`#5F64A8`).
+- **Module** : `code-php` seul (PHP 8.3 en WebAssembly, requêtes simulées, PDO + SQLite en mémoire). Voir `docs/modules.md`.
+- **Évaluations** : évaluation intermédiaire le 25.11.2026 (papier, 90 min, sans ressources, séances 1 à 7) ; projet libre en équipe.
+- **Unités** (une par séance, boss = exercices du cours) :
+  - `u01-rappels` (S1 : client-serveur, bases de PHP ; boss : étude de cas « environnement de développement ») ;
+  - `u02-classes` (S2 : classes, encapsulation, constructeur, constantes ; boss `Person`, `Vehicle`) ;
+  - `u03-heritage` (S2 : interfaces, héritage, abstraction, `static` ; boss `Library`, `Calculator`) ;
+  - `u04-pdo` (S3 : formulaires, PDO, exceptions, configuration, déploiement ; boss gestion d'outils + étude de cas Infomaniak) ;
+  - `u05-interface` (S4 : `require`/`include`, composants ; boss animaux de compagnie) ;
+  - `u06-securite` (S5 : validation / nettoyage, injection SQL, XSS ; boss questions + artistes favori·tes) ;
+  - `u07-cookies` (S6 : cookies, i18n ; boss couleur préférée) ;
+  - `u08-sessions` (S7 : sessions, authentification, autorisation, `password_hash` ; boss gestion de livres, page par page) ;
+  - `u09-examen-blanc` (S8 : révision des séances 1 à 7 au format de l'évaluation papier ; boss : examen blanc) ;
+  - `u10-poo-avancee` (S9 : namespaces, autoloader, traits ; boss personnages et plantes) ;
+  - `u11-e-mails` (S10 : SMTP/POP3/IMAP, PHPMailer **simulé**, Mailpit, Infomaniak ; boss formulaire de contact + étude de cas).
+- **Analogies récurrentes** (toujours les mêmes) : **le restaurant** (client-serveur : le navigateur commande, PHP cuisine le HTML, la base est le garde-manger) ; **le plan et la maison** (POO : classe = plan, objet = maison, interface = cahier des charges, classe abstraite = maison témoin, trait = kit à installer) ; **le ticket de la Poste** (cookie = ticket gardé par le client, session = dossier resté au guichet ; analogie du cours) ; **le signal d'alarme** (exceptions : `throw` / `catch` ; analogie du cours) ; **les cases du formulaire et la vitrine** (requêtes préparées ; `htmlspecialchars`) ; **les hashtags** (namespaces ; analogie du cours).
+- **Boss sur plusieurs fichiers** : l'élève écrit un fichier (`fichier`), les autres sont fournis (`fichiers`) ; un fichier fourni ne contient jamais la solution d'un autre boss (sauf `AbstractCharacter`, entièrement dicté par l'énoncé). Les sessions, cookies et formulaires passent par `requete` ; PHPMailer est remplacé par une version simulée (même interface, `send()` garde l'e-mail dans `PHPMailer::$envoyes`).
+- **Écarts relevés dans les supports** : la solution du cours de `Calculator::subtract` (S2 Ex. 4) donne −12 au lieu de 12 (l'appli suit l'énoncé) ; S7 nomme le rôle par défaut `user` dans le texte et `reader` dans la solution (l'appli suit la solution).
+- **État** : 11 unités complètes, les trois tests verts. À venir : séance 11 (récapitulatif) si de nouveaux supports arrivent.
 
 ## Lancer
 
@@ -31,6 +47,7 @@ js/questions.js            Moteur d'exercices : Q[type] pour les 23 types
 js/app.js                  runSession, leçons / jeux / quiz / boss (code ou étude de cas), défi du jour, vues, démarrage
 js/banc.js, js/worker.js, js/editeur.js     Module code-js : banc d'essai (tests, diagnostics, erreurs traduites), Web Worker, éditeur
 js/dom.js, js/dom-harnais.js                Module dom : page web dans une iframe isolée, harnais de test
+js/php.js, js/vendor/php-wasm/              Module code-php : PHP 8.3 en WebAssembly, requête simulée, tests, erreurs traduites
 content/config.json        app (nom, clé, mascotte, couleurs, modules), sommaire des unités, rangs, badges
 content/unites/uNN-*.json  Une unité par fichier : fiches, leçons, jeux, quiz, boss
 content/pages/             Pages web des exercices DOM (module dom)
@@ -45,7 +62,7 @@ manifest.webmanifest, sw.js, icones/   Appli installable, hors connexion (config
 
 ## Architecture
 
-- Scripts classiques (pas de modules ES), qui partagent leurs déclarations globales, chargés dans l'ordre : `banc.js`, `base.js`, `editeur.js`, `dom.js`, `questions.js`, `app.js`.
+- Scripts classiques (pas de modules ES), qui partagent leurs déclarations globales, chargés dans l'ordre : `banc.js`, `base.js`, `editeur.js`, `dom.js`, `php.js`, `questions.js`, `app.js`.
 - **Identité** : au démarrage, `boot()` lit `content/config.json` puis `appliquerApp(config.app)` remplit `APP` (nom, clé, mascotte, textes, modules), la clé de sauvegarde (`<cle>-sauvegarde-v1`), les couleurs (balise `<style id="couleurs-app">`) et le logo. `aModule("code-js")` dit si un module est actif (onglet Console, boutons « Exécuter »).
 - **Contrat d'un type d'exercice** (repris de Pampre) : `Q.monType = (q, onChange) => ({ el, ready(), check(), key?, cleanup?, reouvrir?, resoudre? })`.
   - `check()` verrouille, marque juste / faux, renvoie `{ ok, answer?, answerHTML?, detailHTML?, retry? }`, ou une **promesse** (exercices de code).
@@ -97,6 +114,7 @@ GitHub Actions (`.github/workflows/tests.yml`) lance les trois tests à chaque p
 
 ## Limites connues
 
-- Un seul langage exécuté pour l'instant (JavaScript) ; les autres sont des modules à ajouter (`docs/modules.md`).
+- Deux langages exécutés : JavaScript (`code-js`) et PHP (`code-php`, un seul actif par cours) ; les autres sont des modules à ajouter (`docs/modules.md`).
+- PHP : pas de vrai réseau (ni SMTP, ni MySQL) : SQLite en mémoire à la place de MariaDB, services externes simulés.
 - Les exercices à réponse libre (rédiger un persona, une argumentation) ne sont pas corrigés automatiquement : les transformer en choix, classements, repérages d'erreurs, ou en grille d'auto-évaluation.
-- La coloration du code suit la syntaxe du JavaScript, quel que soit le langage affiché.
+- La coloration du code suit la syntaxe du JavaScript ou du PHP selon le module actif.

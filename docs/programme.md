@@ -37,25 +37,26 @@ L'appli prépare surtout à l'évaluation papier (lire, prédire, compléter du 
 | u07 Cookies et i18n | `setcookie`, `$_COOKIE`, durée, suppression, fichiers de traduction, langue choisie | S6 Ex. 1 couleur préférée |
 | u08 Sessions, authentification, autorisation | `session_start`, `$_SESSION`, durée, `session_destroy`, sessions ≠ cookies, authentification ≠ autorisation, rôles, `password_hash` / `password_verify` | S7 Ex. 1 livres |
 | u09 Examen blanc | révision mélangée des séances 1 à 7 au format de l'évaluation papier | examen blanc (étude de cas longue) |
-| u10 POO avancée | `namespace`, `use`, autoloader (`spl_autoload_register`), traits, interface vs abstraite vs trait | S9 Ex. 1 personnages, Ex. 2 plantes |
-| u11 E-mails | SMTP, POP3, IMAP, `mail()` vs PHPMailer, Mailpit, Infomaniak, `mail.ini` | S10 Ex. 1 formulaire de contact |
+| u10 POO avancée | `namespace`, `use`, autoloader (`spl_autoload_register`), traits, interface vs abstraite vs trait | S9 Ex. 1 personnages (classe mère, ninja, mages), Ex. 2 plantes (`SmellTrait`, orchidée) |
+| u11 E-mails | SMTP, POP3, IMAP, `mail()` vs PHPMailer, Mailpit, Infomaniak, `mail.ini` | S10 Ex. 1 formulaire de contact (PHPMailer simulé) + étude de cas (Mailpit, Infomaniak) |
 
 Chaque unité : 3 à 5 fiches, 3 à 5 leçons courtes, un jeu, un quiz (dont des révisions), ses boss. L'ordre suit les séances, pour que l'appli soit prête **avant** chaque cours ; u01 à u09 sont prioritaires (évaluation du 25.11).
 
 ## Difficultés à cibler
 
-*(À compléter avec l'élève.)*
+L'élève a indiqué (11.10.2026) quatre domaines difficiles : **la POO**, **les bases de données / PDO**, **la sécurité, les cookies et les sessions**, **les bases de PHP**. Chacun est travaillé dans plusieurs unités, et revient dans le défi du jour (répétition espacée) et dans l'examen blanc (u09).
 
 | difficulté | où elle est travaillée |
 |---|---|
-| `$this->x` oublié, `$this->$x`, `->` vs `::` | u02, u03 |
-| `echo` au lieu de `return` dans une méthode | u01, u02 |
-| concaténation `.` (et pas `+`) | u01 |
-| interface vs classe abstraite vs trait | u03, u10 |
-| requête préparée vs concaténation | u04, u06 |
-| échapper à l'affichage, pas à l'enregistrement | u06 |
-| cookie vs session | u07, u08 |
-| authentification vs autorisation | u08 |
+| **Bases de PHP** : concaténation `.` (et pas `+`), `"$x"` vs `'$x'`, `==` vs `===`, `echo` vs `return`, tableaux associatifs, `foreach` | u01 (toutes les leçons), u09-l1, diagnostics `concat-plus`, `echo-vs-return`, `variable-inconnue` |
+| **POO** : `$this->x` oublié, `$this->$x`, `->` vs `::`, visibilité, constructeur, `parent::` | u02, u03, u09-l2, u10 ; diagnostics `this-oublie`, `this-dollar`, `visibilite`, `parent-sans-extends` |
+| **POO** : interface vs classe abstraite vs trait | u03, u10-l4, u09-l2 |
+| **POO** : namespaces, `use`, autoloader | u10-l1, u10-l2, boss u10-b1 à b5 ; diagnostic `classe-inconnue` (namespace du fichier) |
+| **PDO** : `prepare` / `bindValue` / `execute` / `fetch`, `try` / `catch`, fichier de configuration | u04, u06, u09-l3 ; diagnostics `sql-*` |
+| **Sécurité** : requête préparée vs concaténation, échapper à l'affichage (`htmlspecialchars`), valider côté serveur | u04, u06, u09-l3 ; conseils `sql-concat`, `xss` |
+| **Cookies et sessions** : `setcookie` avant tout affichage, durée, cookie vs session, `session_start`, `session_destroy` | u07, u08, u09-l4 ; diagnostics `entete-envoye`, `session-double` |
+| **Authentification vs autorisation**, `password_hash` / `password_verify` | u08, u09-l4 ; conseil `hachage-faible` |
+| **E-mails** : SMTP / POP3 / IMAP, PHPMailer, format exact du sujet et du corps | u11 |
 
 ## Analogies récurrentes
 

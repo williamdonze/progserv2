@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Mon cours</title>
-<meta name="description" content="Apprendre le cours en jouant : leçons courtes, exercices interactifs, défi du jour et révisions espacées.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 class=%22mascot%22 viewBox=%220 0 120 120%22 aria-hidden=%22true%22%3E%0A    %3Cpath d=%22M22 18c-9 0-12 5-12 12v18c0 6-3 10-8 12 5 2 8 6 8 12v18c0 7 3 12 12 12%22 stroke=%22%235B3FD9%22 stroke-width=%227%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M98 18c9 0 12 5 12 12v18c0 6 3 10 8 12-5 2-8 6-8 12v18c0 7-3 12-12 12%22 stroke=%22%235B3FD9%22 stroke-width=%227%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%0A    %3Cpath d=%22M60 12c17 0 30 30 30 56a30 30 0 0 1-60 0c0-26 13-56 30-56z%22 fill=%22%23FFF6E4%22 stroke=%22%23E3C98F%22 stroke-width=%223%22/%3E%0A    %3Cellipse cx=%2248%22 cy=%2236%22 rx=%226%22 ry=%229%22 fill=%22%23fff%22 opacity=%22.9%22/%3E%0A    %3Ccircle cx=%2249%22 cy=%2264%22 r=%227%22 fill=%22%23fff%22 stroke=%22%232a2340%22 stroke-width=%221.5%22/%3E%3Ccircle cx=%2271%22 cy=%2264%22 r=%227%22 fill=%22%23fff%22 stroke=%22%232a2340%22 stroke-width=%221.5%22/%3E%0A    %3Ccircle cx=%2250.5%22 cy=%2265%22 r=%223.6%22 fill=%22%232a2340%22/%3E%3Ccircle cx=%2272.5%22 cy=%2265%22 r=%223.6%22 fill=%22%232a2340%22/%3E%0A    %3Ccircle cx=%2240%22 cy=%2276%22 r=%225%22 fill=%22%23ff9fb4%22 opacity=%22.6%22/%3E%3Ccircle cx=%2280%22 cy=%2276%22 r=%225%22 fill=%22%23ff9fb4%22 opacity=%22.6%22/%3E%0A    %3Cpath d=%22M49 79q11 11 22 0%22 stroke=%22%232a2340%22 stroke-width=%223.5%22 fill=%22%23fff%22 stroke-linecap=%22round%22/%3E%3C/svg%3E">
+<title>ProgServ2</title>
+<meta name="description" content="Réviser le cours Programmation serveur 2 (HEIG-VD) en jouant : leçons courtes, vrai PHP exécuté dans le navigateur, défi du jour et révisions espacées.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 class=%22mascot%22 viewBox=%220 0 120 120%22 aria-hidden=%22true%22%3E%0A    %3Cpath d=%22M40 40c-22-8 -30 14 -24 36c3 10 12 14 20 8z%22 fill=%22%239EA4D6%22 stroke=%22%235F64A8%22 stroke-width=%223%22 stroke-linejoin=%22round%22/%3E%3Cpath d=%22M80 40c22-8 30 14 24 36c-3 10 -12 14 -20 8z%22 fill=%22%239EA4D6%22 stroke=%22%235F64A8%22 stroke-width=%223%22 stroke-linejoin=%22round%22/%3E%0A    %3Ccircle cx=%2260%22 cy=%2262%22 r=%2229%22 fill=%22%23B3B8E3%22 stroke=%22%235F64A8%22 stroke-width=%223%22/%3E%0A    %3Cellipse cx=%2249%22 cy=%2242%22 rx=%227%22 ry=%225%22 fill=%22%23fff%22 opacity=%22.45%22/%3E%0A    %3Cpath d=%22M60 70c0 14 0 24 9 27c5 1.5 8-1 7-5%22 stroke=%22%235F64A8%22 stroke-width=%2212%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%0A    %3Cpath d=%22M60 70c0 14 0 24 9 27c5 1.5 8-1 7-5%22 stroke=%22%23B3B8E3%22 stroke-width=%226.5%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%0A    %3Ccircle cx=%2249%22 cy=%2258%22 r=%226.5%22 fill=%22%23fff%22 stroke=%22%232a2340%22 stroke-width=%221.5%22/%3E%3Ccircle cx=%2271%22 cy=%2258%22 r=%226.5%22 fill=%22%23fff%22 stroke=%22%232a2340%22 stroke-width=%221.5%22/%3E%0A    %3Ccircle cx=%2250.3%22 cy=%2259%22 r=%223.4%22 fill=%22%232a2340%22/%3E%3Ccircle cx=%2272.3%22 cy=%2259%22 r=%223.4%22 fill=%22%232a2340%22/%3E%0A    %3Ccircle cx=%2240%22 cy=%2276%22 r=%224.5%22 fill=%22%23ff9fb4%22 opacity=%22.6%22/%3E%3Ccircle cx=%2280%22 cy=%2276%22 r=%224.5%22 fill=%22%23ff9fb4%22 opacity=%22.6%22/%3E%0A    %3Cpath d=%22M40 80q7 8 14 2%22 stroke=%22%232a2340%22 stroke-width=%223%22 fill=%22%23fff%22 stroke-linecap=%22round%22/%3E%3Ctext x=%2214%22 y=%22108%22 text-anchor=%22middle%22 font-family=%22JetBrains Mono, ui-monospace, monospace%22 font-weight=%22800%22 font-size=%2228%22 fill=%22%235F64A8%22 stroke=%22var%28--bg, %23FAF7F0%29%22 stroke-width=%225%22 paint-order=%22stroke%22 stroke-linejoin=%22round%22%3E%26lt%3B%3F%3C/text%3E%3Ctext x=%22106%22 y=%22108%22 text-anchor=%22middle%22 font-family=%22JetBrains Mono, ui-monospace, monospace%22 font-weight=%22800%22 font-size=%2228%22 fill=%22%235F64A8%22 stroke=%22var%28--bg, %23FAF7F0%29%22 stroke-width=%225%22 paint-order=%22stroke%22 stroke-linejoin=%22round%22%3E%3F%26gt%3B%3C/text%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icones/apple-touch-icon.png">
 <meta name="theme-color" content="#FAF7F0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#13121C" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Mon cours">
+<meta name="apple-mobile-web-app-title" content="ProgServ2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap">
@@ -21,7 +21,7 @@
 <body>
 <div id="app"></div>
 <div class="toasts" id="toasts"></div>
-<noscript><p style="padding:20px">Mon cours a besoin de JavaScript pour fonctionner.</p></noscript>
+<noscript><p style="padding:20px">ProgServ2 a besoin de JavaScript pour fonctionner.</p></noscript>
 <script src="js/banc.js"></script>
 <script src="js/base.js"></script>
 <script src="js/editeur.js"></script>

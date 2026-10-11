@@ -1,7 +1,7 @@
 {
-  "name": "Mon cours — apprendre en jouant",
-  "short_name": "Mon cours",
-  "description": "Apprendre le cours en jouant : leçons courtes, exercices interactifs, défi du jour et révisions espacées.",
+  "name": "ProgServ2 — la programmation serveur en PHP",
+  "short_name": "ProgServ2",
+  "description": "Réviser le cours Programmation serveur 2 (HEIG-VD) en jouant : leçons courtes, vrai PHP exécuté dans le navigateur, défi du jour et révisions espacées.",
   "lang": "fr",
   "id": "./",
   "start_url": "./",

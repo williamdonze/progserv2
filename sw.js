@@ -1,6 +1,6 @@
 /* Service worker de ProgWeb 2 : appli installable et utilisable hors connexion.
    Réseau d'abord (le contenu est toujours le plus récent quand on est en ligne), copie en cache pour le hors-ligne. */
-const CACHE = "mon-cours-v1";
+const CACHE = "progserv2-v2";
 const CACHE_MOTEURS = "moteurs-v1";   // js/vendor/ : gardé d'une version du site à l'autre ; passer à v2 si on reconstruit js/vendor/ (tools/php-wasm/construire.sh)
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(

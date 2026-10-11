@@ -7,11 +7,14 @@ Le moteur est commun à tous les cours. Ce qui est propre à une **matière** (e
 | module | fichiers | ce qu'il fait |
 |---|---|---|
 | `code-js` | `js/banc.js`, `js/worker.js`, `js/editeur.js` ; types de code dans `js/questions.js` (`exerciceCode`), `executer()` dans `js/base.js`, vue Console dans `js/app.js` | exécute le code de l'élève dans un Web Worker (2 s max), le teste sur plusieurs jeux de données, traduit les erreurs, diagnostique les erreurs typiques |
+| `code-php` | `js/php.js` (banc d'essai : harnais, requête simulée, tests, erreurs traduites, diagnostics, coloration), `js/vendor/php-wasm/` (PHP 8.3 en WebAssembly : `@php-wasm/web` 3.1.57, licence GPL ; reconstruit avec `tools/php-wasm/construire.sh`) | exécute du PHP dans un Web Worker (3 s max ; le moteur de 18 Mo est préchargé au démarrage et mis en cache par `sw.js`, `moteurs-v1`), simule une requête HTTP (GET, POST, cookies, session, en-têtes), lit la page produite, les redirections, les cookies et la session ; PDO + SQLite en mémoire. Actif seul (sans `code-js`), il prend tous les exercices de code (`LANGAGE_CODE = "php"`). Format : `docs/format-contenu.md`, « Exercices en PHP » |
 | `dom` | `js/dom.js`, `js/dom-harnais.js`, `content/pages/` | exécute le code sur une vraie page web, dans une `<iframe sandbox="allow-scripts">`, et joue des étapes de test (clics, comptages) |
 
 Les fichiers d'un module restent chargés même s'il est désactivé (ils sont petits) : le module ne fait qu'**autoriser** ses types d'exercices (validateur) et **afficher** ses éléments d'interface (`aModule("code-js")` dans le code).
 
-## Ajouter un module (exemple : PHP)
+## Ajouter un module (exemple : SQL, Python, terminal)
+
+Le module `code-php` a été construit ainsi : s'en inspirer.
 
 1. **Choisir le moteur d'exécution, côté navigateur, sans serveur** (le site est statique, sur GitHub Pages) :
    - PHP : PHP compilé en WebAssembly (`@php-wasm/web`, celui de WordPress Playground), à charger dans un Web Worker ;

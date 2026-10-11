@@ -283,6 +283,53 @@ Le Web Worker n'a pas de DOM. Avec un champ `dom`, le code de l'élève tourne d
 
 Les étapes s'enchaînent **dans la même page** (l'état d'une étape reste pour la suivante). Une étape sans `actions` vérifie l'état courant (la première : juste après le chargement du code). Le message affiché est le `siEchec` de la première étape ratée qui en a un. Pour un test « au hasard » (main tirée), répéter les clics dans un `script` et ranger les résultats dans `window` (voir le boss `u15-b1`).
 
+### Exercices en PHP (module `code-php`)
+
+Avec le module `code-php` (et sans `code-js`), tous les exercices de code (`trous`, `corriger`, `ecrire`, `boss`, `predire`, exemples des cartes et des fiches) s'exécutent en **PHP 8.3** (WebAssembly, `js/php.js`), avec PDO et SQLite en mémoire. Le code de l'élève sans `<?php` est un extrait : la balise est ajoutée (les numéros de ligne restent ceux de l'élève). Chaque exécution est une **requête HTTP simulée**, neuve (fichiers, session, base remis à zéro).
+
+Champs propres à un exercice PHP :
+
+```jsonc
+{
+  "requete": { "methode": "POST", "get": {…}, "post": {…}, "cookies": {…}, "session": {…}, "entetes": {…} },   // la requête simulée
+  "fichiers": { "src/database.php": ["<?php", "…"], "config/mail.ini": ["host = \"mailpit\""] },  // fichiers déjà écrits (affichés,
+                                           // repliés, en lecture seule), placés dans le projet ; ils ne doivent JAMAIS contenir
+                                           // la solution d'un autre exercice
+  "fichier": "public/index.php"            // chemin du fichier de l'élève (défaut index.php) : __DIR__, require relatifs
+}
+```
+
+Chaque **cas** des `tests` PHP peut contenir, en plus de `titre`, `fonction`, `args`, `attendu`, `sortie`, `variables`, `donnees`, `siEchec` :
+
+| champ | rôle |
+|---|---|
+| `requete` | la requête de ce cas (sinon celle de l'exercice) |
+| `code` | PHP exécuté **après** le fichier de l'élève, dans la même requête ; sa valeur de `return` est comparée à `attendu`. Pour tester des classes (`return (new Pets\\Dog("Rex"))->speak();`), relire une variable, interroger la base, ou lire ce qu'un faux service a gardé (`PHPMailer::$envoyes`) |
+| `appel` | texte de l'appel affiché à l'élève, si celui calculé ne convient pas |
+| `contient` / `neContientPas` | textes que la page produite doit contenir / ne pas contenir (HTML compris) |
+| `redirection` | `"login.php"` (en-tête `Location` attendu, comparé à la fin du chemin), `true` (une redirection quelconque), `false` (aucune) |
+| `statut` | code HTTP attendu (`403`, `200`…) |
+| `cookies` | `{ "langue": "de" }` cookie envoyé avec cette valeur ; `null` : cookie supprimé ; `true` : cookie envoyé, valeur libre |
+| `dureeCookies` | `{ "langue": 2592000 }` : durée de vie attendue, en secondes (à quelques secondes près) |
+| `session` | sous-ensemble attendu de `$_SESSION` à la fin |
+| `sessionVide` | `true` : la session doit être détruite ou vide à la fin |
+
+Valeurs PHP en JSON : tableaux et tableaux associatifs en listes et objets ; un objet attendu s'écrit `{ "__objet": "Pets\\Dog", "props": { "name": "Rex" } }` (seules les propriétés listées sont comparées) ; `null`, `true`, `false` tels quels.
+
+**Diagnostics PHP** (dans `js/php.js`, à citer dans `erreursTypiques[].diagnostic`) :
+
+| id | quand |
+|---|---|
+| `echo-vs-return`, `sans-return`, `texte-vs-nombre`, `texte-vs-booleen`, `donnees-en-dur`, `tableau-vide`, `rien-affiche`, `lignes-collees`, `espaces`, `contenu`, `interdit`, `obligatoire` | résultat faux (même rôle que pour le JavaScript) |
+| `this-oublie`, `this-hors-objet`, `this-dollar`, `variable-inconnue`, `fonction-inconnue`, `methode-inconnue`, `propriete-inconnue`, `classe-inconnue`, `visibilite`, `abstract-new`, `methode-promise`, `extends-implements`, `parent-sans-extends`, `pas-un-trait`, `trait-propriete`, `signature`, `static`, `redeclare` | erreurs de POO (namespaces et traits compris) |
+| `arguments`, `type-argument`, `type-retour`, `type-attribut`, `attribut-vide`, `concat-plus`, `operandes`, `array-to-string`, `objet-en-texte`, `pas-un-objet`, `objet-tableau`, `cle-inconnue`, `constante-inconnue`, `division-zero`, `fichier-introuvable` | erreurs et avertissements traduits |
+| `entete-envoye`, `session-double` | `header`, `setcookie`, `session_start` après un affichage ; `session_start` deux fois |
+| `sql-table`, `sql-colonne`, `sql-syntaxe`, `sql-unique`, `sql-null`, `sql-parametres` | erreurs PDO / SQL traduites |
+| `syntaxe`, `syntaxe-fin`, `point-virgule`, `exception-non-attrapee` | syntaxe, exception non attrapée |
+| `sql-concat`, `xss`, `hachage-faible` (conseils de l'analyse du code), `entete-envoye`, `this-dollar`, `concat-plus` | saisie collée dans du SQL, saisie affichée sans `htmlspecialchars`, `md5` / `sha1` pour un mot de passe |
+
+Les avertissements de PHP (`Undefined variable`, `Undefined array key`…) s'affichent à l'élève comme des conseils, et font échouer les exemples de cartes dans `tools/tester-exercices.py`.
+
 ### Les erreurs typiques (vérifiées par `tools/tester-exercices.py`)
 
 ```jsonc
