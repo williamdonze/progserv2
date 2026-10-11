@@ -45,7 +45,8 @@
     "content/unites/u01-rappels.json",
     "content/unites/u02-classes.json",
     "content/unites/u03-heritage.json",
-    "content/unites/u04-pdo.json"
+    "content/unites/u04-pdo.json",
+    "content/unites/u05-interface.json"
   ],
   "aVenir": [],
   "rangs": [

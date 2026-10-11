@@ -48,7 +48,7 @@ async function testerTout(filtreUnite){
         }
         if (q.type === "predire" && !aCode() && q.reponse !== undefined) stats.predictions++;   // cours sans code : la réponse écrite fait foi
         else if (q.type === "predire") {
-          const r = await executer({ code:lignes(q.code), requete:q.requete });
+          const r = await executer({ code:lignes(q.code), requete:q.requete, fichiers:q.fichiers, fichier:q.fichier });
           stats.predictions++;
           const sortie = r.console.join("\n");
           if (r.erreur && !q.erreurVoulue) erreurs.push(`${o} : le code à prédire plante (${r.erreur.message})`);
@@ -62,7 +62,7 @@ async function testerTout(filtreUnite){
           if (new Set(q.choix).size !== q.choix.length) erreurs.push(`${o} : choix en double`);
         }
         if (q.type === "qcm" && q.code && q.verifierSortie) {
-          const r = await executer({ code:lignes(q.code), requete:q.requete });
+          const r = await executer({ code:lignes(q.code), requete:q.requete, fichiers:q.fichiers, fichier:q.fichier });
           if (norm(r.console.join("\n")) !== norm(q.choix[q.bonne])) erreurs.push(`${o} : le bon choix ne correspond pas à la sortie (${r.console.join(" ⏎ ")})`);
         }
         if (q.type === "bug") { const n = lignes(q.code).split("\n").length; if (!(q.ligne >= 1 && q.ligne <= n)) erreurs.push(`${o} : ligne du bug hors du code`); }

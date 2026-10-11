@@ -1,0 +1,1878 @@
+{
+  "id": "u05",
+  "titre": "Réutiliser des parties d'interface",
+  "sousTitre": "Séance 4 · PHP dans le HTML, include/require, composants, render()",
+  "objectif": "Inclure des fichiers à bon escient, sortir l'en-tête, le pied de page et le bloc head dans des composants, et les afficher avec des paramètres explicites grâce à render().",
+  "icone": "▤",
+  "fiches": [
+    {
+      "id": "php-html",
+      "titre": "PHP et HTML dans le même fichier",
+      "icone": "<?=",
+      "resume": "Une page PHP alterne HTML et blocs `<?php … ?>`. `<?= $x ?>` est le raccourci de `<?php echo $x; ?>`. Une boucle ou une condition peut s'ouvrir dans un bloc PHP et se fermer dans un autre, avec du HTML entre les deux.",
+      "texte": "``` <ul> <?php foreach ($pets as $pet) { ?> <li><?= htmlspecialchars($pet['name']) ?></li> <?php } ?> </ul> ```\n\nPour cocher la bonne option d'une liste : `<?= $species === \"dog\" ? \"selected\" : \"\" ?>` (l'opérateur ternaire : condition `?` valeur si vrai `:` valeur si faux).\n\nTout ce qui est affiché dans le HTML passe par `htmlspecialchars()`.",
+      "pieges": [
+        "Chaque `{` ouverte dans un bloc PHP doit être refermée par un `<?php } ?>` plus bas.",
+        "`<?= … ?>` affiche : pas de `echo` à l'intérieur, pas de point-virgule nécessaire."
+      ]
+    },
+    {
+      "id": "inclusion-fichiers",
+      "titre": "include, require, _once",
+      "icone": "⎘",
+      "resume": "`include` et `require` incluent un fichier ; `_once` l'inclut une seule fois. Fichier introuvable : `include` continue après une erreur, `require` s'arrête (erreur fatale). Le cours : `require_once` pour les fonctions et constantes, `require` pour les parties d'interface.",
+      "texte": "- `include` : erreur si le fichier manque, mais le script continue ;\n- `require` : erreur fatale si le fichier manque, le script s'arrête ;\n- `include_once` : comme `include`, une seule fois même si demandé plusieurs fois ;\n- `require_once` : comme `require`, une seule fois.\n\nLes fichiers de **fonctions** et de **constantes** : `require_once` (les inclure deux fois redéclarerait les fonctions). Les **parties d'interface** (en-tête, pied de page) : `require`, car on peut vouloir les afficher plusieurs fois dans une même page.",
+      "pieges": [
+        "Une partie d'interface incluse avec `require_once` ne s'afficherait qu'une fois par page.",
+        "Un fichier de fonctions inclus deux fois avec `require` : `Cannot redeclare`."
+      ]
+    },
+    {
+      "id": "composants",
+      "titre": "Sortir les parties communes",
+      "icone": "▤",
+      "resume": "En-tête, pied de page et bloc `<head>` vont dans `components/` (`header.php`, `footer.php`, `head.php`) ; chaque page de `public/` les inclut avec `require __DIR__ . '/../components/header.php';`. Une modification se fait à un seul endroit.",
+      "texte": "Structure proposée par le cours :\n\n``` project/ ├── components/ │   ├── footer.php │   ├── head.php │   └── header.php ├── public/ │   ├── create.php │   └── index.php └── src/ ├── constants.php └── functions.php ```\n\nPour un titre différent par page, `head.php` utilise une variable avec une valeur par défaut : `<title><?= htmlspecialchars($title ?? 'ninetendogs') ?></title>`, et la page définit `$title` avant d'inclure.\n\nLe `??` va **à l'intérieur** de `htmlspecialchars()` : `htmlspecialchars($title) ?? '…'` n'utiliserait jamais la valeur par défaut (et `$title` non défini provoquerait un avertissement).",
+      "pieges": [
+        "Avec des variables globales, `head.php` dépend de noms définis ailleurs : une faute de frappe passe inaperçue (la valeur par défaut s'affiche en silence)."
+      ]
+    },
+    {
+      "id": "render-fonction",
+      "titre": "render() : des composants avec paramètres",
+      "icone": "⟨⟩",
+      "resume": "`render('head', ['title' => 'Accueil'])` affiche un composant en lui passant ses valeurs explicitement. La fonction calcule le chemin, transforme le tableau en variables locales avec `extract($data, EXTR_SKIP)`, puis fait `require` du composant.",
+      "analogie": "Comme une fonction ordinaire : le composant est le cuisinier, le tableau `$data` ses ingrédients. Ils sont donnés au moment de l'appel, au lieu d'être laissés traîner sur le plan de travail (des variables globales).",
+      "texte": "``` function render(string $component, array $data = []): void { $componentPath = __DIR__ . '/../components/' . $component . '.php'; extract($data, EXTR_SKIP); require $componentPath; } ```\n\n- `extract()` transforme les clés du tableau en variables : `['title' => 'Accueil']` crée `$title`.\n- Ces variables sont créées **dans la fonction** : elles n'existent que le temps d'afficher le composant et ne « polluent » pas la page.\n- `EXTR_SKIP` empêche d'écraser `$component`, `$data` ou `$componentPath`.\n- `require` (et pas `require_once`) : le même composant peut s'afficher plusieurs fois.\n- `render('header')` suffit pour un composant sans valeur, grâce à `$data = []`.\n\nC'est le principe des composants des moteurs de templates (Twig, Blade) et des bibliothèques comme React ou Vue, où ces valeurs s'appellent des *props*.",
+      "pieges": [
+        "Le chemin doit être calculé AVANT `extract()` : une clé `componentPath` dans `$data` pourrait sinon l'écraser (d'où aussi `EXTR_SKIP`)."
+      ]
+    }
+  ],
+  "lecons": [
+    {
+      "id": "u05-l1",
+      "titre": "PHP et HTML mêlés",
+      "duree": 6,
+      "notions": [
+        "php-html"
+      ],
+      "cartes": [
+        {
+          "titre": "Entrer et sortir de PHP",
+          "texte": "Le fichier est du HTML ; `<?php … ?>` ouvre un passage en PHP. `<?= $x ?>` affiche directement une valeur.",
+          "code": [
+            "<?php $app = \"ninetendogs\"; ?>",
+            "<h1><?= $app ?></h1>",
+            "<p>Bienvenue sur <?= htmlspecialchars($app) ?> !</p>",
+            ""
+          ],
+          "fiche": "php-html"
+        },
+        {
+          "titre": "Une boucle qui fabrique du HTML",
+          "texte": "Le `{` s'ouvre dans un bloc PHP, le HTML se répète, le `}` se ferme dans un autre bloc.",
+          "code": [
+            "<?php $pets = ['Nalia', 'Tofu', 'Moka']; ?>",
+            "<ul>",
+            "    <?php foreach ($pets as $pet) { ?>",
+            "        <li><?= htmlspecialchars($pet) ?></li>",
+            "    <?php } ?>",
+            "</ul>",
+            ""
+          ]
+        },
+        {
+          "titre": "Une condition autour du HTML",
+          "texte": "Même principe pour `if / else` : le message d'erreur n'apparaît que s'il y a des erreurs.",
+          "code": [
+            "<?php $errors = []; ?>",
+            "<?php if (empty($errors)) { ?>",
+            "    <p>Tout est en ordre.</p>",
+            "<?php } else { ?>",
+            "    <p>Il y a des erreurs.</p>",
+            "<?php } ?>",
+            ""
+          ]
+        },
+        {
+          "titre": "selected et checked",
+          "texte": "Pour garder le choix de l'utilisateur dans une liste, l'opérateur ternaire écrit `selected` sur la bonne option : `condition ? \"si vrai\" : \"si faux\"`.",
+          "code": [
+            "<?php $species = \"cat\"; ?>",
+            "<select name=\"species\">",
+            "    <option value=\"dog\" <?= $species === \"dog\" ? \"selected\" : \"\" ?>>Chien</option>",
+            "    <option value=\"cat\" <?= $species === \"cat\" ? \"selected\" : \"\" ?>>Chat</option>",
+            "</select>",
+            ""
+          ]
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u05-l1-e1",
+          "type": "qcm",
+          "notions": [
+            "php-html"
+          ],
+          "mono": true,
+          "question": "Quel est l'équivalent de `<?= $name ?>` ?",
+          "choix": [
+            "<?php echo $name; ?>",
+            "<?php return $name; ?>",
+            "<?php $name; ?>",
+            "<?php print_r($name) ?>"
+          ],
+          "bonne": 0,
+          "explication": "`<?=` est le raccourci d'un `echo`."
+        },
+        {
+          "id": "u05-l1-e2",
+          "type": "predire",
+          "notions": [
+            "php-html"
+          ],
+          "question": "Que reçoit le navigateur ? (une ligne par ligne de HTML ; ignore l'indentation)",
+          "code": [
+            "<?php $colors = ['vert', 'bleu']; ?>",
+            "<?php foreach ($colors as $color) { ?>",
+            "<li><?= $color ?></li>",
+            "<?php } ?>",
+            ""
+          ],
+          "explication": "Le `<li>` est répété pour chaque couleur ; les blocs PHP eux-mêmes ne sont jamais envoyés."
+        },
+        {
+          "id": "u05-l1-e3",
+          "type": "trous",
+          "notions": [
+            "php-html"
+          ],
+          "question": "Complète la liste des animaux.",
+          "code": [
+            "<?php $pets = ['Nalia', 'Tofu']; ?>",
+            "<ul>",
+            "    <?php ___ ($pets as $pet) { ?>",
+            "        <li>___ htmlspecialchars($pet) ?></li>",
+            "    <?php ___ ?>",
+            "</ul>",
+            ""
+          ],
+          "solution": [
+            "foreach",
+            "<?=",
+            "}"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "contient": [
+                  "<li>Nalia</li>",
+                  "<li>Tofu</li>"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "La boucle qui parcourt un tableau.",
+            "Le raccourci qui affiche.",
+            "Il faut refermer l'accolade de la boucle."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "foreach",
+                "<?=",
+                ""
+              ],
+              "attendu": "erreur",
+              "diagnostic": "syntaxe-fin"
+            },
+            {
+              "trous": [
+                "foreach",
+                "<?php",
+                "}"
+              ],
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Ouvrir la boucle dans un bloc, afficher avec `<?=`, refermer avec `<?php } ?>`."
+        },
+        {
+          "id": "u05-l1-e4",
+          "type": "ecrire",
+          "notions": [
+            "php-html",
+            "formulaires"
+          ],
+          "question": "Écris la liste `<select name=\"species\">` avec une option par espèce de `PET_SPECIES` (valeur = la clé, texte = le libellé), où l'option égale à `$species` porte `selected`.",
+          "donnees": {
+            "species": "cat"
+          },
+          "prelude": [
+            "const PET_SPECIES = ['dog' => 'Chien', 'cat' => 'Chat', 'bird' => 'Oiseau'];",
+            ""
+          ],
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Chat choisi",
+                "contient": [
+                  "<select name=\"species\">",
+                  "value=\"dog\"",
+                  ">Chien<",
+                  "value=\"bird\"",
+                  "value=\"cat\" selected"
+                ],
+                "neContientPas": [
+                  "value=\"dog\" selected",
+                  "value=\"bird\" selected"
+                ]
+              },
+              {
+                "titre": "Oiseau choisi",
+                "donnees": {
+                  "species": "bird"
+                },
+                "contient": [
+                  "value=\"bird\" selected"
+                ],
+                "neContientPas": [
+                  "value=\"cat\" selected"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Un `foreach (PET_SPECIES as $key => $label)` entre `<select …>` et `</select>`.",
+            "Dans l'`<option>`, écris `value=\"<?= $key ?>\"` puis `<?= $species === $key ? \"selected\" : \"\" ?>`.",
+            {
+              "texte": "Une option :",
+              "code": "<option value=\"<?= $key ?>\" <?= ___ ?>><?= $label ?></option>"
+            }
+          ],
+          "solution": [
+            "<select name=\"species\">",
+            "    <?php foreach (PET_SPECIES as $key => $label) { ?>",
+            "        <option value=\"<?= $key ?>\" <?= $species === $key ? \"selected\" : \"\" ?>><?= $label ?></option>",
+            "    <?php } ?>",
+            "</select>",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "<select name=\"species\">\n    <?php foreach (PET_SPECIES as $key => $label) { ?>\n        <option value=\"<?= $key ?>\" selected><?= $label ?></option>\n    <?php } ?>\n</select>",
+              "attendu": "echec"
+            },
+            {
+              "code": "<select name=\"species\">\n    <?php foreach (PET_SPECIES as $key => $label) { ?>\n        <option value=\"<?= $label ?>\" <?= $species === $key ? \"selected\" : \"\" ?>><?= $label ?></option>\n    <?php } ?>\n</select>",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "La valeur envoyée est la clé (`cat`), le texte affiché le libellé (`Chat`) ; le ternaire coche la bonne option."
+        },
+        {
+          "id": "u05-l1-e5",
+          "type": "vf",
+          "notions": [
+            "php-html"
+          ],
+          "question": "Les blocs `<?php … ?>` sont envoyés au navigateur avec le HTML.",
+          "bonne": false,
+          "explication": "Le serveur exécute le PHP et n'envoie que le résultat : le HTML produit."
+        }
+      ]
+    },
+    {
+      "id": "u05-l2",
+      "titre": "include, require et _once",
+      "duree": 5,
+      "notions": [
+        "inclusion-fichiers"
+      ],
+      "cartes": [
+        {
+          "titre": "Quatre façons d'inclure",
+          "texte": "`include` / `require` incluent un fichier. Si le fichier manque : `include` continue (avec une erreur), `require` arrête tout. Avec `_once`, le fichier n'est inclus qu'une seule fois.",
+          "fiche": "inclusion-fichiers"
+        },
+        {
+          "titre": "Fonctions et constantes : require_once",
+          "texte": "Un fichier de fonctions inclus deux fois déclarerait deux fois les mêmes fonctions : `Cannot redeclare`. `require_once` l'évite.",
+          "code": [
+            "<?php",
+            "require_once __DIR__ . '/functions.php';",
+            "require_once __DIR__ . '/functions.php';",
+            "echo double(21);",
+            ""
+          ],
+          "fichiers": {
+            "functions.php": [
+              "<?php",
+              "function double(int $n): int {",
+              "    return $n * 2;",
+              "}",
+              ""
+            ]
+          }
+        },
+        {
+          "titre": "Interface : require",
+          "texte": "Une partie d'interface peut s'afficher plusieurs fois dans une même page : on l'inclut avec `require`.",
+          "code": [
+            "<?php",
+            "require __DIR__ . '/separator.php';",
+            "echo \"<p>Section 1</p>\";",
+            "require __DIR__ . '/separator.php';",
+            "echo \"<p>Section 2</p>\";",
+            ""
+          ],
+          "fichiers": {
+            "separator.php": [
+              "<hr>"
+            ]
+          },
+          "apres": "Avec `require_once`, le second séparateur n'apparaîtrait pas."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u05-l2-e1",
+          "type": "assoc",
+          "notions": [
+            "inclusion-fichiers"
+          ],
+          "question": "Associe chaque instruction à son comportement.",
+          "mono": true,
+          "paires": [
+            [
+              "include",
+              "Fichier manquant : erreur, le script continue"
+            ],
+            [
+              "require",
+              "Fichier manquant : erreur fatale, arrêt"
+            ],
+            [
+              "include_once",
+              "Une seule fois ; fichier manquant : le script continue"
+            ],
+            [
+              "require_once",
+              "Une seule fois ; fichier manquant : arrêt"
+            ]
+          ],
+          "explication": "`require` = indispensable ; `_once` = une seule fois."
+        },
+        {
+          "id": "u05-l2-e2",
+          "type": "tri",
+          "notions": [
+            "inclusion-fichiers"
+          ],
+          "question": "Que recommande le cours pour chaque fichier ?",
+          "categories": [
+            "require_once",
+            "require"
+          ],
+          "items": [
+            [
+              "src/functions.php",
+              0
+            ],
+            [
+              "src/constants.php",
+              0
+            ],
+            [
+              "components/header.php",
+              1
+            ],
+            [
+              "components/footer.php",
+              1
+            ],
+            [
+              "src/Book.php (une classe)",
+              0
+            ]
+          ],
+          "mono": true,
+          "explication": "Fonctions, constantes et classes : une seule fois. Parties d'interface : autant de fois qu'on veut les afficher."
+        },
+        {
+          "id": "u05-l2-e3",
+          "type": "predire",
+          "notions": [
+            "inclusion-fichiers"
+          ],
+          "question": "Le fichier `star.php` contient seulement `★`. Qu'affiche ce code ?",
+          "code": [
+            "<?php",
+            "require __DIR__ . '/star.php';",
+            "require_once __DIR__ . '/star.php';",
+            "require __DIR__ . '/star.php';",
+            ""
+          ],
+          "fichiers": {
+            "star.php": [
+              "★"
+            ]
+          },
+          "reponse": "★★",
+          "explication": "Le premier `require` l'affiche ; `require_once` voit qu'il a déjà été inclus et ne fait rien ; le dernier `require` l'affiche encore."
+        },
+        {
+          "id": "u05-l2-e4",
+          "type": "qcm",
+          "notions": [
+            "inclusion-fichiers"
+          ],
+          "question": "`functions.php` est inclus deux fois avec `require`. Que se passe-t-il ?",
+          "choix": [
+            "Cannot redeclare : les fonctions sont déclarées deux fois",
+            "Rien, PHP ignore la seconde inclusion",
+            "Les fonctions sont exécutées deux fois",
+            "Le fichier est fusionné"
+          ],
+          "bonne": 0,
+          "explication": "D'où `require_once` pour les fichiers de fonctions."
+        },
+        {
+          "id": "u05-l2-e5",
+          "type": "vf",
+          "notions": [
+            "inclusion-fichiers"
+          ],
+          "question": "Avec `include`, un fichier introuvable arrête immédiatement le script.",
+          "bonne": false,
+          "explication": "C'est `require` qui arrête ; `include` émet une erreur et continue."
+        }
+      ]
+    },
+    {
+      "id": "u05-l3",
+      "titre": "Sortir les parties communes",
+      "duree": 7,
+      "notions": [
+        "composants"
+      ],
+      "cartes": [
+        {
+          "titre": "Le copier-coller qui coûte cher",
+          "texte": "Dans le mini-projet de ProgServ1, chaque page recopiait l'en-tête, le pied de page et le bloc `<head>`. Pour changer un lien du menu, il fallait modifier TOUTES les pages : fastidieux et source d'erreurs.",
+          "fiche": "composants"
+        },
+        {
+          "titre": "Un dossier components/",
+          "texte": "Les parties communes vont chacune dans leur fichier : `components/head.php`, `components/header.php`, `components/footer.php`. Les pages restent dans `public/`.",
+          "code": [
+            "<header>",
+            "    <nav>",
+            "        <ul>",
+            "            <li><strong>ninetendogs</strong></li>",
+            "        </ul>",
+            "        <ul>",
+            "            <li><a href=\"./index.php\">Accueil</a></li>",
+            "            <li><a href=\"./create.php\">Nouvel animal</a></li>",
+            "        </ul>",
+            "    </nav>",
+            "</header>"
+          ],
+          "executable": false
+        },
+        {
+          "titre": "Inclure dans chaque page",
+          "texte": "La page inclut chaque partie à sa place. Depuis `public/`, on remonte d'un dossier.",
+          "code": [
+            "<!DOCTYPE html>",
+            "<html lang=\"fr\">",
+            "<?php require __DIR__ . '/../components/head.php'; ?>",
+            "<body>",
+            "    <?php require __DIR__ . '/../components/header.php'; ?>",
+            "    <main>…</main>",
+            "    <?php require __DIR__ . '/../components/footer.php'; ?>",
+            "</body>",
+            "</html>",
+            ""
+          ],
+          "executable": false
+        },
+        {
+          "titre": "Un titre par page",
+          "texte": "`head.php` lit `$title`, avec une valeur par défaut. La page définit `$title` AVANT d'inclure `head.php`.",
+          "code": [
+            "<?php",
+            "$title = \"Créer un animal | ninetendogs\";",
+            "require __DIR__ . '/../components/head.php';",
+            ""
+          ],
+          "fichier": "public/create.php",
+          "fichiers": {
+            "components/head.php": [
+              "<head>",
+              "    <meta charset=\"utf-8\">",
+              "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+              "    <link rel=\"stylesheet\" href=\"./css/styles.css\">",
+              "",
+              "    <title><?= htmlspecialchars($title ?? 'ninetendogs') ?></title>",
+              "    <meta name=\"description\" content=\"<?= htmlspecialchars($description ?? \"ninetendogs - Gestionnaire d'animaux de compagnie\") ?>\">",
+              "</head>"
+            ]
+          },
+          "piege": "`htmlspecialchars($title ?? 'ninetendogs')` : le `??` est à l'intérieur. À l'extérieur, la valeur par défaut ne servirait jamais."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u05-l3-e1",
+          "type": "qcm",
+          "notions": [
+            "composants"
+          ],
+          "question": "Quel est le principal avantage de sortir l'en-tête dans `components/header.php` ?",
+          "choix": [
+            "Une modification se fait à un seul endroit et se répercute sur toutes les pages",
+            "La page se charge deux fois plus vite",
+            "Le menu devient sécurisé",
+            "On n'a plus besoin de HTML"
+          ],
+          "bonne": 0,
+          "explication": "Lisibilité et maintenabilité : un seul fichier à modifier."
+        },
+        {
+          "id": "u05-l3-e2",
+          "type": "trous",
+          "notions": [
+            "composants",
+            "inclusion-fichiers"
+          ],
+          "question": "Complète `public/index.php` pour inclure l'en-tête et le pied de page.",
+          "fichier": "public/index.php",
+          "fichiers": {
+            "components/header.php": [
+              "<header>",
+              "    <nav>",
+              "        <ul>",
+              "            <li><strong>ninetendogs</strong></li>",
+              "        </ul>",
+              "        <ul>",
+              "            <li><a href=\"./index.php\">Accueil</a></li>",
+              "            <li><a href=\"./create.php\">Nouvel animal</a></li>",
+              "        </ul>",
+              "    </nav>",
+              "</header>"
+            ],
+            "components/footer.php": [
+              "<footer>",
+              "    <center>",
+              "        <small>",
+              "            Un projet réalisé dans le cadre du cours <a href=\"https://github.com/heig-vd-progserv-course/heig-vd-progserv1-course\">ProgServ1</a> enseigné à la <a href=\"https://heig-vd.ch\">HEIG-VD</a>.",
+              "        </small>",
+              "    </center>",
+              "</footer>"
+            ]
+          },
+          "code": [
+            "<body>",
+            "    <?php ___ __DIR__ . '/../components/header.php'; ?>",
+            "    <main>Bienvenue !</main>",
+            "    <?php require __DIR__ . '___'; ?>",
+            "</body>",
+            ""
+          ],
+          "solution": [
+            "require",
+            "/../components/footer.php"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "contient": [
+                  "<strong>ninetendogs</strong>",
+                  "Bienvenue !",
+                  "<footer>"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "L'instruction recommandée pour une partie d'interface.",
+            "Même chemin que pour l'en-tête, avec l'autre fichier."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "require",
+                "/components/footer.php"
+              ],
+              "attendu": "erreur",
+              "diagnostic": "fichier-introuvable"
+            },
+            {
+              "trous": [
+                "import",
+                "/../components/footer.php"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "`__DIR__` vaut `public` : `/../` remonte à la racine du projet, puis on descend dans `components`."
+        },
+        {
+          "id": "u05-l3-e3",
+          "type": "bug",
+          "notions": [
+            "composants"
+          ],
+          "question": "Le titre par défaut ne s'affiche jamais, et un avertissement apparaît quand `$title` n'est pas défini. Touche la ligne fautive.",
+          "code": [
+            "<head>",
+            "    <meta charset=\"utf-8\">",
+            "    <title><?= htmlspecialchars($title) ?? 'ninetendogs' ?></title>",
+            "</head>",
+            ""
+          ],
+          "ligne": 3,
+          "choix": [
+            "Le `??` doit être à l'intérieur : `htmlspecialchars($title ?? 'ninetendogs')`",
+            "Il faut `echo` au lieu de `<?=`",
+            "Le titre doit être en majuscules",
+            "`htmlspecialchars` est interdit dans `<head>`"
+          ],
+          "bonne": 0,
+          "explication": "`htmlspecialchars()` ne retourne jamais `null` : la valeur par défaut placée après ne sert jamais."
+        },
+        {
+          "id": "u05-l3-e4",
+          "type": "ecrire",
+          "notions": [
+            "composants",
+            "php-html"
+          ],
+          "question": "Écris `public/index.php` : définis `$title` à « Page d'accueil | ninetendogs », inclus `head.php`, `header.php` et `footer.php` (dossier `components/`), et, entre l'en-tête et le pied de page, un tableau avec une ligne par animal de `getPets()` : son nom (échappé) et le libellé de son espèce (`PET_SPECIES`). Les constantes et fonctions sont dans `src/`.",
+          "fichier": "public/index.php",
+          "fichiers": {
+            "components/head.php": [
+              "<head>",
+              "    <meta charset=\"utf-8\">",
+              "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+              "    <link rel=\"stylesheet\" href=\"./css/styles.css\">",
+              "",
+              "    <title><?= htmlspecialchars($title ?? 'ninetendogs') ?></title>",
+              "    <meta name=\"description\" content=\"<?= htmlspecialchars($description ?? \"ninetendogs - Gestionnaire d'animaux de compagnie\") ?>\">",
+              "</head>"
+            ],
+            "components/header.php": [
+              "<header>",
+              "    <nav>",
+              "        <ul>",
+              "            <li><strong>ninetendogs</strong></li>",
+              "        </ul>",
+              "        <ul>",
+              "            <li><a href=\"./index.php\">Accueil</a></li>",
+              "            <li><a href=\"./create.php\">Nouvel animal</a></li>",
+              "        </ul>",
+              "    </nav>",
+              "</header>"
+            ],
+            "components/footer.php": [
+              "<footer>",
+              "    <center>",
+              "        <small>",
+              "            Un projet réalisé dans le cadre du cours <a href=\"https://github.com/heig-vd-progserv-course/heig-vd-progserv1-course\">ProgServ1</a> enseigné à la <a href=\"https://heig-vd.ch\">HEIG-VD</a>.",
+              "        </small>",
+              "    </center>",
+              "</footer>"
+            ],
+            "src/constants.php": [
+              "<?php",
+              "const PET_SPECIES = [",
+              "    'dog' => 'Chien',",
+              "    'cat' => 'Chat',",
+              "    'lizard' => 'Lézard',",
+              "    'snake' => 'Serpent',",
+              "    'bird' => 'Oiseau',",
+              "    'rabbit' => 'Lapin',",
+              "    'other' => 'Autre',",
+              "];",
+              "",
+              "const PET_SEXES = [",
+              "    'male' => 'Mâle',",
+              "    'female' => 'Femelle',",
+              "];"
+            ],
+            "src/functions.php": [
+              "<?php",
+              "// Dans l'appli, getPets() lit un tableau au lieu de la base de données.",
+              "function getPets(): array {",
+              "    return [",
+              "        ['name' => 'Nalia', 'species' => 'dog', 'sex' => 'female', 'birthday' => '2019-04-12'],",
+              "        ['name' => 'Tofu', 'species' => 'cat', 'sex' => 'male', 'birthday' => '2021-09-30'],",
+              "        ['name' => '<b>Rex</b>', 'species' => 'lizard', 'sex' => 'male', 'birthday' => '2022-01-05'],",
+              "    ];",
+              "}"
+            ]
+          },
+          "depart": [
+            "<?php",
+            "require_once __DIR__ . '/../src/constants.php';",
+            "require_once __DIR__ . '/../src/functions.php';",
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Titre de la page",
+                "contient": [
+                  "<title>Page d&#039;accueil | ninetendogs</title>"
+                ]
+              },
+              {
+                "titre": "En-tête et pied de page inclus",
+                "contient": [
+                  "<strong>ninetendogs</strong>",
+                  "<footer>",
+                  "HEIG-VD"
+                ]
+              },
+              {
+                "titre": "Les animaux",
+                "contient": [
+                  "Nalia",
+                  "Chien",
+                  "Tofu",
+                  "Chat",
+                  "Lézard"
+                ]
+              },
+              {
+                "titre": "Nom piégé échappé",
+                "contient": [
+                  "&lt;b&gt;Rex&lt;/b&gt;"
+                ],
+                "neContientPas": [
+                  "<b>Rex</b>"
+                ],
+                "siEchec": "Échappe chaque valeur affichée : `htmlspecialchars($pet['name'])`."
+              }
+            ],
+            "obligatoire": [
+              "require"
+            ]
+          },
+          "indices": [
+            "Définis `$title` avant `require __DIR__ . '/../components/head.php';`.",
+            "Dans le `<body>` : header, puis `<main>` avec une boucle `foreach (getPets() as $pet)` qui écrit une ligne `<tr>`, puis footer.",
+            {
+              "texte": "Une ligne du tableau :",
+              "code": "<tr>\n    <td><?= htmlspecialchars($pet['name']) ?></td>\n    <td><?= htmlspecialchars(PET_SPECIES[___]) ?></td>\n</tr>"
+            }
+          ],
+          "solution": [
+            "<?php",
+            "require_once __DIR__ . '/../src/constants.php';",
+            "require_once __DIR__ . '/../src/functions.php';",
+            "",
+            "$title = \"Page d'accueil | ninetendogs\";",
+            "$pets = getPets();",
+            "?>",
+            "<!DOCTYPE html>",
+            "<html lang=\"fr\">",
+            "<?php require __DIR__ . '/../components/head.php'; ?>",
+            "<body class=\"container\">",
+            "    <?php require __DIR__ . '/../components/header.php'; ?>",
+            "    <main>",
+            "        <h1>ninetendogs</h1>",
+            "        <table>",
+            "            <?php foreach ($pets as $pet) { ?>",
+            "                <tr>",
+            "                    <td><?= htmlspecialchars($pet['name']) ?></td>",
+            "                    <td><?= htmlspecialchars(PET_SPECIES[$pet['species']]) ?></td>",
+            "                </tr>",
+            "            <?php } ?>",
+            "        </table>",
+            "    </main>",
+            "    <?php require __DIR__ . '/../components/footer.php'; ?>",
+            "</body>",
+            "</html>"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "<?php\nrequire_once __DIR__ . '/../src/constants.php';\nrequire_once __DIR__ . '/../src/functions.php';\n\n$pets = getPets();\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<?php require __DIR__ . '/../components/head.php'; ?>\n<body class=\"container\">\n    <?php require __DIR__ . '/../components/header.php'; ?>\n    <main>\n        <h1>ninetendogs</h1>\n        <table>\n            <?php foreach ($pets as $pet) { ?>\n                <tr>\n                    <td><?= htmlspecialchars($pet['name']) ?></td>\n                    <td><?= htmlspecialchars(PET_SPECIES[$pet['species']]) ?></td>\n                </tr>\n            <?php } ?>\n        </table>\n    </main>\n    <?php require __DIR__ . '/../components/footer.php'; ?>\n</body>\n</html>",
+              "attendu": "echec"
+            },
+            {
+              "code": "<?php\nrequire_once __DIR__ . '/../src/constants.php';\nrequire_once __DIR__ . '/../src/functions.php';\n\n$title = \"Page d'accueil | ninetendogs\";\n$pets = getPets();\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<?php require __DIR__ . '/../components/head.php'; ?>\n<body class=\"container\">\n    <?php require __DIR__ . '/../components/header.php'; ?>\n    <main>\n        <h1>ninetendogs</h1>\n        <table>\n            <?php foreach ($pets as $pet) { ?>\n                <tr>\n                    <td><?= $pet['name'] ?></td>\n                    <td><?= htmlspecialchars(PET_SPECIES[$pet['species']]) ?></td>\n                </tr>\n            <?php } ?>\n        </table>\n    </main>\n    <?php require __DIR__ . '/../components/footer.php'; ?>\n</body>\n</html>",
+              "attendu": "echec"
+            },
+            {
+              "code": "<?php\nrequire_once __DIR__ . '/../src/constants.php';\nrequire_once __DIR__ . '/../src/functions.php';\n\n$title = \"Page d'accueil | ninetendogs\";\n$pets = getPets();\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<?php require __DIR__ . '/../components/head.php'; ?>\n<body class=\"container\">\n    <?php require __DIR__ . '/../components/header.php'; ?>\n    <main>\n        <h1>ninetendogs</h1>\n        <table>\n            <?php foreach ($pets as $pet) { ?>\n                <tr>\n                    <td><?= htmlspecialchars($pet['name']) ?></td>\n                    <td><?= htmlspecialchars($pet['species']) ?></td>\n                </tr>\n            <?php } ?>\n        </table>\n    </main>\n    <?php require __DIR__ . '/../components/footer.php'; ?>\n</body>\n</html>",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "La page ne contient plus que ce qui lui est propre ; le reste vient des composants partagés."
+        },
+        {
+          "id": "u05-l3-e5",
+          "type": "vf",
+          "notions": [
+            "composants"
+          ],
+          "question": "Si on oublie de définir `$title` (ou si on se trompe dans son nom), PHP affiche une erreur dans `head.php`.",
+          "bonne": false,
+          "explication": "Grâce au `??`, la valeur par défaut s'affiche en silence : c'est justement le défaut de cette approche, que `render()` corrige."
+        }
+      ]
+    },
+    {
+      "id": "u05-l4",
+      "titre": "render() : des composants avec paramètres",
+      "duree": 7,
+      "notions": [
+        "render-fonction"
+      ],
+      "cartes": [
+        {
+          "titre": "Le défaut des variables globales",
+          "texte": "Avec `$title` défini dans la page, rien dans `head.php` ne dit quelles variables il attend, et rien dans la page ne dit à qui elles sont destinées.",
+          "fiche": "render-fonction"
+        },
+        {
+          "titre": "Une fonction pour afficher un composant",
+          "texte": "`render()` reçoit le nom du composant et ses valeurs. Elle calcule le chemin, crée les variables, puis inclut le fichier.",
+          "code": [
+            "<?php",
+            "function render(string $component, array $data = []): void {",
+            "    $componentPath = __DIR__ . '/components/' . $component . '.php';",
+            "    extract($data, EXTR_SKIP);",
+            "    require $componentPath;",
+            "}",
+            "",
+            "render('card', ['name' => 'Nalia', 'species' => 'Chien']);",
+            "render('card', ['name' => 'Tofu', 'species' => 'Chat']);",
+            "render('card');",
+            ""
+          ],
+          "fichiers": {
+            "components/card.php": [
+              "<article>",
+              "    <h3><?= htmlspecialchars($name ?? 'Sans nom') ?></h3>",
+              "    <p><?= htmlspecialchars($species ?? 'Espèce inconnue') ?></p>",
+              "</article>"
+            ]
+          },
+          "analogie": "Comme pour le cuisinier : on lui tend ses ingrédients au moment de l'appel, au lieu de les laisser traîner sur le plan de travail."
+        },
+        {
+          "titre": "extract()",
+          "texte": "`extract(['title' => 'Accueil'])` crée la variable `$title`. Dans `render()`, ces variables sont **locales** : elles disparaissent après l'affichage du composant.",
+          "code": [
+            "function show(array $data): void {",
+            "    extract($data);",
+            "    echo \"$name a $age ans<br>\";",
+            "}",
+            "",
+            "show(['name' => 'Ana', 'age' => 31]);",
+            "var_dump(isset($name));",
+            ""
+          ]
+        },
+        {
+          "titre": "require, pas require_once",
+          "texte": "Un composant peut s'afficher plusieurs fois dans une page (une carte par animal) : `render()` utilise `require`. Et `EXTR_SKIP` empêche une valeur de `$data` d'écraser `$component` ou `$componentPath`.",
+          "astuce": "C'est le principe des composants et de leurs *props* dans Twig, Blade, React ou Vue."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u05-l4-e1",
+          "type": "predire",
+          "notions": [
+            "render-fonction"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "function greet(array $data = []): void {",
+            "    extract($data, EXTR_SKIP);",
+            "    echo \"Bonjour \" . ($name ?? \"inconnu\") . \"<br>\";",
+            "}",
+            "",
+            "greet(['name' => 'Léa']);",
+            "greet();",
+            "echo isset($name) ? \"fuite\" : \"propre\";",
+            ""
+          ],
+          "explication": "La valeur par défaut sert quand `$name` n'existe pas ; les variables créées par `extract` restent dans la fonction."
+        },
+        {
+          "id": "u05-l4-e2",
+          "type": "qcm",
+          "notions": [
+            "render-fonction"
+          ],
+          "question": "Pourquoi `render()` fait-il `require` et non `require_once` ?",
+          "choix": [
+            "Pour pouvoir afficher plusieurs fois le même composant dans une page",
+            "Parce que require_once est plus lent",
+            "Pour que le composant soit obligatoire",
+            "Parce que require_once n'accepte pas de variable"
+          ],
+          "bonne": 0,
+          "explication": "Avec `require_once`, la deuxième carte ne s'afficherait pas."
+        },
+        {
+          "id": "u05-l4-e3",
+          "type": "ordre",
+          "notions": [
+            "render-fonction"
+          ],
+          "question": "Remets dans l'ordre le corps de `render()`.",
+          "items": [
+            "$componentPath = __DIR__ . '/../components/' . $component . '.php';",
+            "extract($data, EXTR_SKIP);",
+            "require $componentPath;"
+          ],
+          "mono": true,
+          "explication": "Le chemin d'abord (avant qu'`extract` ne crée des variables), puis les variables, puis l'inclusion."
+        },
+        {
+          "id": "u05-l4-e4",
+          "type": "vf",
+          "notions": [
+            "render-fonction"
+          ],
+          "question": "`render('footer')` est valide même si le pied de page n'a besoin d'aucune valeur.",
+          "bonne": true,
+          "explication": "`$data` a une valeur par défaut : le tableau vide."
+        },
+        {
+          "id": "u05-l4-e5",
+          "type": "trous",
+          "notions": [
+            "render-fonction"
+          ],
+          "question": "Complète l'appel : affiche le composant `card` pour Moka, un lapin.",
+          "prelude": [
+            "function render(string $component, array $data = []): void {",
+            "    $componentPath = '/app/components/' . $component . '.php';",
+            "    extract($data, EXTR_SKIP);",
+            "    require $componentPath;",
+            "}",
+            ""
+          ],
+          "fichiers": {
+            "components/card.php": [
+              "<article>",
+              "    <h3><?= htmlspecialchars($name ?? 'Sans nom') ?></h3>",
+              "    <p><?= htmlspecialchars($species ?? 'Espèce inconnue') ?></p>",
+              "</article>"
+            ]
+          },
+          "code": "render(___, ['name' => ___, 'species' => 'Lapin']);",
+          "solution": [
+            "'card'",
+            "'Moka'"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "contient": [
+                  "<h3>Moka</h3>",
+                  "<p>Lapin</p>"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le nom du composant, sans `.php`, entre guillemets.",
+            "La valeur de la clé `name`."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "'card.php'",
+                "'Moka'"
+              ],
+              "attendu": "erreur",
+              "diagnostic": "fichier-introuvable"
+            },
+            {
+              "trous": [
+                "card",
+                "'Moka'"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "`render('card', [...])` : le nom du composant, puis ses valeurs (ses props)."
+        }
+      ]
+    }
+  ],
+  "jeux": [
+    {
+      "id": "u05-require",
+      "titre": "require ou require_once ?",
+      "description": "Dix questions éclair sur l'inclusion et les composants.",
+      "tours": 10,
+      "questions": [
+        {
+          "id": "u05-j1",
+          "type": "qcm",
+          "notions": [
+            "inclusion-fichiers"
+          ],
+          "mono": true,
+          "question": "Pour inclure `src/functions.php` :",
+          "choix": [
+            "require_once",
+            "require",
+            "include",
+            "import"
+          ],
+          "bonne": 0,
+          "explication": "Une seule fois : sinon `Cannot redeclare`."
+        },
+        {
+          "id": "u05-j2",
+          "type": "qcm",
+          "notions": [
+            "inclusion-fichiers"
+          ],
+          "mono": true,
+          "question": "Pour inclure `components/footer.php` :",
+          "choix": [
+            "require",
+            "require_once",
+            "include_once",
+            "use"
+          ],
+          "bonne": 0,
+          "explication": "Une partie d'interface peut être affichée plusieurs fois."
+        },
+        {
+          "id": "u05-j3",
+          "type": "vf",
+          "notions": [
+            "inclusion-fichiers"
+          ],
+          "question": "`require` arrête le script si le fichier est introuvable.",
+          "bonne": true,
+          "explication": "Erreur fatale."
+        },
+        {
+          "id": "u05-j4",
+          "type": "vf",
+          "notions": [
+            "php-html"
+          ],
+          "question": "`<?= $x ?>` affiche la valeur de `$x`.",
+          "bonne": true,
+          "explication": "C'est un `echo` abrégé."
+        },
+        {
+          "id": "u05-j5",
+          "type": "qcm",
+          "notions": [
+            "composants"
+          ],
+          "mono": true,
+          "question": "Depuis `public/index.php`, quel chemin vers l'en-tête ?",
+          "choix": [
+            "__DIR__ . '/../components/header.php'",
+            "__DIR__ . '/components/header.php'",
+            "'/components/header.php'",
+            "__DIR__ . '../components/header.php'"
+          ],
+          "bonne": 0,
+          "explication": "On remonte d'un dossier (`/..`), puis on descend dans `components`."
+        },
+        {
+          "id": "u05-j6",
+          "type": "qcm",
+          "notions": [
+            "composants"
+          ],
+          "mono": true,
+          "question": "Quelle écriture donne vraiment une valeur par défaut au titre ?",
+          "choix": [
+            "htmlspecialchars($title ?? 'ninetendogs')",
+            "htmlspecialchars($title) ?? 'ninetendogs'",
+            "htmlspecialchars($title || 'ninetendogs')",
+            "htmlspecialchars($title) ?: 'ninetendogs'"
+          ],
+          "bonne": 0,
+          "explication": "Le `??` à l'intérieur, appliqué à la variable."
+        },
+        {
+          "id": "u05-j7",
+          "type": "qcm",
+          "notions": [
+            "render-fonction"
+          ],
+          "mono": true,
+          "question": "Quelle fonction transforme `['title' => 'X']` en variable `$title` ?",
+          "choix": [
+            "extract",
+            "explode",
+            "compact",
+            "array_keys"
+          ],
+          "bonne": 0,
+          "explication": "`extract($data)`."
+        },
+        {
+          "id": "u05-j8",
+          "type": "vf",
+          "notions": [
+            "render-fonction"
+          ],
+          "question": "Les variables créées par `extract()` dans `render()` existent encore après l'appel, dans la page.",
+          "bonne": false,
+          "explication": "Elles sont locales à la fonction."
+        },
+        {
+          "id": "u05-j9",
+          "type": "qcm",
+          "notions": [
+            "render-fonction"
+          ],
+          "question": "À quoi sert `EXTR_SKIP` ?",
+          "choix": [
+            "Ne pas écraser les variables qui existent déjà",
+            "Ignorer les valeurs vides",
+            "Sauter le composant",
+            "Échapper les valeurs"
+          ],
+          "bonne": 0,
+          "explication": "`$component`, `$data` et `$componentPath` restent intacts."
+        },
+        {
+          "id": "u05-j10",
+          "type": "vf",
+          "notions": [
+            "composants"
+          ],
+          "question": "Le cours range les pages web dans `public/` et les parties communes dans `components/`.",
+          "bonne": true,
+          "explication": "Et le code (fonctions, constantes) dans `src/`."
+        },
+        {
+          "id": "u05-j11",
+          "type": "qcm",
+          "notions": [
+            "php-html"
+          ],
+          "mono": true,
+          "question": "Comment refermer une boucle `foreach` ouverte dans un bloc PHP au milieu du HTML ?",
+          "choix": [
+            "<?php } ?>",
+            "</foreach>",
+            "<?= } ?>",
+            "<?php end; ?>"
+          ],
+          "bonne": 0,
+          "explication": "Un bloc PHP qui ne contient que l'accolade fermante."
+        }
+      ]
+    }
+  ],
+  "quiz": {
+    "titre": "Quiz : réutiliser des parties d'interface",
+    "questions": [
+      {
+        "id": "u05-q1",
+        "type": "assoc",
+        "notions": [
+          "inclusion-fichiers"
+        ],
+        "question": "Associe.",
+        "mono": true,
+        "paires": [
+          [
+            "require",
+            "Arrêt si le fichier manque"
+          ],
+          [
+            "include",
+            "Continue si le fichier manque"
+          ],
+          [
+            "require_once",
+            "Une seule fois, arrêt si manquant"
+          ]
+        ],
+        "explication": "Les variantes d'inclusion."
+      },
+      {
+        "id": "u05-q2",
+        "type": "qcm",
+        "notions": [
+          "inclusion-fichiers"
+        ],
+        "question": "Pourquoi le cours inclut-il les parties d'interface avec `require` plutôt qu'avec `require_once` ?",
+        "choix": [
+          "Elles peuvent devoir être affichées plusieurs fois dans une même page",
+          "require est plus sécurisé",
+          "require_once ne marche pas avec du HTML",
+          "Pour les charger plus vite"
+        ],
+        "bonne": 0,
+        "explication": "Avec `_once`, la deuxième inclusion serait ignorée."
+      },
+      {
+        "id": "u05-q3",
+        "type": "predire",
+        "notions": [
+          "php-html"
+        ],
+        "question": "Que reçoit le navigateur ?",
+        "code": [
+          "<?php $n = 3; ?>",
+          "<?php for ($i = 1; $i <= $n; $i++) { ?>",
+          "<span><?= $i ?></span>",
+          "<?php } ?>",
+          ""
+        ],
+        "explication": "Le `<span>` est produit trois fois ; seuls les résultats sont envoyés."
+      },
+      {
+        "id": "u05-q4",
+        "type": "qcm",
+        "notions": [
+          "composants"
+        ],
+        "question": "Quelles parties le cours propose-t-il de sortir dans `components/` ?",
+        "choix": [
+          "head.php, header.php et footer.php",
+          "index.php et create.php",
+          "functions.php et constants.php",
+          "styles.css et logo.svg"
+        ],
+        "bonne": 0,
+        "explication": "Le bloc `<head>`, l'en-tête et le pied de page, communs à toutes les pages."
+      },
+      {
+        "id": "u05-q5",
+        "type": "bug",
+        "notions": [
+          "composants"
+        ],
+        "question": "Touche la ligne fautive (`index.php` est dans `public/`).",
+        "code": [
+          "<?php",
+          "$title = \"Accueil\";",
+          "require __DIR__ . '/components/head.php';",
+          ""
+        ],
+        "ligne": 3,
+        "choix": [
+          "Il faut remonter d'un dossier : `__DIR__ . '/../components/head.php'`",
+          "`$title` doit être défini après le require",
+          "Il faut `require_once`",
+          "Il faut `include`"
+        ],
+        "bonne": 0,
+        "explication": "`__DIR__` vaut `public` : `components` est un dossier au-dessus."
+      },
+      {
+        "id": "u05-q6",
+        "type": "vf",
+        "notions": [
+          "composants"
+        ],
+        "question": "Une modification de `components/footer.php` se répercute sur toutes les pages qui l'incluent.",
+        "bonne": true,
+        "explication": "C'est tout l'intérêt : un seul endroit à modifier."
+      },
+      {
+        "id": "u05-q7",
+        "type": "qcm",
+        "notions": [
+          "render-fonction"
+        ],
+        "question": "Quel défaut de l'approche « variables globales » `render()` corrige-t-il ?",
+        "choix": [
+          "On ne voit pas quelles valeurs un composant attend, et une faute de nom passe inaperçue",
+          "Les composants s'affichent trop lentement",
+          "On ne peut pas utiliser htmlspecialchars",
+          "Les composants ne peuvent pas contenir de HTML"
+        ],
+        "bonne": 0,
+        "explication": "Avec `render('head', ['title' => …])`, la relation est explicite."
+      },
+      {
+        "id": "u05-q8",
+        "type": "predire",
+        "notions": [
+          "render-fonction"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "function badge(array $data = []): void {",
+          "    extract($data, EXTR_SKIP);",
+          "    echo \"[\" . ($label ?? \"?\") . \"]\";",
+          "}",
+          "badge(['label' => 'admin']);",
+          "badge();",
+          "badge(['label' => 'auteur']);",
+          ""
+        ],
+        "explication": "Chaque appel reçoit ses propres valeurs ; sans valeur, le `??` donne « ? »."
+      },
+      {
+        "id": "u05-q9",
+        "type": "ordre",
+        "notions": [
+          "render-fonction"
+        ],
+        "question": "Remets la fonction dans l'ordre.",
+        "items": [
+          "function render(string $component, array $data = []): void {",
+          "    $componentPath = __DIR__ . '/../components/' . $component . '.php';",
+          "    extract($data, EXTR_SKIP);",
+          "    require $componentPath;",
+          "}"
+        ],
+        "mono": true,
+        "explication": "Signature, chemin, variables, inclusion."
+      },
+      {
+        "id": "u05-q10",
+        "type": "qcm",
+        "notions": [
+          "render-fonction"
+        ],
+        "question": "Comment s'appellent les valeurs passées à un composant dans React ou Vue, selon le cours ?",
+        "choix": [
+          "Des props",
+          "Des cookies",
+          "Des sessions",
+          "Des traits"
+        ],
+        "bonne": 0,
+        "explication": "*props*, pour *properties*."
+      },
+      {
+        "id": "u05-q11",
+        "type": "trous",
+        "notions": [
+          "php-html"
+        ],
+        "question": "Complète : coche « Femelle » si `$sex` vaut `female`.",
+        "donnees": {
+          "sex": "female"
+        },
+        "code": [
+          "<input type=\"radio\" name=\"sex\" value=\"female\" <?= $sex ___ \"female\" ___ \"checked\" : \"\" ?>>",
+          ""
+        ],
+        "solution": [
+          "===",
+          "?"
+        ],
+        "tests": {
+          "cas": [
+            {
+              "titre": "female",
+              "contient": [
+                "value=\"female\" checked"
+              ]
+            },
+            {
+              "titre": "male",
+              "donnees": {
+                "sex": "male"
+              },
+              "neContientPas": [
+                "checked"
+              ]
+            }
+          ]
+        },
+        "indices": [
+          "Comparer strictement.",
+          "L'opérateur ternaire : condition, puis `?`."
+        ],
+        "erreursTypiques": [
+          {
+            "trous": [
+              "=",
+              "?"
+            ],
+            "attendu": "echec"
+          }
+        ],
+        "explication": "`condition ? \"checked\" : \"\"`."
+      },
+      {
+        "id": "u05-q12",
+        "type": "vf",
+        "notions": [
+          "inclusion-fichiers"
+        ],
+        "question": "`include_once` arrête le script si le fichier est introuvable.",
+        "bonne": false,
+        "explication": "Les `include` continuent ; ce sont les `require` qui arrêtent."
+      },
+      {
+        "id": "u05-q13",
+        "type": "qcm",
+        "notions": [
+          "php-html",
+          "composants"
+        ],
+        "question": "Pourquoi échapper même `$title`, qui vient de notre propre code ?",
+        "choix": [
+          "Par habitude : échapper tout ce qui est affiché évite les failles XSS",
+          "Parce que le titre est dangereux",
+          "Pour le référencement",
+          "Ce n'est pas utile"
+        ],
+        "bonne": 0,
+        "explication": "Le cours le recommande : échapper systématiquement tout ce qui est affiché dans du HTML."
+      },
+      {
+        "id": "u05-q14",
+        "type": "ecrire",
+        "notions": [
+          "render-fonction"
+        ],
+        "question": "Écris `renderList(array $items): string` qui retourne une liste HTML : `<ul>`, un `<li>` par élément (échappé), `</ul>`, sans espaces ni retours à la ligne.",
+        "depart": [
+          ""
+        ],
+        "tests": {
+          "fonction": "renderList",
+          "cas": [
+            {
+              "args": [
+                [
+                  "Nalia",
+                  "Tofu"
+                ]
+              ],
+              "attendu": "<ul><li>Nalia</li><li>Tofu</li></ul>"
+            },
+            {
+              "titre": "Élément piégé",
+              "args": [
+                [
+                  "<b>Rex</b>"
+                ]
+              ],
+              "attendu": "<ul><li>&lt;b&gt;Rex&lt;/b&gt;</li></ul>"
+            },
+            {
+              "titre": "Liste vide",
+              "args": [
+                []
+              ],
+              "attendu": "<ul></ul>"
+            }
+          ]
+        },
+        "indices": [
+          "Commence avec `$html = \"<ul>\";`.",
+          "Pour chaque élément, ajoute `\"<li>\" . htmlspecialchars($item) . \"</li>\"` avec `.=`.",
+          {
+            "texte": "La structure :",
+            "code": "$html = \"<ul>\";\nforeach ($items as $item) {\n    $html .= ___;\n}\nreturn $html . \"</ul>\";"
+          }
+        ],
+        "solution": [
+          "function renderList(array $items): string {",
+          "    $html = \"<ul>\";",
+          "    foreach ($items as $item) {",
+          "        $html .= \"<li>\" . htmlspecialchars($item) . \"</li>\";",
+          "    }",
+          "    return $html . \"</ul>\";",
+          "}",
+          ""
+        ],
+        "erreursTypiques": [
+          {
+            "code": "function renderList(array $items): string {\n    $html = \"<ul>\";\n    foreach ($items as $item) {\n        $html .= \"<li>\" . $item . \"</li>\";\n    }\n    return $html . \"</ul>\";\n}",
+            "attendu": "echec"
+          },
+          {
+            "code": "function renderList(array $items): string {\n    foreach ($items as $item) {\n        $html = \"<li>\" . htmlspecialchars($item) . \"</li>\";\n    }\n    return \"<ul>\" . $html . \"</ul>\";\n}",
+            "attendu": "echec"
+          }
+        ],
+        "explication": "`.=` accumule le HTML ; `htmlspecialchars` neutralise les balises des données."
+      },
+      {
+        "id": "u05-q15",
+        "type": "qcm",
+        "notions": [
+          "php-html"
+        ],
+        "mono": true,
+        "question": "Quelle ligne garde l'option choisie (`$species`) dans une liste ?",
+        "choix": [
+          "<option value=\"dog\" <?= $species === \"dog\" ? \"selected\" : \"\" ?>>Chien</option>",
+          "<option value=\"dog\" selected>Chien</option>",
+          "<option value=\"<?= $species ?>\">Chien</option>",
+          "<option value=\"dog\" <?= selected ?>>Chien</option>"
+        ],
+        "bonne": 0,
+        "explication": "Seule l'option égale au choix reçoit `selected`."
+      }
+    ]
+  },
+  "boss": [
+    {
+      "id": "u05-b1",
+      "titre": "ninetendogs : les parties communes",
+      "source": "Séance 4, exercice 1 (inclure les composants)",
+      "notions": [
+        "composants",
+        "inclusion-fichiers",
+        "php-html"
+      ],
+      "enonce": "**L'exercice du cours** : en reprenant une version simplifiée du mini-projet des animaux de compagnie réalisé dans le cours Programmation serveur 1 (ProgServ1), adaptez le code pour que les parties d'interface communes soient réutilisables avec l'approche de réutilisation des parties d'interface.\n\n**Ta mission ici** : les composants `head.php`, `header.php` et `footer.php` sont déjà sortis dans `components/`. Réécris la page `public/create.php` (le formulaire de création d'un animal) pour qu'elle les **inclue** au lieu de les recopier :\n\n- `$title` vaut « Créer un nouvel animal de compagnie | ninetendogs » ;\n- la page inclut `head.php`, puis, dans `<body>`, `header.php`, le contenu propre à la page, et `footer.php` ;\n- le contenu propre : un titre `<h1>Créer un nouvel animal de compagnie</h1>` et un formulaire en POST vers `./create.php` avec un champ `name` (qui garde sa valeur, échappée) et une liste `species` construite avec `PET_SPECIES` (l'option choisie porte `selected`).\n\n*Dans l'appli, on ne traite pas l'envoi : on vérifie seulement l'affichage, avant et après un envoi.*",
+      "fichier": "public/create.php",
+      "fichiers": {
+        "components/head.php": [
+          "<head>",
+          "    <meta charset=\"utf-8\">",
+          "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+          "    <link rel=\"stylesheet\" href=\"./css/styles.css\">",
+          "",
+          "    <title><?= htmlspecialchars($title ?? 'ninetendogs') ?></title>",
+          "    <meta name=\"description\" content=\"<?= htmlspecialchars($description ?? \"ninetendogs - Gestionnaire d'animaux de compagnie\") ?>\">",
+          "</head>"
+        ],
+        "components/header.php": [
+          "<header>",
+          "    <nav>",
+          "        <ul>",
+          "            <li><strong>ninetendogs</strong></li>",
+          "        </ul>",
+          "        <ul>",
+          "            <li><a href=\"./index.php\">Accueil</a></li>",
+          "            <li><a href=\"./create.php\">Nouvel animal</a></li>",
+          "        </ul>",
+          "    </nav>",
+          "</header>"
+        ],
+        "components/footer.php": [
+          "<footer>",
+          "    <center>",
+          "        <small>",
+          "            Un projet réalisé dans le cadre du cours <a href=\"https://github.com/heig-vd-progserv-course/heig-vd-progserv1-course\">ProgServ1</a> enseigné à la <a href=\"https://heig-vd.ch\">HEIG-VD</a>.",
+          "        </small>",
+          "    </center>",
+          "</footer>"
+        ],
+        "src/constants.php": [
+          "<?php",
+          "const PET_SPECIES = [",
+          "    'dog' => 'Chien',",
+          "    'cat' => 'Chat',",
+          "    'lizard' => 'Lézard',",
+          "    'snake' => 'Serpent',",
+          "    'bird' => 'Oiseau',",
+          "    'rabbit' => 'Lapin',",
+          "    'other' => 'Autre',",
+          "];",
+          "",
+          "const PET_SEXES = [",
+          "    'male' => 'Mâle',",
+          "    'female' => 'Femelle',",
+          "];"
+        ]
+      },
+      "depart": [
+        "<?php",
+        "require_once __DIR__ . '/../src/constants.php';",
+        "",
+        "$name = $_POST[\"name\"] ?? '';",
+        "$species = $_POST[\"species\"] ?? '';",
+        "?>",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Titre propre à la page",
+            "requete": {
+              "methode": "GET"
+            },
+            "contient": [
+              "<title>Créer un nouvel animal de compagnie | ninetendogs</title>"
+            ]
+          },
+          {
+            "titre": "En-tête et pied de page inclus",
+            "requete": {
+              "methode": "GET"
+            },
+            "contient": [
+              "<strong>ninetendogs</strong>",
+              "<footer>",
+              "<h1>Créer un nouvel animal de compagnie</h1>"
+            ]
+          },
+          {
+            "titre": "Le formulaire",
+            "requete": {
+              "methode": "GET"
+            },
+            "contient": [
+              "method=\"POST\"",
+              "name=\"name\"",
+              "name=\"species\"",
+              "value=\"dog\"",
+              "Lézard"
+            ]
+          },
+          {
+            "titre": "Après envoi : valeurs gardées",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "Moka",
+                "species": "rabbit"
+              }
+            },
+            "contient": [
+              "value=\"Moka\"",
+              "value=\"rabbit\" selected"
+            ],
+            "neContientPas": [
+              "value=\"dog\" selected"
+            ]
+          },
+          {
+            "titre": "Saisie piégée échappée",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "\"><script>alert(1)</script>",
+                "species": "cat"
+              }
+            },
+            "neContientPas": [
+              "<script>alert(1)</script>"
+            ],
+            "siEchec": "Réaffiche la saisie avec `htmlspecialchars($name)`."
+          }
+        ],
+        "obligatoire": [
+          "require"
+        ]
+      },
+      "indices": [
+        "Le squelette : `<!DOCTYPE html>`, `<html lang=\"fr\">`, puis `<?php require __DIR__ . '/../components/head.php'; ?>` et le `<body>`. N'oublie pas de définir `$title` AVANT d'inclure `head.php`.",
+        "Dans le `<body>` : header, `<main>` (le `<h1>` et le formulaire), footer. Pour la liste : `foreach (PET_SPECIES as $key => $label)` et `<?= $species === $key ? \"selected\" : \"\" ?>`.",
+        {
+          "texte": "Le haut de la page :",
+          "code": "<?php\n// …\n$title = ___;\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<?php require __DIR__ . '/../components/head.php'; ?>\n<body class=\"container\">\n    <?php require ___; ?>"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "require_once __DIR__ . '/../src/constants.php';",
+        "",
+        "$name = $_POST[\"name\"] ?? '';",
+        "$species = $_POST[\"species\"] ?? '';",
+        "$title = \"Créer un nouvel animal de compagnie | ninetendogs\";",
+        "?>",
+        "<!DOCTYPE html>",
+        "<html lang=\"fr\">",
+        "<?php require __DIR__ . '/../components/head.php'; ?>",
+        "<body class=\"container\">",
+        "    <?php require __DIR__ . '/../components/header.php'; ?>",
+        "    <main>",
+        "        <h1>Créer un nouvel animal de compagnie</h1>",
+        "        <form action=\"./create.php\" method=\"POST\">",
+        "            <label for=\"name\">Nom</label>",
+        "            <input type=\"text\" id=\"name\" name=\"name\" value=\"<?= htmlspecialchars($name) ?>\" minlength=\"2\" maxlength=\"50\" required>",
+        "",
+        "            <label for=\"species\">Espèce</label>",
+        "            <select id=\"species\" name=\"species\" required>",
+        "                <?php foreach (PET_SPECIES as $key => $label) { ?>",
+        "                    <option value=\"<?= $key ?>\" <?= $species === $key ? \"selected\" : \"\" ?>><?= $label ?></option>",
+        "                <?php } ?>",
+        "            </select>",
+        "",
+        "            <button type=\"submit\">Créer le nouvel animal</button>",
+        "        </form>",
+        "    </main>",
+        "    <?php require __DIR__ . '/../components/footer.php'; ?>",
+        "</body>",
+        "</html>",
+        ""
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../src/constants.php';\n$name = $_POST[\"name\"] ?? '';\n$species = $_POST[\"species\"] ?? '';\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<?php require __DIR__ . '/../components/head.php'; ?>\n<body>\n<?php require __DIR__ . '/../components/header.php'; ?>\n<h1>Créer un nouvel animal de compagnie</h1>\n<?php require __DIR__ . '/../components/footer.php'; ?>\n</body>\n</html>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../src/constants.php';\n$title = \"Créer un nouvel animal de compagnie | ninetendogs\";\n?>\n<html>\n<?php require __DIR__ . '/components/head.php'; ?>\n</html>",
+          "attendu": "erreur",
+          "diagnostic": "fichier-introuvable"
+        }
+      ],
+      "explication": "La page ne garde que ce qui lui est propre (le titre, le formulaire) ; les parties communes viennent de `components/`."
+    },
+    {
+      "id": "u05-b2",
+      "titre": "ninetendogs : la fonction render()",
+      "source": "Séance 4, exercice 1 (passer des paramètres explicites avec une fonction)",
+      "notions": [
+        "render-fonction",
+        "inclusion-fichiers"
+      ],
+      "enonce": "**L'exercice du cours** : en reprenant une version simplifiée du mini-projet des animaux de compagnie réalisé dans le cours Programmation serveur 1 (ProgServ1), adaptez le code pour que les parties d'interface communes soient réutilisables avec l'approche de réutilisation des parties d'interface.\n\n**Ta mission ici** : aller jusqu'au bout de l'approche du cours. Dans `src/functions.php`, écris la fonction `render(string $component, array $data = []): void` qui affiche le composant `components/<nom>.php` en lui passant les valeurs du tableau `$data` comme variables, **sans** créer de variables globales.\n\nElle doit permettre :\n\n- `render('head', ['title' => \"Page d'accueil | ninetendogs\", 'description' => '…'])` ;\n- `render('header')` et `render('footer')`, sans valeurs ;\n- d'afficher plusieurs fois le même composant dans une page.",
+      "fichier": "src/functions.php",
+      "fichiers": {
+        "components/head.php": [
+          "<head>",
+          "    <meta charset=\"utf-8\">",
+          "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+          "    <link rel=\"stylesheet\" href=\"./css/styles.css\">",
+          "",
+          "    <title><?= htmlspecialchars($title ?? 'ninetendogs') ?></title>",
+          "    <meta name=\"description\" content=\"<?= htmlspecialchars($description ?? \"ninetendogs - Gestionnaire d'animaux de compagnie\") ?>\">",
+          "</head>"
+        ],
+        "components/header.php": [
+          "<header>",
+          "    <nav>",
+          "        <ul>",
+          "            <li><strong>ninetendogs</strong></li>",
+          "        </ul>",
+          "        <ul>",
+          "            <li><a href=\"./index.php\">Accueil</a></li>",
+          "            <li><a href=\"./create.php\">Nouvel animal</a></li>",
+          "        </ul>",
+          "    </nav>",
+          "</header>"
+        ],
+        "components/footer.php": [
+          "<footer>",
+          "    <center>",
+          "        <small>",
+          "            Un projet réalisé dans le cadre du cours <a href=\"https://github.com/heig-vd-progserv-course/heig-vd-progserv1-course\">ProgServ1</a> enseigné à la <a href=\"https://heig-vd.ch\">HEIG-VD</a>.",
+          "        </small>",
+          "    </center>",
+          "</footer>"
+        ],
+        "components/card.php": [
+          "<article>",
+          "    <h3><?= htmlspecialchars($name ?? 'Sans nom') ?></h3>",
+          "    <p><?= htmlspecialchars($species ?? 'Espèce inconnue') ?></p>",
+          "</article>"
+        ]
+      },
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "head avec un titre",
+            "code": "render('head', ['title' => \"Page d'accueil | ninetendogs\", 'description' => 'Liste des animaux']);",
+            "contient": [
+              "<title>Page d&#039;accueil | ninetendogs</title>",
+              "content=\"Liste des animaux\""
+            ]
+          },
+          {
+            "titre": "head sans valeur : défauts",
+            "code": "render('head');",
+            "contient": [
+              "<title>ninetendogs</title>"
+            ]
+          },
+          {
+            "titre": "header et footer",
+            "code": "render('header');\nrender('footer');",
+            "contient": [
+              "<strong>ninetendogs</strong>",
+              "<footer>"
+            ]
+          },
+          {
+            "titre": "Deux fois le même composant",
+            "code": "render('card', ['name' => 'Nalia', 'species' => 'Chien']);\nrender('card', ['name' => 'Tofu', 'species' => 'Chat']);",
+            "contient": [
+              "<h3>Nalia</h3>",
+              "<h3>Tofu</h3>",
+              "<p>Chat</p>"
+            ],
+            "siEchec": "Le second appel n'affiche rien ? Utilise `require`, pas `require_once` : un composant doit pouvoir s'afficher plusieurs fois."
+          },
+          {
+            "titre": "Pas de variable globale",
+            "code": "render('card', ['name' => 'Nalia']);\nreturn isset($name);",
+            "attendu": false,
+            "siEchec": "Les valeurs ne doivent exister que dans `render()` : `extract()` à l'intérieur de la fonction, jamais de `global`."
+          },
+          {
+            "titre": "Valeurs indépendantes d'un appel à l'autre",
+            "code": "render('card', ['name' => 'Nalia', 'species' => 'Chien']);\nrender('card');",
+            "contient": [
+              "<h3>Sans nom</h3>"
+            ]
+          }
+        ],
+        "obligatoire": [
+          "extract"
+        ]
+      },
+      "indices": [
+        "Le chemin du composant : `__DIR__ . '/../components/' . $component . '.php'` (le fichier est dans `src/`).",
+        "`extract($data, EXTR_SKIP)` crée les variables DANS la fonction ; ensuite, inclus le fichier. Calcule le chemin avant `extract`.",
+        {
+          "texte": "Presque :",
+          "code": "function render(string $component, array $data = []): void {\n    $componentPath = ___;\n    extract($data, EXTR_SKIP);\n    ___ $componentPath;\n}"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "function render(string $component, array $data = []): void {",
+        "    $componentPath = __DIR__ . '/../components/' . $component . '.php';",
+        "    extract($data, EXTR_SKIP);",
+        "    require $componentPath;",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nfunction render(string $component, array $data = []): void {\n    $componentPath = __DIR__ . '/../components/' . $component . '.php';\n    extract($data, EXTR_SKIP);\n    require_once $componentPath;\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nfunction render(string $component, array $data = []): void {\n    require __DIR__ . '/../components/' . $component . '.php';\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nfunction render(string $component, array $data = []): void {\n    $componentPath = __DIR__ . '/components/' . $component . '.php';\n    extract($data, EXTR_SKIP);\n    require $componentPath;\n}",
+          "attendu": "erreur",
+          "diagnostic": "fichier-introuvable"
+        }
+      ],
+      "explication": "Un composant, des valeurs passées au moment de l'appel : c'est le principe des composants (et de leurs *props*) dans tous les moteurs de templates."
+    }
+  ],
+  "parcours": [
+    "u05-l1",
+    "u05-l2",
+    "jeu:u05-require",
+    "u05-l3",
+    "u05-l4",
+    "quiz",
+    "boss:u05-b1",
+    "boss:u05-b2"
+  ]
+}

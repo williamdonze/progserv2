@@ -247,7 +247,7 @@ Q.predire = (q, onChange) => {
   inp.addEventListener("keydown", e => { if (e.key === "Enter") e.stopPropagation(); });
   const attendu = async () => {
     if (q.reponse !== undefined) return [q.reponse, ...(q.accepte || [])];
-    const r = await executer({ code: lignes(q.code), requete: q.requete });
+    const r = await executer({ code: lignes(q.code), requete: q.requete, fichiers: q.fichiers, fichier: q.fichier });
     return [r.console.join("\n"), ...(q.accepte || [])];
   };
   return { el, ready:() => inp.value.trim() !== "",
