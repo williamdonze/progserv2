@@ -111,6 +111,8 @@ register_shutdown_function(function () {
         'sorties' => $pw['sorties'], 'avert' => $pw['avert'], 'exception' => $pw['exception'] ?? $fatal,
         'entetes' => headers_list(), 'statut' => http_response_code(),
         'session' => session_status() === PHP_SESSION_ACTIVE ? __pw_exporter($_SESSION) : null,
+        // session d'origine jamais ouverte ni détruite : ses données restent sur le serveur
+        'sessionRestante' => session_status() !== PHP_SESSION_ACTIVE && isset($pw['req']['session']) && @filesize(rtrim(session_save_path() ?: sys_get_temp_dir(), '/') . '/sess_pwtest') > 0,
         'resultat' => $pw['aResultat'] ? __pw_exporter($pw['resultat']) : null, 'aResultat' => $pw['aResultat'], 'variables' => (object) $vars, 'phase' => $pw['phase'],
     ], JSON_PARTIAL_OUTPUT_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PRESERVE_ZERO_FRACTION) . "\x02";
     // ce qui s'affiche après ce marqueur vient des destructeurs appelés en fin de script (après les fonctions d'arrêt)
@@ -121,7 +123,7 @@ $_SERVER['REQUEST_METHOD'] = $__r['methode'] ?? 'GET';
 $_SERVER['PHP_SELF'] = $_SERVER['SCRIPT_NAME'] = $_SERVER['REQUEST_URI'] = '/' . $__r['fichier'];
 foreach ($__r['entetes'] ?? [] as $__k => $__v) $_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $__k))] = $__v;
 if (isset($__r['session'])) {
-    session_id('pwtest'); session_start(); $_SESSION = $__r['session']; session_write_close();
+    session_id('pwtest'); session_start(); $_SESSION = $__r['session']; session_write_close(); $_SESSION = [];
     $_COOKIE[session_name()] = 'pwtest';
     header_remove();
 }
@@ -571,7 +573,7 @@ async function executerPhp({ code, donnees, prelude, tests, requete, fichiers, f
         else if (v !== true && !egalPhp(s[k], v)) { r.ok = false; r.details.push(`\`$_SESSION['${k}']\` vaut ${enPhp(s[k])}, on attend ${enPhp(v)}.`); }
       }
     }
-    if (cas.sessionVide && run.session && Object.keys(run.session).length) { r.ok = false; r.details.push("La session devrait être vidée (`session_destroy()`), mais elle contient encore des données."); }
+    if (cas.sessionVide && (run.sessionRestante || run.session && Object.keys(run.session).length)) { r.ok = false; r.details.push("La session devrait être vidée (`session_destroy()`), mais elle contient encore des données."); }
     if ("statut" in cas && run.statut !== cas.statut) { r.ok = false; r.details.push(`Code HTTP ${run.statut}, on attend ${cas.statut}.`); }
     for (const [nom, val] of Object.entries(cas.variables || {})) {
       const v = run.variables?.[nom];

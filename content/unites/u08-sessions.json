@@ -1,0 +1,2309 @@
+{
+  "id": "u08",
+  "titre": "Sessions, authentification, autorisation",
+  "sousTitre": "Séance 7 · session_start, $_SESSION, rôles, password_hash",
+  "objectif": "Utiliser les sessions pour garder un utilisateur connecté, distinguer sessions et cookies, authentifier avec des mots de passe hachés et autoriser selon le rôle.",
+  "icone": "🎫",
+  "fiches": [
+    {
+      "id": "sessions",
+      "titre": "Les sessions",
+      "icone": "🎫",
+      "resume": "Une session garde des informations sur un utilisateur **côté serveur**, d'une requête à l'autre. `session_start()` (au début de chaque script, avant tout affichage) ouvre la session ; `$_SESSION['user_id'] = 123;` y range une valeur ; `session_destroy()` la détruit.",
+      "analogie": "**Le ticket de la Poste** (l'analogie du cours). À l'arrivée, la Poste (le serveur) donne un ticket numéroté (un cookie avec l'identifiant de session). À chaque passage au guichet, on présente le ticket (le cookie est renvoyé) ; le guichet retrouve le dossier grâce au numéro (les données de session, gardées au guichet). Ticket perdu, ou retour trop tard (expiration) : il faut se réinscrire.",
+      "texte": "Chaque requête HTTP est indépendante : sans session, le serveur ne se souvient de rien. La session associe un **identifiant unique** à chaque utilisateur ; cet identifiant voyage dans un cookie, les données restent sur le serveur (un fichier de session).\n\n``` session_start(); $_SESSION['user_id'] = 123; $_SESSION['username'] = 'johndoe'; ```\n\nDans une autre page : `session_start();` puis `$_SESSION['username'] ?? 'Invité'`.\n\n**Durée de vie** : par défaut, une session PHP expire après 24 minutes d'inactivité. Le cours déconseille de l'allonger (risque de détournement de session).\n\n**Détruire** : `session_start();` puis `session_destroy();`.",
+      "pieges": [
+        "Sans `session_start()`, `$_SESSION` n'est pas chargé : la page croit que personne n'est connecté.",
+        "`session_start()` doit venir avant tout affichage (comme `setcookie` : il envoie un cookie)."
+      ]
+    },
+    {
+      "id": "sessions-cookies",
+      "titre": "Sessions ou cookies ?",
+      "icone": "⚖",
+      "resume": "Cookies : chez le client, modifiables, petits, pour des préférences non sensibles. Sessions : sur le serveur, pour des informations sensibles et temporaires (l'état de connexion) ; seul l'identifiant voyage dans un cookie.",
+      "texte": "- **Stockage** : cookie sur le poste client ; session sur le serveur (fichiers ou base).\n- **Sécurité** : un cookie peut être volé ou falsifié ; la session est plus sûre (les données restent au serveur), mais son identifiant doit lui aussi être protégé.\n- **Taille** : quelques kilo-octets pour un cookie ; davantage pour une session.\n- **Durée** : un cookie dure ce que le serveur décide (ou jusqu'à la fermeture du navigateur) ; une session expire vite (24 minutes d'inactivité par défaut).\n\nSi le client modifie son cookie de session, il ne sera plus reconnu et devra se reconnecter. Pour des données à garder longtemps : la base de données.",
+      "pieges": [
+        "Le rôle d'un utilisateur ne se range JAMAIS dans un cookie : n'importe qui écrirait `role=admin`. Il va dans la session."
+      ]
+    },
+    {
+      "id": "authentification",
+      "titre": "Authentification",
+      "icone": "🔑",
+      "resume": "L'**authentification** vérifie l'identité (« qui es-tu ? ») : l'e-mail et le mot de passe sont contrôlés par le serveur ; si c'est juste, l'identifiant de l'utilisateur est rangé dans la session.",
+      "texte": "Étapes résumées par le cours :\n\n- démarrer une session lors de la connexion ;\n- vérifier les informations de connexion (le mot de passe avec `password_verify`) ;\n- stocker l'id de l'utilisateur et son rôle dans la session ;\n- utiliser la session pour autoriser ou interdire l'accès aux pages.\n\nUne page protégée commence par vérifier la session, et redirige vers la page de connexion si personne n'est connecté :\n\n``` session_start(); if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit(); } ```",
+      "pieges": [
+        "Sans `exit()` après la redirection, la suite de la page s'exécute quand même (et son contenu part dans la réponse)."
+      ]
+    },
+    {
+      "id": "autorisation",
+      "titre": "Autorisation et rôles",
+      "icone": "🚦",
+      "resume": "L'**autorisation** détermine ce qu'un utilisateur authentifié a le droit de faire (« as-tu le droit ? »), selon son rôle gardé dans la session. Pas le droit : erreur 403 (`http_response_code(403)`) ou page d'accès refusé.",
+      "texte": "``` if ($_SESSION['role'] !== 'admin') { http_response_code(403); exit(); } ```\n\nOn vérifie d'abord l'authentification (connecté ?), ensuite l'autorisation (bon rôle ?).\n\nLe cours prévient : ces exemples sont simplifiés à des fins pédagogiques. Pour une vraie application, suivre les bonnes pratiques (OWASP Authentication et Authorization Cheat Sheets) ; plus tard, des bibliothèques et frameworks spécialisés s'en chargeront.",
+      "pieges": [
+        "403 (interdit) n'est pas 401 ou une redirection vers la connexion : la personne EST connectée, mais n'a pas le droit."
+      ]
+    },
+    {
+      "id": "mots-de-passe",
+      "titre": "Mots de passe : password_hash",
+      "icone": "#",
+      "resume": "On ne stocke jamais un mot de passe en clair : `password_hash($password, PASSWORD_DEFAULT)` le transforme en une empreinte (un hash) impossible à inverser. À la connexion, `password_verify($saisie, $hash)` dit si la saisie correspond.",
+      "texte": "Hacher, c'est transformer le mot de passe en une chaîne unique et fixe, qui ne permet pas de retrouver l'original. Même si la base de données est volée, les mots de passe restent inaccessibles.\n\n``` // Inscription $hashedPassword = password_hash($password, PASSWORD_DEFAULT); // … INSERT avec $hashedPassword\n\n// Connexion if ($user && password_verify($password, $user['password'])) { session_start(); $_SESSION['user_id'] = $user['id']; } ```\n\nDeux hachages du même mot de passe donnent deux résultats différents : on ne compare donc jamais avec `===`, toujours avec `password_verify`.",
+      "pieges": [
+        "`password_hash($p) === $user['password']` est toujours faux : utilise `password_verify`.",
+        "`md5` ou `sha1` ne conviennent pas aux mots de passe."
+      ]
+    }
+  ],
+  "lecons": [
+    {
+      "id": "u08-l1",
+      "titre": "Le guichet de la Poste",
+      "duree": 5,
+      "notions": [
+        "sessions"
+      ],
+      "cartes": [
+        {
+          "titre": "Le serveur oublie tout",
+          "texte": "Chaque requête HTTP est indépendante : sans aide, le serveur ne sait pas que c'est encore toi. La session lui donne une mémoire.",
+          "fiche": "sessions"
+        },
+        {
+          "titre": "Le ticket numéroté",
+          "texte": "Au premier passage, le serveur crée un identifiant de session unique et l'envoie au navigateur dans un **cookie**. Les données, elles, restent sur le serveur.",
+          "analogie": "La Poste te donne un ticket numéroté ; ton dossier reste derrière le guichet."
+        },
+        {
+          "titre": "Le retour au guichet",
+          "texte": "Aux requêtes suivantes, le navigateur renvoie le cookie ; le serveur retrouve les données de session grâce au numéro. Chaque utilisateur a sa propre session.",
+          "analogie": "Tu présentes ton ticket : le guichet retrouve ton dossier. Ticket perdu, ou retour trop tard : il faut se réinscrire."
+        },
+        {
+          "titre": "Une mémoire courte",
+          "texte": "Par défaut, une session PHP expire après 24 minutes d'inactivité. Le cours déconseille d'allonger cette durée : une session courte limite les risques de détournement."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u08-l1-e1",
+          "type": "assoc",
+          "notions": [
+            "sessions"
+          ],
+          "question": "Associe chaque élément de l'analogie de la Poste.",
+          "paires": [
+            [
+              "La Poste",
+              "Le serveur"
+            ],
+            [
+              "Le ticket",
+              "Le cookie de session"
+            ],
+            [
+              "Le numéro du ticket",
+              "L'identifiant de session"
+            ],
+            [
+              "Le dossier au guichet",
+              "Les données de $_SESSION"
+            ]
+          ],
+          "explication": "L'analogie (fictive et simplifiée) du cours."
+        },
+        {
+          "id": "u08-l1-e2",
+          "type": "qcm",
+          "notions": [
+            "sessions"
+          ],
+          "question": "Où sont stockées les données de `$_SESSION` ?",
+          "choix": [
+            "Sur le serveur",
+            "Dans le navigateur",
+            "Dans l'URL",
+            "Dans le code HTML"
+          ],
+          "bonne": 0,
+          "explication": "Seul l'identifiant voyage, dans un cookie."
+        },
+        {
+          "id": "u08-l1-e3",
+          "type": "ordre",
+          "notions": [
+            "sessions"
+          ],
+          "question": "Remets dans l'ordre.",
+          "items": [
+            "Première requête : le serveur crée une session et un identifiant unique",
+            "Le serveur envoie l'identifiant au navigateur dans un cookie",
+            "Requête suivante : le navigateur renvoie le cookie",
+            "Le serveur retrouve les données de session grâce à l'identifiant"
+          ],
+          "explication": "Le ticket est distribué, puis présenté à chaque passage."
+        },
+        {
+          "id": "u08-l1-e4",
+          "type": "vf",
+          "notions": [
+            "sessions"
+          ],
+          "question": "Par défaut, une session PHP expire après 24 minutes d'inactivité.",
+          "bonne": true,
+          "explication": "Une durée courte, volontairement."
+        },
+        {
+          "id": "u08-l1-e5",
+          "type": "qcm",
+          "notions": [
+            "sessions"
+          ],
+          "question": "Un utilisateur modifie la valeur de son cookie de session. Que se passe-t-il ?",
+          "choix": [
+            "Le serveur ne le reconnaît plus : il doit se reconnecter",
+            "Il prend l'identité d'un autre automatiquement",
+            "Rien ne change",
+            "Le serveur s'arrête"
+          ],
+          "bonne": 0,
+          "explication": "Avec un mauvais numéro, le guichet ne retrouve pas le dossier."
+        }
+      ]
+    },
+    {
+      "id": "u08-l2",
+      "titre": "session_start, $_SESSION, session_destroy",
+      "duree": 6,
+      "notions": [
+        "sessions"
+      ],
+      "cartes": [
+        {
+          "titre": "Ouvrir la session",
+          "texte": "`session_start()` au début de **chaque** script qui utilise la session, avant tout affichage. Ensuite, `$_SESSION` est un tableau qu'on lit et qu'on écrit.",
+          "code": [
+            "session_start();",
+            "$_SESSION['user_id'] = 123;",
+            "$_SESSION['username'] = 'johndoe';",
+            "echo \"Session : \" . $_SESSION['username'];",
+            ""
+          ],
+          "fiche": "sessions"
+        },
+        {
+          "titre": "Relire dans une autre page",
+          "texte": "Une autre page relit les valeurs, après son propre `session_start()`. Cet exemple simule une requête qui porte déjà une session.",
+          "code": [
+            "session_start();",
+            "$userId = $_SESSION['user_id'] ?? null;",
+            "$username = $_SESSION['username'] ?? 'Invité';",
+            "echo \"Bonjour $username\";",
+            ""
+          ],
+          "requete": {
+            "session": {
+              "user_id": 123,
+              "username": "johndoe"
+            }
+          }
+        },
+        {
+          "titre": "Détruire la session",
+          "texte": "Pour déconnecter : `session_start()` (pour accéder à la session en cours), puis `session_destroy()`.",
+          "code": [
+            "session_start();",
+            "session_destroy();",
+            "echo \"Vous avez été déconnecté·e.\";",
+            ""
+          ],
+          "requete": {
+            "session": {
+              "user_id": 123
+            }
+          }
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u08-l2-e1",
+          "type": "ecrire",
+          "notions": [
+            "sessions"
+          ],
+          "question": "Écris un compteur de visites : à chaque requête, `$_SESSION['visits']` augmente de 1 (il part de 0), puis la page affiche « Visites : » suivi du nombre.",
+          "depart": [
+            "<?php",
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Première visite",
+                "requete": {
+                  "methode": "GET"
+                },
+                "sortie": [
+                  "Visites : 1"
+                ],
+                "session": {
+                  "visits": 1
+                }
+              },
+              {
+                "titre": "Quatrième visite",
+                "requete": {
+                  "session": {
+                    "visits": 3
+                  }
+                },
+                "sortie": [
+                  "Visites : 4"
+                ],
+                "session": {
+                  "visits": 4
+                }
+              }
+            ]
+          },
+          "indices": [
+            "Commence par `session_start();`.",
+            "`$_SESSION['visits'] = ($_SESSION['visits'] ?? 0) + 1;`",
+            {
+              "texte": "Presque :",
+              "code": "session_start();\n$_SESSION['visits'] = ___;\necho \"Visites : \" . $_SESSION['visits'];"
+            }
+          ],
+          "solution": [
+            "<?php",
+            "session_start();",
+            "$_SESSION['visits'] = ($_SESSION['visits'] ?? 0) + 1;",
+            "echo \"Visites : \" . $_SESSION['visits'];",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "<?php\n$_SESSION['visits'] = ($_SESSION['visits'] ?? 0) + 1;\necho \"Visites : \" . $_SESSION['visits'];",
+              "attendu": "echec"
+            },
+            {
+              "code": "<?php\nsession_start();\n$_SESSION['visits'] = 1;\necho \"Visites : \" . $_SESSION['visits'];",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Sans `session_start()`, `$_SESSION` n'est ni chargé ni sauvegardé : le compteur repart de zéro à chaque fois."
+        },
+        {
+          "id": "u08-l2-e2",
+          "type": "predire",
+          "notions": [
+            "sessions"
+          ],
+          "question": "La requête porte une session où `username` vaut « ana ». Qu'affiche ce code ?",
+          "requete": {
+            "session": {
+              "username": "ana"
+            }
+          },
+          "code": [
+            "session_start();",
+            "$name = $_SESSION['username'] ?? 'Invité';",
+            "$role = $_SESSION['role'] ?? 'aucun';",
+            "echo \"$name ($role)\";",
+            ""
+          ],
+          "explication": "`username` existe dans la session ; `role` non, d'où sa valeur par défaut."
+        },
+        {
+          "id": "u08-l2-e3",
+          "type": "bug",
+          "notions": [
+            "sessions"
+          ],
+          "question": "La page affiche toujours « Invité », même quand on est connecté. Touche la ligne qui manque son rôle.",
+          "code": [
+            "<?php",
+            "$username = $_SESSION['username'] ?? 'Invité';",
+            "echo \"Bonjour $username\";",
+            ""
+          ],
+          "ligne": 2,
+          "choix": [
+            "Il manque `session_start();` avant de lire $_SESSION",
+            "Il faut `$_COOKIE` au lieu de `$_SESSION`",
+            "`??` est interdit avec une session",
+            "Il manque `session_destroy()`"
+          ],
+          "bonne": 0,
+          "explication": "Sans `session_start()`, `$_SESSION` n'est pas chargé."
+        },
+        {
+          "id": "u08-l2-e4",
+          "type": "qcm",
+          "notions": [
+            "sessions"
+          ],
+          "question": "Pourquoi `session_start()` doit-il venir avant tout `echo` ?",
+          "choix": [
+            "Parce qu'il envoie un cookie (un en-tête HTTP) qui doit partir avant le contenu",
+            "Parce qu'il efface la page",
+            "Parce qu'il est lent",
+            "Ce n'est pas nécessaire"
+          ],
+          "bonne": 0,
+          "explication": "Comme `setcookie()` et `header()`."
+        },
+        {
+          "id": "u08-l2-e5",
+          "type": "trous",
+          "notions": [
+            "sessions"
+          ],
+          "question": "Complète la déconnexion.",
+          "requete": {
+            "session": {
+              "user_id": 7
+            }
+          },
+          "code": [
+            "___();",
+            "___();",
+            "echo \"Au revoir !\";",
+            ""
+          ],
+          "solution": [
+            "session_start",
+            "session_destroy"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sessionVide": true,
+                "sortie": [
+                  "Au revoir !"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "D'abord accéder à la session en cours.",
+            "Puis la détruire."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "session_destroy",
+                "session_start"
+              ],
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`session_start()` puis `session_destroy()`."
+        }
+      ]
+    },
+    {
+      "id": "u08-l3",
+      "titre": "Sessions ou cookies ?",
+      "duree": 5,
+      "notions": [
+        "sessions-cookies"
+      ],
+      "cartes": [
+        {
+          "titre": "Deux mécanismes",
+          "texte": "Les deux gardent des informations sur l'utilisateur, mais pas au même endroit : le cookie chez le client, la session sur le serveur (seul son identifiant voyage dans un cookie).",
+          "fiche": "sessions-cookies"
+        },
+        {
+          "titre": "Les cookies : des préférences",
+          "texte": "Petits, modifiables par le client, durée choisie : parfaits pour la langue ou le thème, que le serveur doit simplement respecter."
+        },
+        {
+          "titre": "Les sessions : la connexion",
+          "texte": "Données sensibles et temporaires, comme l'état de connexion et le rôle : elles ne doivent pas être modifiables par le client.",
+          "piege": "Un rôle rangé dans un cookie (`role=author`) peut être changé en `role=admin` par n'importe qui. Dans la session, il reste au serveur."
+        },
+        {
+          "titre": "Et la base de données ?",
+          "texte": "Pour ce qui doit durer longtemps (comptes, livres, commandes), ni cookie ni session : la base de données."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u08-l3-e1",
+          "type": "tri",
+          "notions": [
+            "sessions-cookies"
+          ],
+          "question": "Cookie ou session ?",
+          "categories": [
+            "Cookie",
+            "Session"
+          ],
+          "items": [
+            [
+              "Stocké sur le poste client",
+              0
+            ],
+            [
+              "Stocké sur le serveur",
+              1
+            ],
+            [
+              "Modifiable par l'utilisateur",
+              0
+            ],
+            [
+              "Expire après 24 minutes d'inactivité (par défaut)",
+              1
+            ],
+            [
+              "Quelques kilo-octets au maximum",
+              0
+            ],
+            [
+              "Garde l'état de connexion",
+              1
+            ]
+          ],
+          "explication": "Le ticket (cookie) dans la poche du client ; le dossier (session) au guichet."
+        },
+        {
+          "id": "u08-l3-e2",
+          "type": "tri",
+          "notions": [
+            "sessions-cookies"
+          ],
+          "question": "Où ranger chaque information ?",
+          "categories": [
+            "Cookie",
+            "Session",
+            "Base de données"
+          ],
+          "items": [
+            [
+              "La langue préférée",
+              0
+            ],
+            [
+              "L'id de l'utilisateur connecté",
+              1
+            ],
+            [
+              "Le rôle de l'utilisateur connecté",
+              1
+            ],
+            [
+              "Le thème clair/sombre",
+              0
+            ],
+            [
+              "Le mot de passe haché",
+              2
+            ],
+            [
+              "La liste des livres",
+              2
+            ]
+          ],
+          "explication": "Préférences : cookie. Connexion : session. Données durables : base."
+        },
+        {
+          "id": "u08-l3-e3",
+          "type": "vf",
+          "notions": [
+            "sessions-cookies"
+          ],
+          "question": "Les sessions utilisent un cookie pour l'identifiant de session.",
+          "bonne": true,
+          "explication": "C'est le ticket ; les données restent au serveur."
+        },
+        {
+          "id": "u08-l3-e4",
+          "type": "qcm",
+          "notions": [
+            "sessions-cookies"
+          ],
+          "question": "Pourquoi ne pas garder le rôle « author » dans un cookie ?",
+          "choix": [
+            "L'utilisateur pourrait le modifier en « admin »",
+            "Un cookie ne peut pas contenir de texte",
+            "Le cookie expire trop vite",
+            "C'est trop lent"
+          ],
+          "bonne": 0,
+          "explication": "Ce qui décide des droits doit rester côté serveur."
+        },
+        {
+          "id": "u08-l3-e5",
+          "type": "qcm",
+          "notions": [
+            "sessions-cookies"
+          ],
+          "question": "Quelle affirmation est vraie, selon le cours ?",
+          "choix": [
+            "Les sessions seules ne protègent pas complètement les données : l'identifiant doit aussi être protégé",
+            "Les sessions sont parfaitement sûres",
+            "Les cookies sont plus sûrs que les sessions",
+            "Les sessions durent plusieurs mois"
+          ],
+          "bonne": 0,
+          "explication": "Le cours le précise : la session ajoute une couche de sécurité, pas une protection absolue."
+        }
+      ]
+    },
+    {
+      "id": "u08-l4",
+      "titre": "Authentification et autorisation",
+      "duree": 7,
+      "notions": [
+        "authentification",
+        "autorisation"
+      ],
+      "cartes": [
+        {
+          "titre": "Qui es-tu ?",
+          "texte": "L'**authentification** vérifie l'identité : le serveur contrôle l'e-mail et le mot de passe. Si c'est juste, il range l'id de l'utilisateur dans la session.",
+          "fiche": "authentification"
+        },
+        {
+          "titre": "As-tu le droit ?",
+          "texte": "L'**autorisation** décide de ce qu'un utilisateur authentifié peut faire, selon son rôle (gardé dans la session).",
+          "fiche": "autorisation"
+        },
+        {
+          "titre": "Garder une page",
+          "texte": "Une page protégée vérifie d'abord la connexion (sinon : redirection vers la connexion), puis le rôle (sinon : 403).",
+          "code": [
+            "<?php",
+            "session_start();",
+            "",
+            "if (!isset($_SESSION['user_id'])) {",
+            "    header('Location: login.php');",
+            "    exit();",
+            "}",
+            "",
+            "if ($_SESSION['role'] !== 'admin') {",
+            "    http_response_code(403);",
+            "    echo \"Accès refusé.\";",
+            "    exit();",
+            "}",
+            "",
+            "echo \"Bienvenue dans l'administration, \" . htmlspecialchars($_SESSION['email']) . \".\";"
+          ],
+          "requete": {
+            "session": {
+              "user_id": 1,
+              "email": "ana@example.com",
+              "role": "admin"
+            }
+          }
+        },
+        {
+          "titre": "La prudence du cours",
+          "texte": "Ces exemples sont simplifiés pour apprendre. Pour une application réelle : les bonnes pratiques (OWASP), et plus tard des bibliothèques et frameworks spécialisés.",
+          "astuce": "`exit()` après chaque `header('Location: …')` : sinon la suite de la page s'exécute quand même."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u08-l4-e1",
+          "type": "tri",
+          "notions": [
+            "authentification",
+            "autorisation"
+          ],
+          "question": "Authentification ou autorisation ?",
+          "categories": [
+            "Authentification",
+            "Autorisation"
+          ],
+          "items": [
+            [
+              "Vérifier l'e-mail et le mot de passe",
+              0
+            ],
+            [
+              "Refuser la page admin à un lecteur",
+              1
+            ],
+            [
+              "Ranger l'id de l'utilisateur dans la session",
+              0
+            ],
+            [
+              "Répondre 403 Forbidden",
+              1
+            ],
+            [
+              "Réserver une page aux auteur·trices",
+              1
+            ]
+          ],
+          "explication": "Qui es-tu (authentification) ; as-tu le droit (autorisation)."
+        },
+        {
+          "id": "u08-l4-e2",
+          "type": "ecrire",
+          "notions": [
+            "authentification",
+            "autorisation"
+          ],
+          "question": "Écris la page d'administration : `session_start()` ; pas connecté (pas de `user_id` en session) → redirection vers `login.php` ; connecté mais rôle différent de `admin` → code 403 et « Accès refusé. » ; sinon « Bienvenue dans l'administration, » suivi de l'e-mail (échappé) et d'un point.",
+          "depart": [
+            "<?php",
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Pas connecté",
+                "requete": {
+                  "methode": "GET"
+                },
+                "redirection": "login.php",
+                "neContientPas": [
+                  "Accès refusé",
+                  "Bienvenue"
+                ]
+              },
+              {
+                "titre": "Lecteur",
+                "requete": {
+                  "session": {
+                    "user_id": 2,
+                    "email": "leo@example.com",
+                    "role": "reader"
+                  }
+                },
+                "statut": 403,
+                "sortie": [
+                  "Accès refusé."
+                ],
+                "redirection": false
+              },
+              {
+                "titre": "Admin",
+                "requete": {
+                  "session": {
+                    "user_id": 1,
+                    "email": "ana@example.com",
+                    "role": "admin"
+                  }
+                },
+                "sortie": [
+                  "Bienvenue dans l'administration, ana@example.com."
+                ],
+                "statut": 200
+              }
+            ]
+          },
+          "indices": [
+            "Deux vérifications à la suite, chacune terminée par `exit()`.",
+            "`if (!isset($_SESSION['user_id']))` → `header('Location: login.php'); exit();` ; `if ($_SESSION['role'] !== 'admin')` → `http_response_code(403);`.",
+            {
+              "texte": "La seconde garde :",
+              "code": "if ($_SESSION['role'] !== 'admin') {\n    http_response_code(___);\n    echo \"Accès refusé.\";\n    exit();\n}"
+            }
+          ],
+          "solution": [
+            "<?php",
+            "session_start();",
+            "",
+            "if (!isset($_SESSION['user_id'])) {",
+            "    header('Location: login.php');",
+            "    exit();",
+            "}",
+            "",
+            "if ($_SESSION['role'] !== 'admin') {",
+            "    http_response_code(403);",
+            "    echo \"Accès refusé.\";",
+            "    exit();",
+            "}",
+            "",
+            "echo \"Bienvenue dans l'administration, \" . htmlspecialchars($_SESSION['email']) . \".\";"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "<?php\nsession_start();\n\nif (!isset($_SESSION['user_id'])) {\n    header('Location: login.php');\n}\n\nif ($_SESSION['role'] !== 'admin') {\n    http_response_code(403);\n    echo \"Accès refusé.\";\n    exit();\n}\n\necho \"Bienvenue dans l'administration, \" . htmlspecialchars($_SESSION['email']) . \".\";",
+              "attendu": "echec"
+            },
+            {
+              "code": "<?php\nsession_start();\n\nif (!isset($_SESSION['user_id'])) {\n    header('Location: login.php');\n    exit();\n}\n\nif ($_SESSION['role'] !== 'admin') {\n    \n    echo \"Accès refusé.\";\n    exit();\n}\n\necho \"Bienvenue dans l'administration, \" . htmlspecialchars($_SESSION['email']) . \".\";",
+              "attendu": "echec"
+            },
+            {
+              "code": "<?php\n\n\nif (!isset($_SESSION['user_id'])) {\n    header('Location: login.php');\n    exit();\n}\n\nif ($_SESSION['role'] !== 'admin') {\n    http_response_code(403);\n    echo \"Accès refusé.\";\n    exit();\n}\n\necho \"Bienvenue dans l'administration, \" . htmlspecialchars($_SESSION['email']) . \".\";",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "D'abord l'authentification, ensuite l'autorisation, et `exit()` après chaque refus."
+        },
+        {
+          "id": "u08-l4-e3",
+          "type": "qcm",
+          "notions": [
+            "autorisation"
+          ],
+          "question": "Une personne connectée avec le rôle « reader » ouvre la page réservée aux admins. Que répondre ?",
+          "choix": [
+            "Une erreur 403 (accès refusé)",
+            "Une redirection vers la connexion",
+            "La page admin",
+            "Une erreur 404"
+          ],
+          "bonne": 0,
+          "explication": "Elle est authentifiée (connectée) mais pas autorisée : 403 Forbidden."
+        },
+        {
+          "id": "u08-l4-e4",
+          "type": "ordre",
+          "notions": [
+            "authentification",
+            "autorisation"
+          ],
+          "question": "Remets dans l'ordre les étapes résumées par le cours.",
+          "items": [
+            "Démarrer une session lors de la connexion",
+            "Vérifier les informations d'identification",
+            "Stocker l'id de l'utilisateur et son rôle dans la session",
+            "Utiliser la session pour autoriser ou interdire l'accès aux pages"
+          ],
+          "explication": "Démarrer, vérifier, mémoriser, contrôler."
+        },
+        {
+          "id": "u08-l4-e5",
+          "type": "bug",
+          "notions": [
+            "authentification"
+          ],
+          "question": "Un visiteur non connecté voit quand même le contenu secret dans la réponse. Touche la ligne qu'il faudrait compléter.",
+          "code": [
+            "<?php",
+            "session_start();",
+            "if (!isset($_SESSION['user_id'])) {",
+            "    header('Location: login.php');",
+            "}",
+            "echo \"Contenu secret\";",
+            ""
+          ],
+          "ligne": 4,
+          "choix": [
+            "Il manque `exit();` après la redirection",
+            "Il faut `session_destroy()`",
+            "`isset` doit être `empty`",
+            "Le header doit être après l'echo"
+          ],
+          "bonne": 0,
+          "explication": "`header()` ne stoppe pas le script : sans `exit()`, la suite s'exécute et part dans la réponse."
+        }
+      ]
+    },
+    {
+      "id": "u08-l5",
+      "titre": "Mots de passe : password_hash",
+      "duree": 6,
+      "notions": [
+        "mots-de-passe"
+      ],
+      "cartes": [
+        {
+          "titre": "Jamais en clair",
+          "texte": "Si la base de données est volée, des mots de passe en clair sont lisibles par tous. On stocke à la place une **empreinte** (un hash), impossible à inverser.",
+          "code": [
+            "$hash = password_hash(\"secret123\", PASSWORD_DEFAULT);",
+            "echo $hash;",
+            ""
+          ],
+          "fiche": "mots-de-passe"
+        },
+        {
+          "titre": "Vérifier avec password_verify",
+          "texte": "Deux hachages du même mot de passe donnent deux chaînes différentes : on ne compare jamais avec `===`, on demande à `password_verify`.",
+          "code": [
+            "$hash = password_hash(\"secret123\", PASSWORD_DEFAULT);",
+            "var_dump(password_verify(\"secret123\", $hash));",
+            "var_dump(password_verify(\"Secret123\", $hash));",
+            "var_dump(password_hash(\"secret123\", PASSWORD_DEFAULT) === $hash);",
+            ""
+          ]
+        },
+        {
+          "titre": "Inscription et connexion",
+          "texte": "À l'inscription : `password_hash`, puis INSERT. À la connexion : lire l'utilisateur par son e-mail (requête préparée), `password_verify`, puis ranger son id dans la session.",
+          "code": [
+            "$stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email');",
+            "$stmt->execute(['email' => $email]);",
+            "$user = $stmt->fetch();",
+            "",
+            "if ($user && password_verify($password, $user['password'])) {",
+            "    session_start();",
+            "    $_SESSION['user_id'] = $user['id'];",
+            "    header('Location: index.php');",
+            "    exit();",
+            "}",
+            ""
+          ],
+          "executable": false
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u08-l5-e1",
+          "type": "ecrire",
+          "notions": [
+            "mots-de-passe",
+            "pdo"
+          ],
+          "question": "La table `users (id, email, password, role)` existe dans `$pdo` (Ana, mot de passe `secret123`, mot de passe stocké haché). Écris `checkLogin(PDO $pdo, string $email, string $password): ?array` qui retourne la ligne de l'utilisateur si l'e-mail existe ET que le mot de passe est juste, sinon `null`.",
+          "prelude": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);",
+            "$pdo->exec(\"CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT NOT NULL)\");",
+            "$stmt = $pdo->prepare(\"INSERT INTO users (email, password, role) VALUES (:email, :password, :role)\");",
+            "$stmt->execute(['email' => 'ana@example.com', 'password' => password_hash('secret123', PASSWORD_DEFAULT), 'role' => 'author']);"
+          ],
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Bon mot de passe",
+                "code": "return checkLogin($pdo, 'ana@example.com', 'secret123')['role'];",
+                "attendu": "author"
+              },
+              {
+                "titre": "Mauvais mot de passe",
+                "code": "return checkLogin($pdo, 'ana@example.com', 'Secret123');",
+                "attendu": null
+              },
+              {
+                "titre": "E-mail inconnu",
+                "code": "return checkLogin($pdo, 'zoe@example.com', 'secret123');",
+                "attendu": null
+              },
+              {
+                "titre": "Injection dans l'e-mail",
+                "code": "return checkLogin($pdo, \"' OR '1'='1\", 'x');",
+                "attendu": null
+              }
+            ],
+            "obligatoire": [
+              "password_verify",
+              "->prepare"
+            ]
+          },
+          "indices": [
+            "Lis l'utilisateur par son e-mail avec une requête préparée.",
+            "S'il existe et que `password_verify($password, $user['password'])` est vrai, retourne-le.",
+            {
+              "texte": "Presque :",
+              "code": "if ($user && ___) {\n    return $user;\n}\nreturn null;"
+            }
+          ],
+          "solution": [
+            "function checkLogin(PDO $pdo, string $email, string $password): ?array {",
+            "    $stmt = $pdo->prepare(\"SELECT * FROM users WHERE email = :email\");",
+            "    $stmt->execute(['email' => $email]);",
+            "    $user = $stmt->fetch();",
+            "    if ($user && password_verify($password, $user['password'])) {",
+            "        return $user;",
+            "    }",
+            "    return null;",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function checkLogin(PDO $pdo, string $email, string $password): ?array {\n    $stmt = $pdo->prepare(\"SELECT * FROM users WHERE email = :email\");\n    $stmt->execute(['email' => $email]);\n    $user = $stmt->fetch();\n    if ($user && $user['password'] === password_hash($password, PASSWORD_DEFAULT)) {\n        return $user;\n    }\n    return null;\n}",
+              "attendu": "echec"
+            },
+            {
+              "code": "function checkLogin(PDO $pdo, string $email, string $password): ?array {\n    $stmt = $pdo->prepare(\"SELECT * FROM users WHERE email = :email\");\n    $stmt->execute(['email' => $email]);\n    $user = $stmt->fetch();\n    if ($user['password'] === $password) {\n        return $user;\n    }\n    return null;\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`password_verify` sait relire l'empreinte ; comparer deux hachages avec `===` échoue toujours."
+        },
+        {
+          "id": "u08-l5-e2",
+          "type": "vf",
+          "notions": [
+            "mots-de-passe"
+          ],
+          "question": "`password_hash(\"abc\")` donne toujours la même chaîne.",
+          "bonne": false,
+          "explication": "Chaque hachage est différent : c'est pourquoi on vérifie avec `password_verify`."
+        },
+        {
+          "id": "u08-l5-e3",
+          "type": "qcm",
+          "notions": [
+            "mots-de-passe"
+          ],
+          "question": "Pourquoi hacher les mots de passe ?",
+          "choix": [
+            "Si la base est volée, les mots de passe restent inaccessibles",
+            "Pour qu'ils prennent moins de place",
+            "Pour pouvoir les renvoyer par e-mail",
+            "Pour accélérer la connexion"
+          ],
+          "bonne": 0,
+          "explication": "Le hachage ne peut pas être inversé."
+        },
+        {
+          "id": "u08-l5-e4",
+          "type": "trous",
+          "notions": [
+            "mots-de-passe"
+          ],
+          "question": "Complète l'inscription.",
+          "prelude": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->exec(\"CREATE TABLE users (email TEXT, password TEXT)\");",
+            "$password = 'motdepasse123';"
+          ],
+          "code": [
+            "$hashedPassword = ___($password, PASSWORD_DEFAULT);",
+            "$stmt = $pdo->prepare('INSERT INTO users (email, password) VALUES (:email, :password)');",
+            "$stmt->execute(['email' => 'zoe@example.com', 'password' => ___]);",
+            "$stored = $pdo->query(\"SELECT password FROM users\")->fetchColumn();",
+            "var_dump($stored !== $password && password_verify($password, $stored));",
+            ""
+          ],
+          "solution": [
+            "password_hash",
+            "$hashedPassword"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "bool(true)"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "La fonction qui hache.",
+            "On enregistre l'empreinte, pas le mot de passe."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "password_hash",
+                "$password"
+              ],
+              "attendu": "echec"
+            },
+            {
+              "trous": [
+                "md5",
+                "$hashedPassword"
+              ],
+              "attendu": "echec"
+            }
+          ],
+          "explication": "On insère `$hashedPassword` : la base ne contient jamais le mot de passe en clair."
+        },
+        {
+          "id": "u08-l5-e5",
+          "type": "erreurs",
+          "notions": [
+            "mots-de-passe",
+            "sessions"
+          ],
+          "question": "Que dit chaque symptôme ?",
+          "paires": [
+            [
+              "La connexion échoue toujours, même avec le bon mot de passe",
+              "On compare des hachages avec === au lieu de password_verify"
+            ],
+            [
+              "La page privée redirige toujours vers la connexion",
+              "Il manque session_start() dans la page privée"
+            ],
+            [
+              "Cannot modify header information - headers already sent",
+              "Un affichage avant session_start() ou header()"
+            ]
+          ],
+          "explication": "Trois pannes classiques de l'authentification."
+        }
+      ]
+    }
+  ],
+  "jeux": [
+    {
+      "id": "u08-guichet",
+      "titre": "Au guichet",
+      "description": "Dix questions éclair : sessions, connexion, droits et mots de passe.",
+      "tours": 10,
+      "questions": [
+        {
+          "id": "u08-j1",
+          "type": "qcm",
+          "notions": [
+            "sessions"
+          ],
+          "mono": true,
+          "question": "Quelle fonction ouvre la session ?",
+          "choix": [
+            "session_start",
+            "session_open",
+            "start_session",
+            "$_SESSION()"
+          ],
+          "bonne": 0,
+          "explication": "Au début de chaque script, avant tout affichage."
+        },
+        {
+          "id": "u08-j2",
+          "type": "qcm",
+          "notions": [
+            "sessions"
+          ],
+          "mono": true,
+          "question": "Quelle fonction détruit la session ?",
+          "choix": [
+            "session_destroy",
+            "session_end",
+            "unset_session",
+            "session_delete"
+          ],
+          "bonne": 0,
+          "explication": "Après `session_start()`."
+        },
+        {
+          "id": "u08-j3",
+          "type": "vf",
+          "notions": [
+            "sessions-cookies"
+          ],
+          "question": "Les données d'une session sont stockées dans le navigateur.",
+          "bonne": false,
+          "explication": "Sur le serveur ; seul l'identifiant voyage dans un cookie."
+        },
+        {
+          "id": "u08-j4",
+          "type": "qcm",
+          "notions": [
+            "autorisation"
+          ],
+          "mono": true,
+          "question": "Quel code HTTP pour « connecté, mais pas le droit » ?",
+          "choix": [
+            "403",
+            "404",
+            "200",
+            "500"
+          ],
+          "bonne": 0,
+          "explication": "403 Forbidden."
+        },
+        {
+          "id": "u08-j5",
+          "type": "qcm",
+          "notions": [
+            "mots-de-passe"
+          ],
+          "mono": true,
+          "question": "Quelle fonction vérifie un mot de passe saisi ?",
+          "choix": [
+            "password_verify",
+            "password_hash",
+            "password_check",
+            "md5"
+          ],
+          "bonne": 0,
+          "explication": "`password_verify($saisie, $hash)`."
+        },
+        {
+          "id": "u08-j6",
+          "type": "vf",
+          "notions": [
+            "authentification"
+          ],
+          "question": "Après `header('Location: login.php');`, il faut `exit();`.",
+          "bonne": true,
+          "explication": "Sinon la suite de la page s'exécute."
+        },
+        {
+          "id": "u08-j7",
+          "type": "qcm",
+          "notions": [
+            "authentification",
+            "autorisation"
+          ],
+          "question": "« Vérifier l'identité » s'appelle…",
+          "choix": [
+            "l'authentification",
+            "l'autorisation",
+            "l'hachage",
+            "la session"
+          ],
+          "bonne": 0,
+          "explication": "L'autorisation décide ensuite des droits."
+        },
+        {
+          "id": "u08-j8",
+          "type": "vf",
+          "notions": [
+            "sessions-cookies"
+          ],
+          "question": "On peut garder le rôle de l'utilisateur dans un cookie sans risque.",
+          "bonne": false,
+          "explication": "Il serait modifiable : dans la session."
+        },
+        {
+          "id": "u08-j9",
+          "type": "vf",
+          "notions": [
+            "sessions"
+          ],
+          "question": "Chaque utilisateur a sa propre session, avec ses propres données.",
+          "bonne": true,
+          "explication": "Chacun son ticket, chacun son dossier."
+        },
+        {
+          "id": "u08-j10",
+          "type": "qcm",
+          "notions": [
+            "mots-de-passe"
+          ],
+          "question": "Que stocke-t-on dans la colonne `password` ?",
+          "choix": [
+            "Le résultat de password_hash",
+            "Le mot de passe en clair",
+            "Le mot de passe en md5",
+            "Rien"
+          ],
+          "bonne": 0,
+          "explication": "L'empreinte, jamais le mot de passe."
+        },
+        {
+          "id": "u08-j11",
+          "type": "qcm",
+          "notions": [
+            "sessions"
+          ],
+          "question": "Que faut-il appeler avant `session_destroy()` ?",
+          "choix": [
+            "session_start()",
+            "header()",
+            "password_verify()",
+            "Rien"
+          ],
+          "bonne": 0,
+          "explication": "Pour accéder à la session en cours."
+        }
+      ]
+    }
+  ],
+  "quiz": {
+    "titre": "Quiz : sessions, authentification et autorisation",
+    "questions": [
+      {
+        "id": "u08-q1",
+        "type": "qcm",
+        "notions": [
+          "sessions"
+        ],
+        "question": "Pourquoi a-t-on besoin des sessions ?",
+        "choix": [
+          "Chaque requête HTTP est indépendante : le serveur ne se souvient pas des précédentes",
+          "Pour accélérer les pages",
+          "Pour remplacer la base de données",
+          "Pour chiffrer les mots de passe"
+        ],
+        "bonne": 0,
+        "explication": "La session donne une mémoire au serveur, utilisateur par utilisateur."
+      },
+      {
+        "id": "u08-q2",
+        "type": "predire",
+        "notions": [
+          "sessions"
+        ],
+        "question": "La requête porte une session où `cart` vaut `['pomme']`. Qu'affiche ce code ?",
+        "requete": {
+          "session": {
+            "cart": [
+              "pomme"
+            ]
+          }
+        },
+        "code": [
+          "session_start();",
+          "$_SESSION['cart'][] = 'poire';",
+          "echo count($_SESSION['cart']) . \" article(s)\";",
+          ""
+        ],
+        "explication": "La session contenait déjà un article ; on en ajoute un."
+      },
+      {
+        "id": "u08-q3",
+        "type": "tri",
+        "notions": [
+          "sessions-cookies"
+        ],
+        "question": "Cookie ou session ?",
+        "categories": [
+          "Cookie",
+          "Session"
+        ],
+        "items": [
+          [
+            "Préférence de thème",
+            0
+          ],
+          [
+            "Utilisateur connecté",
+            1
+          ],
+          [
+            "Peut être falsifié par le client",
+            0
+          ],
+          [
+            "Plus de données possibles",
+            1
+          ]
+        ],
+        "explication": "Préférences côté client, état de connexion côté serveur."
+      },
+      {
+        "id": "u08-q4",
+        "type": "bug",
+        "notions": [
+          "autorisation"
+        ],
+        "question": "Un lecteur arrive à voir la page des auteur·trices. Touche la ligne fautive.",
+        "code": [
+          "<?php",
+          "session_start();",
+          "if (!isset($_SESSION['user_id'])) {",
+          "    header('Location: login.php');",
+          "    exit();",
+          "}",
+          "if ($_SESSION['role'] = 'author') {",
+          "    echo \"Espace auteur·trice\";",
+          "}",
+          ""
+        ],
+        "ligne": 7,
+        "choix": [
+          "Un seul `=` range 'author' dans le rôle au lieu de comparer : il faut `===`",
+          "Il faut `$_COOKIE['role']`",
+          "Il manque session_destroy()",
+          "La ligne 2 est en trop"
+        ],
+        "bonne": 0,
+        "explication": "`=` affecte (et vaut 'author', donc vrai) : tout le monde devient auteur·trice !"
+      },
+      {
+        "id": "u08-q5",
+        "type": "qcm",
+        "notions": [
+          "authentification"
+        ],
+        "question": "Que range-t-on dans la session après une connexion réussie, dans l'exercice du cours ?",
+        "choix": [
+          "L'id, l'e-mail et le rôle de l'utilisateur",
+          "Son mot de passe en clair",
+          "Son mot de passe haché",
+          "Tout le contenu de la base"
+        ],
+        "bonne": 0,
+        "explication": "`$_SESSION['user_id']`, `$_SESSION['email']`, `$_SESSION['role']`."
+      },
+      {
+        "id": "u08-q6",
+        "type": "vf",
+        "notions": [
+          "mots-de-passe"
+        ],
+        "question": "`password_verify` compare le mot de passe saisi à une empreinte créée par `password_hash`.",
+        "bonne": true,
+        "explication": "C'est la seule bonne façon de vérifier."
+      },
+      {
+        "id": "u08-q7",
+        "type": "predire",
+        "notions": [
+          "mots-de-passe"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "$hash = password_hash(\"tournesol\", PASSWORD_DEFAULT);",
+          "echo password_verify(\"tournesol\", $hash) ? \"ok\" : \"refusé\";",
+          "echo \" / \";",
+          "echo $hash === \"tournesol\" ? \"en clair\" : \"haché\";",
+          ""
+        ],
+        "explication": "La vérification réussit ; l'empreinte n'est pas le mot de passe."
+      },
+      {
+        "id": "u08-q8",
+        "type": "qcm",
+        "notions": [
+          "autorisation"
+        ],
+        "mono": true,
+        "question": "Comment répondre 403 en PHP ?",
+        "choix": [
+          "http_response_code(403);",
+          "header('403');",
+          "exit(403);",
+          "echo 403;"
+        ],
+        "bonne": 0,
+        "explication": "`http_response_code(403)`, puis `exit()`."
+      },
+      {
+        "id": "u08-q9",
+        "type": "ordre",
+        "notions": [
+          "authentification",
+          "mots-de-passe"
+        ],
+        "question": "Remets la connexion dans l'ordre.",
+        "items": [
+          "Lire l'e-mail et le mot de passe dans $_POST",
+          "Chercher l'utilisateur par e-mail (requête préparée)",
+          "Vérifier avec password_verify",
+          "session_start() et ranger user_id, email, role",
+          "Rediriger vers l'accueil"
+        ],
+        "explication": "Lire, chercher, vérifier, mémoriser, rediriger."
+      },
+      {
+        "id": "u08-q10",
+        "type": "qcm",
+        "notions": [
+          "sessions"
+        ],
+        "question": "Que fait `session_destroy()` ?",
+        "choix": [
+          "Détruit les données de la session en cours sur le serveur",
+          "Supprime tous les utilisateurs",
+          "Efface la base de données",
+          "Ferme le navigateur"
+        ],
+        "bonne": 0,
+        "explication": "C'est la déconnexion."
+      },
+      {
+        "id": "u08-q11",
+        "type": "vf",
+        "notions": [
+          "sessions-cookies"
+        ],
+        "question": "Les sessions conviennent pour garder des données pendant des mois.",
+        "bonne": false,
+        "explication": "Pour une durée limitée ; pour le long terme, la base de données."
+      },
+      {
+        "id": "u08-q12",
+        "type": "erreurs",
+        "notions": [
+          "sessions",
+          "authentification"
+        ],
+        "question": "Traduis.",
+        "paires": [
+          [
+            "session_start(): Session cannot be started after headers have already been sent",
+            "Un affichage a eu lieu avant session_start()"
+          ],
+          [
+            "Undefined array key \"role\"",
+            "Le rôle n'est pas (encore) dans la session"
+          ],
+          [
+            "Ignoring session_start() because a session is already active",
+            "session_start() est appelé deux fois"
+          ]
+        ],
+        "explication": "Trois messages fréquents autour des sessions."
+      },
+      {
+        "id": "u08-q13",
+        "type": "ecrire",
+        "notions": [
+          "autorisation"
+        ],
+        "question": "Écris `canAccess(?array $session, string $role): bool` qui retourne `true` seulement si la session contient un `user_id` ET que son `role` vaut `$role`.",
+        "depart": [
+          ""
+        ],
+        "tests": {
+          "fonction": "canAccess",
+          "cas": [
+            {
+              "args": [
+                {
+                  "user_id": 1,
+                  "role": "author"
+                },
+                "author"
+              ],
+              "attendu": true
+            },
+            {
+              "titre": "Mauvais rôle",
+              "args": [
+                {
+                  "user_id": 2,
+                  "role": "reader"
+                },
+                "author"
+              ],
+              "attendu": false
+            },
+            {
+              "titre": "Pas connecté",
+              "args": [
+                {},
+                "author"
+              ],
+              "attendu": false
+            },
+            {
+              "titre": "Session nulle",
+              "args": [
+                null,
+                "reader"
+              ],
+              "attendu": false
+            },
+            {
+              "titre": "Rôle sans connexion",
+              "args": [
+                {
+                  "role": "author"
+                },
+                "author"
+              ],
+              "attendu": false
+            }
+          ]
+        },
+        "indices": [
+          "Deux conditions reliées par `&&`.",
+          "`isset($session['user_id'])` gère aussi le cas `null`.",
+          {
+            "texte": "Presque :",
+            "code": "return isset($session['user_id']) && (___);"
+          }
+        ],
+        "solution": [
+          "function canAccess(?array $session, string $role): bool {",
+          "    return isset($session['user_id']) && ($session['role'] ?? null) === $role;",
+          "}"
+        ],
+        "erreursTypiques": [
+          {
+            "code": "function canAccess(?array $session, string $role): bool {\n    return ($session['role'] ?? null) === $role;\n}",
+            "attendu": "echec"
+          }
+        ],
+        "explication": "Authentifié ET autorisé : les deux conditions sont nécessaires."
+      },
+      {
+        "id": "u08-q14",
+        "type": "qcm",
+        "notions": [
+          "autorisation"
+        ],
+        "question": "Que recommande le cours pour les applications réelles ?",
+        "choix": [
+          "Suivre les bonnes pratiques de sécurité (OWASP) et, plus tard, utiliser des bibliothèques spécialisées",
+          "Copier exactement les exemples du cours",
+          "Garder les rôles dans des cookies",
+          "Désactiver les sessions"
+        ],
+        "bonne": 0,
+        "explication": "Les exemples du cours sont simplifiés à des fins pédagogiques."
+      },
+      {
+        "id": "u08-q15",
+        "type": "vf",
+        "notions": [
+          "sessions"
+        ],
+        "question": "Le cours recommande d'allonger la durée des sessions dans php.ini.",
+        "bonne": false,
+        "explication": "Il le déconseille : une session courte limite le risque de détournement."
+      }
+    ]
+  },
+  "boss": [
+    {
+      "id": "u08-b1",
+      "titre": "Créer un compte",
+      "source": "Séance 7, exercice 1 (page de création de compte)",
+      "notions": [
+        "mots-de-passe",
+        "pdo",
+        "formulaires"
+      ],
+      "enonce": "**L'exercice du cours (séance 7, exercice 1)** : réalisez une application web PHP simple de gestion de livres (uniquement la partie authentification et autorisation) avec les fonctionnalités suivantes :\n\n- accéder à une page publique accessible à toutes les personnes (page d'accueil) ;\n- accéder à une page pour se créer un compte avec une adresse mail et un mot de passe et un rôle auteur.trice ou lecteur.trice (`author` ou `reader`) ;\n- accéder à une page pour se connecter avec son adresse mail et son mot de passe ;\n- accéder à une page privée accessible uniquement aux personnes connectées. La page devra afficher un message de bienvenue avec l'adresse mail de la personne et son rôle ;\n- accéder à une page privée accessible uniquement aux personnes auteur.trice (rôle `author`) ;\n- se déconnecter.\n\nUtilisez les sessions PHP pour gérer l'état de connexion des personnes. Assurez-vous de stocker les mots de passe de manière sécurisée (en hachant le mot de passe).\n\n**Ta mission ici** : la page `public/auth/register.php`. `src/database.php` (déjà écrit) ouvre la base dans `$pdo` (table `users` : `id`, `email` unique, `password`, `role`).\n\n- Un formulaire POST : `email`, `password`, et une liste `role` (`reader` ou `author`).\n- À l'envoi : tous les champs sont obligatoires ; le rôle doit être `author` ou `reader` (un client peut envoyer n'importe quoi, comme `admin`) ; un e-mail déjà pris est refusé ; sinon le mot de passe est **haché** et le compte est inséré (requête préparée).\n- Afficher un message d'erreur, ou de succès.",
+      "fichier": "public/auth/register.php",
+      "fichiers": {
+        "src/database.php": [
+          "<?php",
+          "// Base de données de l'application (SQLite) : la table users, et deux comptes de test.",
+          "const DATABASE_FILE = __DIR__ . '/../books.db';",
+          "",
+          "$pdo = new PDO('sqlite:' . DATABASE_FILE);",
+          "$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);",
+          "$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);",
+          "$pdo->exec('CREATE TABLE IF NOT EXISTS users (",
+          "    id INTEGER PRIMARY KEY AUTOINCREMENT,",
+          "    email TEXT UNIQUE NOT NULL,",
+          "    password TEXT NOT NULL,",
+          "    role TEXT NOT NULL DEFAULT \"reader\"",
+          ")');",
+          "",
+          "if ($pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() == 0) {",
+          "    $stmt = $pdo->prepare('INSERT INTO users (email, password, role) VALUES (:email, :password, :role)');",
+          "    $stmt->execute(['email' => 'ana@example.com', 'password' => password_hash('secret123', PASSWORD_DEFAULT), 'role' => 'author']);",
+          "    $stmt->execute(['email' => 'leo@example.com', 'password' => password_hash('lecture42', PASSWORD_DEFAULT), 'role' => 'reader']);",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        "require_once __DIR__ . '/../../src/database.php';",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Le formulaire",
+            "requete": {
+              "methode": "GET"
+            },
+            "contient": [
+              "name=\"email\"",
+              "name=\"password\"",
+              "name=\"role\"",
+              "value=\"author\"",
+              "value=\"reader\""
+            ]
+          },
+          {
+            "titre": "Créer Zoé (lectrice)",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "email": "zoe@example.com",
+                "password": "motdepasse123",
+                "role": "reader"
+              }
+            },
+            "code": "$u = $pdo->query(\"SELECT * FROM users WHERE email = 'zoe@example.com'\")->fetch();\nreturn $u ? [$u['role'], $u['password'] !== 'motdepasse123', password_verify('motdepasse123', $u['password'])] : 'aucun compte';",
+            "attendu": [
+              "reader",
+              true,
+              true
+            ],
+            "siEchec": "Le compte doit être créé avec le mot de passe **haché** : `password_hash($password, PASSWORD_DEFAULT)`."
+          },
+          {
+            "titre": "E-mail déjà pris",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "email": "ana@example.com",
+                "password": "nouveau123",
+                "role": "reader"
+              }
+            },
+            "code": "return $pdo->query(\"SELECT COUNT(*) FROM users WHERE email = 'ana@example.com'\")->fetchColumn();",
+            "attendu": 1
+          },
+          {
+            "titre": "E-mail déjà pris : message",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "email": "ana@example.com",
+                "password": "nouveau123",
+                "role": "reader"
+              }
+            },
+            "contient": [
+              "déjà"
+            ]
+          },
+          {
+            "titre": "Rôle inventé (admin) refusé",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "email": "eve@example.com",
+                "password": "pirate123",
+                "role": "admin"
+              }
+            },
+            "code": "return $pdo->query(\"SELECT COUNT(*) FROM users WHERE email = 'eve@example.com'\")->fetchColumn();",
+            "attendu": 0,
+            "siEchec": "N'accepte que les rôles `author` et `reader` : sinon n'importe qui se donne le rôle `admin` en modifiant le formulaire."
+          },
+          {
+            "titre": "Champ vide refusé",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "email": "",
+                "password": "abc",
+                "role": "reader"
+              }
+            },
+            "code": "return $pdo->query(\"SELECT COUNT(*) FROM users\")->fetchColumn();",
+            "attendu": 2
+          }
+        ],
+        "obligatoire": [
+          "password_hash",
+          "->prepare"
+        ]
+      },
+      "indices": [
+        "En haut : si POST, lis `email`, `password`, `role` (avec `?? ''`), puis une suite de vérifications avec `if / elseif / else`.",
+        "Vérifications : champs vides (`empty`), rôle (`in_array($role, ['author', 'reader'])`), e-mail déjà pris (un SELECT préparé). Si tout va bien : `password_hash`, puis INSERT préparé.",
+        {
+          "texte": "L'insertion :",
+          "code": "$hashedPassword = password_hash($password, PASSWORD_DEFAULT);\n$stmt = $pdo->prepare('INSERT INTO users (email, password, role) VALUES (:email, :password, :role)');\n$stmt->execute(['email' => $email, 'password' => ___, 'role' => $role]);"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "require_once __DIR__ . '/../../src/database.php';",
+        "",
+        "$error = '';",
+        "$success = '';",
+        "",
+        "if ($_SERVER['REQUEST_METHOD'] === 'POST') {",
+        "    $email = $_POST['email'] ?? '';",
+        "    $password = $_POST['password'] ?? '';",
+        "    $role = $_POST['role'] ?? '';",
+        "",
+        "    if (empty($email) || empty($password) || empty($role)) {",
+        "        $error = 'Tous les champs sont obligatoires.';",
+        "    } elseif (!in_array($role, ['author', 'reader'])) {",
+        "        $error = 'Le rôle est invalide.';",
+        "    } else {",
+        "        $stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email');",
+        "        $stmt->execute(['email' => $email]);",
+        "        if ($stmt->fetch()) {",
+        "            $error = 'Cet e-mail est déjà pris.';",
+        "        } else {",
+        "            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);",
+        "            $stmt = $pdo->prepare('INSERT INTO users (email, password, role) VALUES (:email, :password, :role)');",
+        "            $stmt->execute(['email' => $email, 'password' => $hashedPassword, 'role' => $role]);",
+        "            $success = 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.';",
+        "        }",
+        "    }",
+        "}",
+        "?>",
+        "<h1>Créer un compte</h1>",
+        "<?php if ($error) { ?>",
+        "    <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>",
+        "<?php } ?>",
+        "<?php if ($success) { ?>",
+        "    <p><strong>Succès :</strong> <?= htmlspecialchars($success) ?></p>",
+        "<?php } ?>",
+        "<form method=\"POST\">",
+        "    <input type=\"email\" name=\"email\" required>",
+        "    <input type=\"password\" name=\"password\" required>",
+        "    <select name=\"role\" required>",
+        "        <option value=\"reader\">Lecteur·trice</option>",
+        "        <option value=\"author\">Auteur·trice</option>",
+        "    </select>",
+        "    <button type=\"submit\">Créer mon compte</button>",
+        "</form>"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../../src/database.php';\n\n$error = '';\n$success = '';\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $email = $_POST['email'] ?? '';\n    $password = $_POST['password'] ?? '';\n    $role = $_POST['role'] ?? '';\n\n    if (empty($email) || empty($password) || empty($role)) {\n        $error = 'Tous les champs sont obligatoires.';\n    } elseif (!in_array($role, ['author', 'reader'])) {\n        $error = 'Le rôle est invalide.';\n    } else {\n        $stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email');\n        $stmt->execute(['email' => $email]);\n        if ($stmt->fetch()) {\n            $error = 'Cet e-mail est déjà pris.';\n        } else {\n            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);\n            $stmt = $pdo->prepare('INSERT INTO users (email, password, role) VALUES (:email, :password, :role)');\n            $stmt->execute(['email' => $email, 'password' => $password, 'role' => $role]);\n            $success = 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.';\n        }\n    }\n}\n?>\n<h1>Créer un compte</h1>\n<?php if ($error) { ?>\n    <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>\n<?php } ?>\n<?php if ($success) { ?>\n    <p><strong>Succès :</strong> <?= htmlspecialchars($success) ?></p>\n<?php } ?>\n<form method=\"POST\">\n    <input type=\"email\" name=\"email\" required>\n    <input type=\"password\" name=\"password\" required>\n    <select name=\"role\" required>\n        <option value=\"reader\">Lecteur·trice</option>\n        <option value=\"author\">Auteur·trice</option>\n    </select>\n    <button type=\"submit\">Créer mon compte</button>\n</form>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../../src/database.php';\n\n$error = '';\n$success = '';\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $email = $_POST['email'] ?? '';\n    $password = $_POST['password'] ?? '';\n    $role = $_POST['role'] ?? '';\n\n    if (empty($email) || empty($password) || empty($role)) {\n        $error = 'Tous les champs sont obligatoires.';\n    } else {\n        $stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email');\n        $stmt->execute(['email' => $email]);\n        if ($stmt->fetch()) {\n            $error = 'Cet e-mail est déjà pris.';\n        } else {\n            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);\n            $stmt = $pdo->prepare('INSERT INTO users (email, password, role) VALUES (:email, :password, :role)');\n            $stmt->execute(['email' => $email, 'password' => $hashedPassword, 'role' => $role]);\n            $success = 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.';\n        }\n    }\n}\n?>\n<h1>Créer un compte</h1>\n<?php if ($error) { ?>\n    <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>\n<?php } ?>\n<?php if ($success) { ?>\n    <p><strong>Succès :</strong> <?= htmlspecialchars($success) ?></p>\n<?php } ?>\n<form method=\"POST\">\n    <input type=\"email\" name=\"email\" required>\n    <input type=\"password\" name=\"password\" required>\n    <select name=\"role\" required>\n        <option value=\"reader\">Lecteur·trice</option>\n        <option value=\"author\">Auteur·trice</option>\n    </select>\n    <button type=\"submit\">Créer mon compte</button>\n</form>",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "On ne fait jamais confiance au formulaire (le rôle !) et on ne stocke jamais un mot de passe en clair."
+    },
+    {
+      "id": "u08-b2",
+      "titre": "Se connecter",
+      "source": "Séance 7, exercice 1 (page de connexion)",
+      "notions": [
+        "authentification",
+        "mots-de-passe",
+        "sessions"
+      ],
+      "enonce": "**L'exercice du cours (séance 7, exercice 1)** : réalisez une application web PHP simple de gestion de livres (uniquement la partie authentification et autorisation) avec les fonctionnalités suivantes :\n\n- accéder à une page publique accessible à toutes les personnes (page d'accueil) ;\n- accéder à une page pour se créer un compte avec une adresse mail et un mot de passe et un rôle auteur.trice ou lecteur.trice (`author` ou `reader`) ;\n- accéder à une page pour se connecter avec son adresse mail et son mot de passe ;\n- accéder à une page privée accessible uniquement aux personnes connectées. La page devra afficher un message de bienvenue avec l'adresse mail de la personne et son rôle ;\n- accéder à une page privée accessible uniquement aux personnes auteur.trice (rôle `author`) ;\n- se déconnecter.\n\nUtilisez les sessions PHP pour gérer l'état de connexion des personnes. Assurez-vous de stocker les mots de passe de manière sécurisée (en hachant le mot de passe).\n\n**Ta mission ici** : la page `public/auth/login.php`. La base contient déjà deux comptes : `ana@example.com` (mot de passe `secret123`, rôle `author`) et `leo@example.com` (`lecture42`, `reader`).\n\n- Un formulaire POST : `email` et `password`.\n- Si le mot de passe est juste : ranger `user_id`, `email` et `role` dans la session, puis rediriger vers l'accueil (`../index.php`).\n- Sinon : afficher « E-mail ou mot de passe incorrect. » (le même message dans les deux cas : on ne dit pas à un attaquant quels e-mails existent).",
+      "fichier": "public/auth/login.php",
+      "fichiers": {
+        "src/database.php": [
+          "<?php",
+          "// Base de données de l'application (SQLite) : la table users, et deux comptes de test.",
+          "const DATABASE_FILE = __DIR__ . '/../books.db';",
+          "",
+          "$pdo = new PDO('sqlite:' . DATABASE_FILE);",
+          "$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);",
+          "$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);",
+          "$pdo->exec('CREATE TABLE IF NOT EXISTS users (",
+          "    id INTEGER PRIMARY KEY AUTOINCREMENT,",
+          "    email TEXT UNIQUE NOT NULL,",
+          "    password TEXT NOT NULL,",
+          "    role TEXT NOT NULL DEFAULT \"reader\"",
+          ")');",
+          "",
+          "if ($pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() == 0) {",
+          "    $stmt = $pdo->prepare('INSERT INTO users (email, password, role) VALUES (:email, :password, :role)');",
+          "    $stmt->execute(['email' => 'ana@example.com', 'password' => password_hash('secret123', PASSWORD_DEFAULT), 'role' => 'author']);",
+          "    $stmt->execute(['email' => 'leo@example.com', 'password' => password_hash('lecture42', PASSWORD_DEFAULT), 'role' => 'reader']);",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        "require_once __DIR__ . '/../../src/database.php';",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Le formulaire",
+            "requete": {
+              "methode": "GET"
+            },
+            "contient": [
+              "name=\"email\"",
+              "name=\"password\""
+            ],
+            "redirection": false
+          },
+          {
+            "titre": "Ana, bon mot de passe",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "email": "ana@example.com",
+                "password": "secret123"
+              }
+            },
+            "session": {
+              "user_id": 1,
+              "email": "ana@example.com",
+              "role": "author"
+            },
+            "redirection": "../index.php"
+          },
+          {
+            "titre": "Léo, bon mot de passe",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "email": "leo@example.com",
+                "password": "lecture42"
+              }
+            },
+            "session": {
+              "user_id": 2,
+              "role": "reader"
+            },
+            "redirection": true
+          },
+          {
+            "titre": "Mauvais mot de passe",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "email": "ana@example.com",
+                "password": "Secret123"
+              }
+            },
+            "code": "return isset($_SESSION['user_id']);",
+            "attendu": false,
+            "siEchec": "Avec un mauvais mot de passe, rien ne doit entrer dans la session."
+          },
+          {
+            "titre": "Mauvais mot de passe : message",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "email": "ana@example.com",
+                "password": "Secret123"
+              }
+            },
+            "contient": [
+              "E-mail ou mot de passe incorrect."
+            ],
+            "redirection": false
+          },
+          {
+            "titre": "E-mail inconnu",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "email": "zoe@example.com",
+                "password": "secret123"
+              }
+            },
+            "contient": [
+              "E-mail ou mot de passe incorrect."
+            ],
+            "redirection": false
+          },
+          {
+            "titre": "Injection dans l'e-mail",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "email": "' OR '1'='1",
+                "password": "x"
+              }
+            },
+            "code": "return isset($_SESSION['user_id']);",
+            "attendu": false
+          }
+        ],
+        "obligatoire": [
+          "password_verify",
+          "session_start"
+        ]
+      },
+      "indices": [
+        "`session_start();` en haut. Si POST : chercher l'utilisateur par e-mail (requête préparée), puis vérifier le mot de passe.",
+        "`if ($user && password_verify($password, $user['password']))` : ranger les trois valeurs dans `$_SESSION`, puis `header('Location: ../index.php'); exit();`. Sinon, le message d'erreur.",
+        {
+          "texte": "La partie session :",
+          "code": "$_SESSION['user_id'] = $user['id'];\n$_SESSION['email'] = ___;\n$_SESSION['role'] = ___;\nheader('Location: ../index.php');\nexit();"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "require_once __DIR__ . '/../../src/database.php';",
+        "",
+        "session_start();",
+        "",
+        "$error = '';",
+        "",
+        "if ($_SERVER['REQUEST_METHOD'] === 'POST') {",
+        "    $email = $_POST['email'] ?? '';",
+        "    $password = $_POST['password'] ?? '';",
+        "",
+        "    $stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email');",
+        "    $stmt->execute(['email' => $email]);",
+        "    $user = $stmt->fetch();",
+        "",
+        "    if ($user && password_verify($password, $user['password'])) {",
+        "        $_SESSION['user_id'] = $user['id'];",
+        "        $_SESSION['email'] = $user['email'];",
+        "        $_SESSION['role'] = $user['role'];",
+        "        header('Location: ../index.php');",
+        "        exit();",
+        "    }",
+        "    $error = 'E-mail ou mot de passe incorrect.';",
+        "}",
+        "?>",
+        "<h1>Se connecter</h1>",
+        "<?php if ($error) { ?>",
+        "    <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>",
+        "<?php } ?>",
+        "<form method=\"POST\">",
+        "    <input type=\"email\" name=\"email\" required>",
+        "    <input type=\"password\" name=\"password\" required>",
+        "    <button type=\"submit\">Se connecter</button>",
+        "</form>"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../../src/database.php';\n\nsession_start();\n\n$error = '';\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $email = $_POST['email'] ?? '';\n    $password = $_POST['password'] ?? '';\n\n    $stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email');\n    $stmt->execute(['email' => $email]);\n    $user = $stmt->fetch();\n\n    if ($user) {\n        $_SESSION['user_id'] = $user['id'];\n        $_SESSION['email'] = $user['email'];\n        $_SESSION['role'] = $user['role'];\n        header('Location: ../index.php');\n        exit();\n    }\n    $error = 'E-mail ou mot de passe incorrect.';\n}\n?>\n<h1>Se connecter</h1>\n<?php if ($error) { ?>\n    <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>\n<?php } ?>\n<form method=\"POST\">\n    <input type=\"email\" name=\"email\" required>\n    <input type=\"password\" name=\"password\" required>\n    <button type=\"submit\">Se connecter</button>\n</form>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../../src/database.php';\n\n\n\n$error = '';\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $email = $_POST['email'] ?? '';\n    $password = $_POST['password'] ?? '';\n\n    $stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email');\n    $stmt->execute(['email' => $email]);\n    $user = $stmt->fetch();\n\n    if ($user && password_verify($password, $user['password'])) {\n        $_SESSION['user_id'] = $user['id'];\n        $_SESSION['email'] = $user['email'];\n        $_SESSION['role'] = $user['role'];\n        header('Location: ../index.php');\n        exit();\n    }\n    $error = 'E-mail ou mot de passe incorrect.';\n}\n?>\n<h1>Se connecter</h1>\n<?php if ($error) { ?>\n    <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>\n<?php } ?>\n<form method=\"POST\">\n    <input type=\"email\" name=\"email\" required>\n    <input type=\"password\" name=\"password\" required>\n    <button type=\"submit\">Se connecter</button>\n</form>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../../src/database.php';\n\nsession_start();\n\n$error = '';\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $email = $_POST['email'] ?? '';\n    $password = $_POST['password'] ?? '';\n\n    $stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email');\n    $stmt->execute(['email' => $email]);\n    $user = $stmt->fetch();\n\n    if ($user && password_verify($password, $user['password'])) {\n        $_SESSION['user_id'] = $user['id'];\n        $_SESSION['email'] = $user['email'];\n        setcookie('role', $user['role']);\n        header('Location: ../index.php');\n        exit();\n    }\n    $error = 'E-mail ou mot de passe incorrect.';\n}\n?>\n<h1>Se connecter</h1>\n<?php if ($error) { ?>\n    <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>\n<?php } ?>\n<form method=\"POST\">\n    <input type=\"email\" name=\"email\" required>\n    <input type=\"password\" name=\"password\" required>\n    <button type=\"submit\">Se connecter</button>\n</form>",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "Une connexion réussie remplit la session (id, e-mail, rôle) ; un échec ne laisse rien entrer et ne dit pas pourquoi."
+    },
+    {
+      "id": "u08-b3",
+      "titre": "La page privée",
+      "source": "Séance 7, exercice 1 (page privée)",
+      "notions": [
+        "authentification",
+        "sessions"
+      ],
+      "enonce": "**L'exercice du cours (séance 7, exercice 1)** : réalisez une application web PHP simple de gestion de livres (uniquement la partie authentification et autorisation) avec les fonctionnalités suivantes :\n\n- accéder à une page publique accessible à toutes les personnes (page d'accueil) ;\n- accéder à une page pour se créer un compte avec une adresse mail et un mot de passe et un rôle auteur.trice ou lecteur.trice (`author` ou `reader`) ;\n- accéder à une page pour se connecter avec son adresse mail et son mot de passe ;\n- accéder à une page privée accessible uniquement aux personnes connectées. La page devra afficher un message de bienvenue avec l'adresse mail de la personne et son rôle ;\n- accéder à une page privée accessible uniquement aux personnes auteur.trice (rôle `author`) ;\n- se déconnecter.\n\nUtilisez les sessions PHP pour gérer l'état de connexion des personnes. Assurez-vous de stocker les mots de passe de manière sécurisée (en hachant le mot de passe).\n\n**Ta mission ici** : la page `public/private.php`, accessible uniquement aux personnes connectées. Si personne n'est connecté, redirection vers `auth/login.php`. Sinon, un message de bienvenue avec l'adresse e-mail de la personne et son rôle (pris dans la session, et échappés).",
+      "fichier": "public/private.php",
+      "fichiers": {
+        "src/database.php": [
+          "<?php",
+          "// Base de données de l'application (SQLite) : la table users, et deux comptes de test.",
+          "const DATABASE_FILE = __DIR__ . '/../books.db';",
+          "",
+          "$pdo = new PDO('sqlite:' . DATABASE_FILE);",
+          "$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);",
+          "$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);",
+          "$pdo->exec('CREATE TABLE IF NOT EXISTS users (",
+          "    id INTEGER PRIMARY KEY AUTOINCREMENT,",
+          "    email TEXT UNIQUE NOT NULL,",
+          "    password TEXT NOT NULL,",
+          "    role TEXT NOT NULL DEFAULT \"reader\"",
+          ")');",
+          "",
+          "if ($pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() == 0) {",
+          "    $stmt = $pdo->prepare('INSERT INTO users (email, password, role) VALUES (:email, :password, :role)');",
+          "    $stmt->execute(['email' => 'ana@example.com', 'password' => password_hash('secret123', PASSWORD_DEFAULT), 'role' => 'author']);",
+          "    $stmt->execute(['email' => 'leo@example.com', 'password' => password_hash('lecture42', PASSWORD_DEFAULT), 'role' => 'reader']);",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Pas connecté : vers la connexion",
+            "requete": {
+              "methode": "GET"
+            },
+            "redirection": "auth/login.php",
+            "neContientPas": [
+              "Bienvenue"
+            ]
+          },
+          {
+            "titre": "Ana connectée",
+            "requete": {
+              "session": {
+                "user_id": 1,
+                "email": "ana@example.com",
+                "role": "author"
+              }
+            },
+            "contient": [
+              "ana@example.com",
+              "author"
+            ],
+            "redirection": false
+          },
+          {
+            "titre": "Léo connecté",
+            "requete": {
+              "session": {
+                "user_id": 2,
+                "email": "leo@example.com",
+                "role": "reader"
+              }
+            },
+            "contient": [
+              "leo@example.com",
+              "reader"
+            ]
+          },
+          {
+            "titre": "E-mail piégé en session",
+            "requete": {
+              "session": {
+                "user_id": 9,
+                "email": "<b>eve</b>@example.com",
+                "role": "reader"
+              }
+            },
+            "neContientPas": [
+              "<b>eve</b>"
+            ]
+          }
+        ]
+      },
+      "indices": [
+        "`session_start();`, puis la garde : pas de `user_id` → redirection et `exit()`.",
+        "Ensuite, affiche l'e-mail et le rôle de la session, avec `htmlspecialchars`.",
+        {
+          "texte": "La garde :",
+          "code": "session_start();\nif (!isset($_SESSION['user_id'])) {\n    header('Location: ___');\n    exit();\n}"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "session_start();",
+        "",
+        "$userId = $_SESSION['user_id'] ?? null;",
+        "if (!$userId) {",
+        "    header('Location: auth/login.php');",
+        "    exit();",
+        "}",
+        "",
+        "$email = $_SESSION['email'];",
+        "$role = $_SESSION['role'];",
+        "?>",
+        "<h1>Page privée</h1>",
+        "<p>Bienvenue <?= htmlspecialchars($email) ?> ! Votre rôle : <?= htmlspecialchars($role) ?>.</p>",
+        "<p><a href=\"auth/logout.php\">Se déconnecter</a></p>"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nsession_start();\n\n$userId = $_SESSION['user_id'] ?? null;\nif (!$userId) {\n    header('Location: auth/login.php');\n}\n\n$email = $_SESSION['email'];\n$role = $_SESSION['role'];\n?>\n<h1>Page privée</h1>\n<p>Bienvenue <?= htmlspecialchars($email) ?> ! Votre rôle : <?= htmlspecialchars($role) ?>.</p>\n<p><a href=\"auth/logout.php\">Se déconnecter</a></p>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\n\n\n$userId = $_SESSION['user_id'] ?? null;\nif (!$userId) {\n    header('Location: auth/login.php');\n    exit();\n}\n\n$email = $_SESSION['email'];\n$role = $_SESSION['role'];\n?>\n<h1>Page privée</h1>\n<p>Bienvenue <?= htmlspecialchars($email) ?> ! Votre rôle : <?= htmlspecialchars($role) ?>.</p>\n<p><a href=\"auth/logout.php\">Se déconnecter</a></p>",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "La garde en haut de page : sans session, personne n'entre (et `exit()` empêche la suite de partir)."
+    },
+    {
+      "id": "u08-b4",
+      "titre": "L'espace auteur·trice",
+      "source": "Séance 7, exercice 1 (page réservée au rôle author)",
+      "notions": [
+        "autorisation",
+        "authentification"
+      ],
+      "enonce": "**L'exercice du cours (séance 7, exercice 1)** : réalisez une application web PHP simple de gestion de livres (uniquement la partie authentification et autorisation) avec les fonctionnalités suivantes :\n\n- accéder à une page publique accessible à toutes les personnes (page d'accueil) ;\n- accéder à une page pour se créer un compte avec une adresse mail et un mot de passe et un rôle auteur.trice ou lecteur.trice (`author` ou `reader`) ;\n- accéder à une page pour se connecter avec son adresse mail et son mot de passe ;\n- accéder à une page privée accessible uniquement aux personnes connectées. La page devra afficher un message de bienvenue avec l'adresse mail de la personne et son rôle ;\n- accéder à une page privée accessible uniquement aux personnes auteur.trice (rôle `author`) ;\n- se déconnecter.\n\nUtilisez les sessions PHP pour gérer l'état de connexion des personnes. Assurez-vous de stocker les mots de passe de manière sécurisée (en hachant le mot de passe).\n\n**Ta mission ici** : la page `public/author.php`, accessible uniquement aux personnes de rôle `author`.\n\n- Pas connecté : redirection vers `auth/login.php`.\n- Connecté mais pas `author` : accès refusé, avec le code HTTP 403 (et un message).\n- `author` : le titre `<h1>Espace auteur·trice</h1>`.",
+      "fichier": "public/author.php",
+      "fichiers": {
+        "src/database.php": [
+          "<?php",
+          "// Base de données de l'application (SQLite) : la table users, et deux comptes de test.",
+          "const DATABASE_FILE = __DIR__ . '/../books.db';",
+          "",
+          "$pdo = new PDO('sqlite:' . DATABASE_FILE);",
+          "$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);",
+          "$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);",
+          "$pdo->exec('CREATE TABLE IF NOT EXISTS users (",
+          "    id INTEGER PRIMARY KEY AUTOINCREMENT,",
+          "    email TEXT UNIQUE NOT NULL,",
+          "    password TEXT NOT NULL,",
+          "    role TEXT NOT NULL DEFAULT \"reader\"",
+          ")');",
+          "",
+          "if ($pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() == 0) {",
+          "    $stmt = $pdo->prepare('INSERT INTO users (email, password, role) VALUES (:email, :password, :role)');",
+          "    $stmt->execute(['email' => 'ana@example.com', 'password' => password_hash('secret123', PASSWORD_DEFAULT), 'role' => 'author']);",
+          "    $stmt->execute(['email' => 'leo@example.com', 'password' => password_hash('lecture42', PASSWORD_DEFAULT), 'role' => 'reader']);",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Pas connecté",
+            "requete": {
+              "methode": "GET"
+            },
+            "redirection": "auth/login.php"
+          },
+          {
+            "titre": "Léo (reader) : 403",
+            "requete": {
+              "session": {
+                "user_id": 2,
+                "email": "leo@example.com",
+                "role": "reader"
+              }
+            },
+            "statut": 403,
+            "neContientPas": [
+              "<h1>Espace auteur·trice</h1>"
+            ]
+          },
+          {
+            "titre": "Ana (author)",
+            "requete": {
+              "session": {
+                "user_id": 1,
+                "email": "ana@example.com",
+                "role": "author"
+              }
+            },
+            "contient": [
+              "<h1>Espace auteur·trice</h1>"
+            ],
+            "statut": 200
+          },
+          {
+            "titre": "Session sans rôle",
+            "requete": {
+              "session": {
+                "user_id": 5,
+                "email": "x@example.com"
+              }
+            },
+            "neContientPas": [
+              "<h1>Espace auteur·trice</h1>"
+            ]
+          }
+        ]
+      },
+      "indices": [
+        "Deux gardes : connexion, puis rôle.",
+        "`http_response_code(403);` puis un message et `exit();` si `$_SESSION['role'] !== 'author'` (pense au cas où le rôle manque : `?? ''`).",
+        {
+          "texte": "La seconde garde :",
+          "code": "if (($_SESSION['role'] ?? '') !== ___) {\n    http_response_code(403);\n    echo \"<h1>Accès refusé</h1>\";\n    exit();\n}"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "session_start();",
+        "",
+        "if (!isset($_SESSION['user_id'])) {",
+        "    header('Location: auth/login.php');",
+        "    exit();",
+        "}",
+        "",
+        "if (($_SESSION['role'] ?? '') !== 'author') {",
+        "    http_response_code(403);",
+        "    echo \"<h1>Accès refusé</h1>\";",
+        "    echo \"<p>Cette page est réservée aux auteur·trices.</p>\";",
+        "    exit();",
+        "}",
+        "?>",
+        "<h1>Espace auteur·trice</h1>",
+        "<p>Cette page est accessible uniquement aux auteur·trices.</p>"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nsession_start();\n\nif (!isset($_SESSION['user_id'])) {\n    header('Location: auth/login.php');\n    exit();\n}\n\nif (($_SESSION['role'] ?? '') === 'admin') {\n    http_response_code(403);\n    echo \"<h1>Accès refusé</h1>\";\n    echo \"<p>Cette page est réservée aux auteur·trices.</p>\";\n    exit();\n}\n?>\n<h1>Espace auteur·trice</h1>\n<p>Cette page est accessible uniquement aux auteur·trices.</p>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nsession_start();\n\nif (!isset($_SESSION['user_id'])) {\n    header('Location: auth/login.php');\n    exit();\n}\n\nif (($_SESSION['role'] ?? '') !== 'author') {\n    \n    echo \"<h1>Accès refusé</h1>\";\n    echo \"<p>Cette page est réservée aux auteur·trices.</p>\";\n    exit();\n}\n?>\n<h1>Espace auteur·trice</h1>\n<p>Cette page est accessible uniquement aux auteur·trices.</p>",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "Authentifié ne veut pas dire autorisé : le rôle se vérifie à chaque page protégée."
+    },
+    {
+      "id": "u08-b5",
+      "titre": "Se déconnecter",
+      "source": "Séance 7, exercice 1 (déconnexion)",
+      "notions": [
+        "sessions"
+      ],
+      "enonce": "**L'exercice du cours (séance 7, exercice 1)** : réalisez une application web PHP simple de gestion de livres (uniquement la partie authentification et autorisation) avec les fonctionnalités suivantes :\n\n- accéder à une page publique accessible à toutes les personnes (page d'accueil) ;\n- accéder à une page pour se créer un compte avec une adresse mail et un mot de passe et un rôle auteur.trice ou lecteur.trice (`author` ou `reader`) ;\n- accéder à une page pour se connecter avec son adresse mail et son mot de passe ;\n- accéder à une page privée accessible uniquement aux personnes connectées. La page devra afficher un message de bienvenue avec l'adresse mail de la personne et son rôle ;\n- accéder à une page privée accessible uniquement aux personnes auteur.trice (rôle `author`) ;\n- se déconnecter.\n\nUtilisez les sessions PHP pour gérer l'état de connexion des personnes. Assurez-vous de stocker les mots de passe de manière sécurisée (en hachant le mot de passe).\n\n**Ta mission ici** : la page `public/auth/logout.php` : elle détruit la session, puis redirige vers `login.php`.",
+      "fichier": "public/auth/logout.php",
+      "fichiers": {
+        "src/database.php": [
+          "<?php",
+          "// Base de données de l'application (SQLite) : la table users, et deux comptes de test.",
+          "const DATABASE_FILE = __DIR__ . '/../books.db';",
+          "",
+          "$pdo = new PDO('sqlite:' . DATABASE_FILE);",
+          "$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);",
+          "$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);",
+          "$pdo->exec('CREATE TABLE IF NOT EXISTS users (",
+          "    id INTEGER PRIMARY KEY AUTOINCREMENT,",
+          "    email TEXT UNIQUE NOT NULL,",
+          "    password TEXT NOT NULL,",
+          "    role TEXT NOT NULL DEFAULT \"reader\"",
+          ")');",
+          "",
+          "if ($pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() == 0) {",
+          "    $stmt = $pdo->prepare('INSERT INTO users (email, password, role) VALUES (:email, :password, :role)');",
+          "    $stmt->execute(['email' => 'ana@example.com', 'password' => password_hash('secret123', PASSWORD_DEFAULT), 'role' => 'author']);",
+          "    $stmt->execute(['email' => 'leo@example.com', 'password' => password_hash('lecture42', PASSWORD_DEFAULT), 'role' => 'reader']);",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Ana se déconnecte",
+            "requete": {
+              "session": {
+                "user_id": 1,
+                "email": "ana@example.com",
+                "role": "author"
+              }
+            },
+            "sessionVide": true,
+            "redirection": "login.php"
+          },
+          {
+            "titre": "Déjà déconnecté",
+            "requete": {
+              "methode": "GET"
+            },
+            "redirection": "login.php"
+          }
+        ],
+        "obligatoire": [
+          "session_destroy"
+        ]
+      },
+      "indices": [
+        "Deux fonctions de session, dans l'ordre : on accède d'abord à la session, puis on la détruit.",
+        "`session_start();` puis `session_destroy();`, ensuite la redirection, suivie de `exit()`.",
+        {
+          "texte": "Presque :",
+          "code": "session_start();\n___;\nheader('Location: ___');\nexit();"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "session_start();",
+        "session_destroy();",
+        "header('Location: login.php');",
+        "exit();"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nsession_destroy();\nheader('Location: login.php');\nexit();",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nsession_start();\nheader('Location: login.php');\nexit();",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "`session_start()` pour accéder à la session en cours, `session_destroy()` pour la détruire."
+    }
+  ],
+  "parcours": [
+    "u08-l1",
+    "u08-l2",
+    "u08-l3",
+    "jeu:u08-guichet",
+    "u08-l4",
+    "u08-l5",
+    "quiz",
+    "boss:u08-b1",
+    "boss:u08-b2",
+    "boss:u08-b3",
+    "boss:u08-b4",
+    "boss:u08-b5"
+  ]
+}
