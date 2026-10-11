@@ -1,0 +1,2661 @@
+{
+  "id": "u09",
+  "titre": "Examen blanc",
+  "sousTitre": "Séance 8 · révision des séances 1 à 7 au format de l'évaluation papier",
+  "objectif": "Lire, prédire, compléter et expliquer du PHP sans ordinateur, sur toutes les notions des séances 1 à 7, comme à l'évaluation intermédiaire du 25.11.2026.",
+  "icone": "📝",
+  "fiches": [
+    {
+      "id": "evaluation-intermediaire",
+      "titre": "L'évaluation intermédiaire",
+      "icone": "📝",
+      "resume": "Le **25.11.2026, de 16h30 à 18h00** : 90 minutes, **sur papier**, **aucune ressource**. 50 % de la note. Questions de théorie, bouts de code à expliquer ou compléter, QCM, sur les séances 1 à 7 (et des notions de ProgServ1).",
+      "texte": "Ce que dit le cours :\n\n- l'évaluation porte sur les concepts fondamentaux vus en cours ;\n- elle met l'accent sur la **compréhension**, la **qualité du code**, la **structure de l'application** et les **bonnes pratiques** de PHP ;\n- les questions peuvent porter sur des notions théoriques, des bouts de code à expliquer ou compléter, des QCM… ;\n- certaines questions reposent sur des notions de ProgServ1 appliquées à ProgServ2.\n\nComment se préparer, selon le cours :\n\n- relire les supports de cours avec leurs **objectifs** ;\n- utiliser ces objectifs pour valider tes acquis ;\n- refaire les exercices ;\n- poser des questions si nécessaire.",
+      "pieges": [
+        "Aucune ressource : pas d'ordinateur pour tester. Il faut savoir **lire** du PHP et prédire ce qu'il fait, sans l'exécuter.",
+        "Tricher entraîne la note 1 (règlement de la HEIG-VD) : ne prends pas ce risque."
+      ]
+    },
+    {
+      "id": "objectifs-seances",
+      "titre": "Les objectifs des séances 1 à 7",
+      "icone": "🎯",
+      "resume": "La liste à cocher du cours : si tu sais faire chaque point, tu es prêt·e. Chaque point renvoie à une unité de l'appli.",
+      "texte": "- **Rappels (u01)** : les concepts de base de PHP.\n- **POO (u02, u03)** : lister les concepts clés ; expliquer avantages et désavantages ; créer classes et objets ; attributs et méthodes ; encapsulation ; constructeurs et destructeurs ; constantes de classe ; interfaces, héritage, abstraction.\n- **Bases de données (u04)** : formulaires, validation et sécurité ; PDO ; exceptions ; fichiers de configuration ; déploiement chez un hébergeur.\n- **Interface (u05)** : l'inclusion de fichiers ; réutiliser des parties d'interface.\n- **Sécurité (u06)** : validation ≠ nettoyage ; implications des saisies ; injections SQL et XSS, et s'en prémunir ; requêtes préparées ; échapper avant d'afficher.\n- **Cookies (u07)** : stocker des préférences ; gestion multilingue (i18n).\n- **Sessions (u08)** : stocker des informations ; sessions ≠ cookies ; authentification ; autorisation selon le rôle."
+    },
+    {
+      "id": "lire-du-code",
+      "titre": "Lire du code sur papier",
+      "icone": "👓",
+      "resume": "Sans ordinateur, tu deviens l'interpréteur PHP : tu lis ligne par ligne, tu tiens un petit tableau des variables, et tu écris exactement ce que chaque `echo` affiche.",
+      "analogie": "**Le restaurant.** À l'examen, c'est toi le cuisinier : tu suis la recette (le code) pas à pas, et tu dis quel plat (quel HTML) sortira de la cuisine.",
+      "texte": "Une méthode en quatre gestes :\n\n- **Tableau des variables** : une colonne par variable, une ligne par changement de valeur.\n- **Une ligne à la fois** : n'avance que quand la ligne en cours est finie (une boucle, c'est plusieurs passages).\n- **Les fonctions et les méthodes** : saute à leur définition, avec les valeurs des arguments, puis reviens avec la valeur retournée.\n- **La sortie exacte** : espaces, points, retours à la ligne. `'$x'` ne remplace pas la variable, `\"$x\"` oui.\n\nPour compléter un code à trous : lis d'abord **tout** le code et ce qu'il doit faire ; le trou se déduit souvent de la ligne d'après (une variable utilisée, une méthode appelée).",
+      "pieges": [
+        "`==` compare les valeurs (`\"5\" == 5` est vrai), `===` compare aussi le type (`\"5\" === 5` est faux).",
+        "Une exception saute directement au `catch` : les lignes suivantes du `try` ne s'exécutent pas."
+      ]
+    }
+  ],
+  "lecons": [
+    {
+      "id": "u09-l1",
+      "titre": "Lire du PHP sans ordinateur",
+      "duree": 5,
+      "notions": [
+        "variables-constantes",
+        "operateurs-conditions",
+        "fonctions",
+        "tableaux-boucles"
+      ],
+      "cartes": [
+        {
+          "titre": "Le jour J",
+          "texte": "L'évaluation intermédiaire a lieu le **25.11.2026** : 90 minutes, sur papier, **aucune ressource**. Théorie, code à expliquer ou à compléter, QCM, sur les séances 1 à 7.",
+          "fiche": "evaluation-intermediaire"
+        },
+        {
+          "titre": "Devenir l'interpréteur",
+          "texte": "Sans ordinateur, c'est toi qui exécutes : un tableau des variables, une ligne à la fois, et la sortie **exacte** de chaque `echo`.",
+          "analogie": "Au restaurant, tu es le cuisinier qui suit la recette pas à pas : quel plat sortira de la cuisine ?",
+          "fiche": "lire-du-code"
+        },
+        {
+          "titre": "Essaie sur ce code",
+          "texte": "Prédis la sortie avant d'exécuter : `continue` saute au tour suivant de la boucle.",
+          "code": [
+            "$stock = ['pain' => 12, 'croissant' => 0, 'tresse' => 3];",
+            "",
+            "foreach ($stock as $produit => $quantite) {",
+            "    if ($quantite === 0) {",
+            "        continue;",
+            "    }",
+            "    echo \"$produit : $quantite\\n\";",
+            "}"
+          ]
+        },
+        {
+          "titre": "Les pièges qui reviennent",
+          "texte": "`.` colle du texte (pas `+`) ; `==` compare les valeurs, `===` aussi le type ; `\"$x\"` remplace la variable, `'$x'` non ; une fonction qui **retourne** n'affiche rien toute seule."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u09-l1-e1",
+          "type": "predire",
+          "notions": [
+            "operateurs-conditions"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "$a = \"5\";",
+            "$b = 5;",
+            "echo $a == $b ? \"égaux\" : \"différents\";",
+            "echo \" / \";",
+            "echo $a === $b ? \"identiques\" : \"pas identiques\";",
+            ""
+          ],
+          "choix": [
+            "égaux / pas identiques",
+            "égaux / identiques",
+            "différents / pas identiques",
+            "Une erreur : on ne compare pas un texte et un nombre"
+          ],
+          "bonne": 0,
+          "explication": "`==` compare les valeurs (« 5 » vaut 5) ; `===` exige aussi le même type (texte ≠ entier)."
+        },
+        {
+          "id": "u09-l1-e2",
+          "type": "predire",
+          "notions": [
+            "variables-constantes"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "$prix = 4.5;",
+            "echo 'Prix : $prix CHF';",
+            ""
+          ],
+          "choix": [
+            "Prix : $prix CHF",
+            "Prix : 4.5 CHF",
+            "Prix : 4,5 CHF",
+            "Une erreur"
+          ],
+          "bonne": 0,
+          "explication": "Entre apostrophes, PHP ne remplace pas les variables. Avec des guillemets, il afficherait « Prix : 4.5 CHF »."
+        },
+        {
+          "id": "u09-l1-e3",
+          "type": "predire",
+          "notions": [
+            "fonctions"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "function remise(float $prix, int $pourcent = 10): float {",
+            "    return $prix - $prix * $pourcent / 100;",
+            "}",
+            "",
+            "echo remise(50) . \" / \" . remise(50, 20);",
+            ""
+          ],
+          "choix": [
+            "45 / 40",
+            "45 / 30",
+            "50 / 50",
+            "40 / 45"
+          ],
+          "bonne": 0,
+          "explication": "Sans 2ᵉ argument, `$pourcent` vaut 10 (valeur par défaut) : 50 − 5 = 45. Avec 20 : 50 − 10 = 40."
+        },
+        {
+          "id": "u09-l1-e4",
+          "type": "bug",
+          "notions": [
+            "fonctions"
+          ],
+          "question": "Cette fonction doit **retourner** la moyenne, mais `$m = moyenne([4, 5, 6]);` plante. Touche la ligne fautive, puis choisis l'explication.",
+          "code": [
+            "function moyenne(array $notes): float {",
+            "    $total = 0;",
+            "    foreach ($notes as $note) { $total += $note; }",
+            "    echo $total / count($notes);",
+            "}",
+            ""
+          ],
+          "ligne": 4,
+          "choix": [
+            "`echo` affiche la moyenne mais ne la retourne pas : la fonction promet un `float` et ne rend rien",
+            "`count` ne fonctionne pas sur un tableau",
+            "`+=` n'existe pas en PHP",
+            "Il faut un `for` au lieu d'un `foreach`"
+          ],
+          "bonne": 0,
+          "explication": "Il faut `return $total / count($notes);`. PHP répond « Return value must be of type float, none returned »."
+        },
+        {
+          "id": "u09-l1-e5",
+          "type": "trous",
+          "notions": [
+            "tableaux-boucles"
+          ],
+          "question": "Complète pour afficher le nombre de films, puis chaque film sur sa ligne.",
+          "code": [
+            "$films = [\"Dune\", \"Up\", \"Coco\"];",
+            "echo \"Il y a \" . ___($films) . \" films.\\n\";",
+            "foreach ($films ___ $film) {",
+            "    echo \"- $film\\n\";",
+            "}",
+            ""
+          ],
+          "solution": [
+            "count",
+            "as"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Il y a 3 films.",
+                  "- Dune",
+                  "- Up",
+                  "- Coco"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le premier trou compte les éléments d'un tableau.",
+            "Le second est le petit mot de `foreach` entre le tableau et la variable."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "strlen",
+                "as"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "count",
+                "in"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "`count($films)` vaut 3 ; `foreach ($films as $film)` prend chaque film à son tour."
+        },
+        {
+          "id": "u09-l1-e6",
+          "type": "ecrire",
+          "notions": [
+            "fonctions",
+            "tableaux-boucles"
+          ],
+          "question": "Écris `plusLong(array $mots): string` qui retourne le mot le plus long du tableau (le premier en cas d'égalité), ou `\"\"` si le tableau est vide.",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "fonction": "plusLong",
+            "cas": [
+              {
+                "args": [
+                  [
+                    "chat",
+                    "hippopotame",
+                    "souris"
+                  ]
+                ],
+                "attendu": "hippopotame"
+              },
+              {
+                "titre": "Égalité",
+                "args": [
+                  [
+                    "ane",
+                    "rat"
+                  ]
+                ],
+                "attendu": "ane"
+              },
+              {
+                "titre": "Tableau vide",
+                "args": [
+                  []
+                ],
+                "attendu": ""
+              },
+              {
+                "titre": "Un seul mot",
+                "args": [
+                  [
+                    "zèbre"
+                  ]
+                ],
+                "attendu": "zèbre"
+              }
+            ]
+          },
+          "indices": [
+            "Garde le meilleur mot trouvé jusqu'ici dans une variable, qui commence à `\"\"`.",
+            "Dans un `foreach`, compare `strlen($mot)` à `strlen($resultat)` : strictement plus grand seulement (pour garder le premier en cas d'égalité).",
+            {
+              "texte": "Presque :",
+              "code": "foreach ($mots as $mot) {\n    if (___) {\n        $resultat = $mot;\n    }\n}\nreturn $resultat;"
+            }
+          ],
+          "solution": [
+            "function plusLong(array $mots): string {",
+            "    $resultat = \"\";",
+            "    foreach ($mots as $mot) {",
+            "        if (strlen($mot) > strlen($resultat)) {",
+            "            $resultat = $mot;",
+            "        }",
+            "    }",
+            "    return $resultat;",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function plusLong(array $mots): string {\n    $resultat = \"\";\n    foreach ($mots as $mot) {\n        if (strlen($mot) >= strlen($resultat)) {\n            $resultat = $mot;\n        }\n    }\n    return $resultat;\n}",
+              "attendu": "echec"
+            },
+            {
+              "code": "function plusLong(array $mots): string {\n    $resultat = \"\";\n    foreach ($mots as $mot) {\n        if (strlen($mot) > strlen($resultat)) {\n            $resultat = $mot;\n        }\n    }\n    echo $resultat;\n}",
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "Le « meilleur jusqu'ici » est un schéma qui revient souvent : une variable de départ, une boucle, une comparaison."
+        }
+      ]
+    },
+    {
+      "id": "u09-l2",
+      "titre": "Les classes sur papier",
+      "duree": 5,
+      "notions": [
+        "poo-concepts",
+        "classe-objet",
+        "encapsulation",
+        "constructeur",
+        "heritage",
+        "interfaces",
+        "classes-abstraites"
+      ],
+      "cartes": [
+        {
+          "titre": "Les concepts clés",
+          "texte": "Classes, objets, attributs, méthodes, encapsulation, constructeurs et destructeurs, interfaces, héritage, classes abstraites : le cours demande de savoir les **lister** et les **expliquer**.",
+          "analogie": "La classe est le plan, l'objet une maison construite d'après ce plan.",
+          "fiche": "poo-concepts"
+        },
+        {
+          "titre": "Pour et contre",
+          "texte": "Avantages : **lisibilité**, **réutilisabilité**, **maintenabilité**. Désavantages : **complexité** (surtout pour de petites applications) et **performance** (souvent négligeable aujourd'hui)."
+        },
+        {
+          "titre": "Lis cet héritage",
+          "texte": "`Chien` hérite de `Animal` ; `parent::decrire()` appelle la version du parent, puis la complète.",
+          "code": [
+            "class Animal {",
+            "    protected string $nom;",
+            "",
+            "    public function __construct(string $nom) {",
+            "        $this->nom = $nom;",
+            "    }",
+            "",
+            "    public function decrire(): string {",
+            "        return \"Je suis \" . $this->nom;",
+            "    }",
+            "}",
+            "",
+            "class Chien extends Animal {",
+            "    public function decrire(): string {",
+            "        return parent::decrire() . \" et j'aboie\";",
+            "    }",
+            "}",
+            "",
+            "$rex = new Chien(\"Rex\");",
+            "echo $rex->decrire();"
+          ]
+        },
+        {
+          "titre": "Interface ou classe abstraite ?",
+          "texte": "Une **interface** est un contrat (des signatures de méthodes), qu'une classe **implémente** (`implements`), et on peut en implémenter plusieurs. Une **classe abstraite** ne s'instancie pas, peut contenir du code, et on n'**étend** qu'une seule classe (`extends`) : PHP n'a pas d'héritage multiple.",
+          "analogie": "L'interface est le cahier des charges ; la classe abstraite, une maison témoin à moitié finie."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u09-l2-e1",
+          "type": "assoc",
+          "notions": [
+            "poo-concepts"
+          ],
+          "question": "Associe chaque concept à sa définition (celles du cours).",
+          "paires": [
+            [
+              "Classe",
+              "Modèle qui définit les propriétés et les comportements des objets"
+            ],
+            [
+              "Objet",
+              "Instance d'une classe, créée en mémoire"
+            ],
+            [
+              "Attribut",
+              "Propriété qui stocke l'état d'un objet"
+            ],
+            [
+              "Méthode",
+              "Fonction définie dans une classe"
+            ],
+            [
+              "Encapsulation",
+              "Limiter l'accès direct aux attributs pour protéger les données"
+            ]
+          ],
+          "explication": "Les définitions de la séance 2, à savoir expliquer avec tes mots."
+        },
+        {
+          "id": "u09-l2-e2",
+          "type": "predire",
+          "notions": [
+            "classe-objet",
+            "encapsulation"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "class Compteur {",
+            "    private int $valeur = 0;",
+            "",
+            "    public function incrementer(): void {",
+            "        $this->valeur++;",
+            "    }",
+            "",
+            "    public function getValeur(): int {",
+            "        return $this->valeur;",
+            "    }",
+            "}",
+            "",
+            "$a = new Compteur();",
+            "$b = new Compteur();",
+            "$a->incrementer();",
+            "$a->incrementer();",
+            "$b->incrementer();",
+            "echo $a->getValeur() . \" / \" . $b->getValeur();",
+            ""
+          ],
+          "choix": [
+            "2 / 1",
+            "3 / 3",
+            "1 / 1",
+            "2 / 2"
+          ],
+          "bonne": 0,
+          "explication": "Deux objets, deux maisons : chacun a son propre attribut `$valeur`."
+        },
+        {
+          "id": "u09-l2-e3",
+          "type": "trous",
+          "notions": [
+            "encapsulation",
+            "constructeur"
+          ],
+          "question": "Complète la classe : le titre est protégé de l'extérieur, et le constructeur le range dans l'objet.",
+          "code": [
+            "class Livre {",
+            "    ___ string $titre;",
+            "",
+            "    public function __construct(string $titre) {",
+            "        ___->titre = $titre;",
+            "    }",
+            "",
+            "    public function getTitre(): string {",
+            "        return $this->titre;",
+            "    }",
+            "}",
+            "",
+            "$livre = new Livre(\"Le Petit Prince\");",
+            "echo $livre->getTitre();",
+            ""
+          ],
+          "solution": [
+            "private",
+            "$this"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Le Petit Prince"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le premier trou est un niveau de visibilité : celui qui interdit l'accès depuis l'extérieur.",
+            "Le second désigne l'objet en cours de construction."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "private",
+                "this"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "private",
+                "$titre"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "`private` réserve l'attribut à la classe ; `$this->titre` est l'attribut de l'objet, `$titre` le paramètre."
+        },
+        {
+          "id": "u09-l2-e4",
+          "type": "predire",
+          "notions": [
+            "heritage"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "class Animal {",
+            "    protected string $nom;",
+            "",
+            "    public function __construct(string $nom) {",
+            "        $this->nom = $nom;",
+            "    }",
+            "",
+            "    public function decrire(): string {",
+            "        return \"Je suis \" . $this->nom;",
+            "    }",
+            "}",
+            "",
+            "class Chien extends Animal {",
+            "    public function decrire(): string {",
+            "        return parent::decrire() . \" et j'aboie\";",
+            "    }",
+            "}",
+            "",
+            "$rex = new Chien(\"Rex\");",
+            "echo $rex->decrire();"
+          ],
+          "choix": [
+            "Je suis Rex et j'aboie",
+            "Je suis Rex",
+            "et j'aboie",
+            "Une erreur : $nom est protected"
+          ],
+          "bonne": 0,
+          "explication": "`parent::decrire()` renvoie « Je suis Rex » (le `protected` est accessible dans la classe et ses enfants), puis `Chien` ajoute « et j'aboie »."
+        },
+        {
+          "id": "u09-l2-e5",
+          "type": "bug",
+          "notions": [
+            "classes-abstraites"
+          ],
+          "question": "Ce code plante. Touche la ligne fautive, puis choisis l'explication.",
+          "code": [
+            "abstract class Forme {",
+            "    abstract public function aire(): float;",
+            "}",
+            "",
+            "class Carre extends Forme {",
+            "    private float $cote;",
+            "",
+            "    public function __construct(float $cote) {",
+            "        $this->cote = $cote;",
+            "    }",
+            "",
+            "    public function aire(): float {",
+            "        return $this->cote * $this->cote;",
+            "    }",
+            "}",
+            "",
+            "$forme = new Forme();",
+            "echo $forme->aire();",
+            ""
+          ],
+          "ligne": 18,
+          "choix": [
+            "Une classe abstraite ne peut pas être instanciée : il faut `new Carre(3)`",
+            "`Carre` ne peut pas étendre une classe abstraite",
+            "Une méthode abstraite doit contenir du code",
+            "Il manque `parent::__construct()`"
+          ],
+          "bonne": 0,
+          "explication": "« Cannot instantiate abstract class Forme » : on crée des `Carre`, et `Forme` sert de modèle commun."
+        },
+        {
+          "id": "u09-l2-e6",
+          "type": "qcm",
+          "notions": [
+            "heritage",
+            "interfaces"
+          ],
+          "question": "Une classe `Velo` doit hériter de `Vehicule` et respecter les interfaces `Louable` et `Reparable`. Que peut-on écrire ?",
+          "choix": [
+            "class Velo extends Vehicule implements Louable, Reparable",
+            "class Velo extends Vehicule, Louable, Reparable",
+            "class Velo implements Vehicule extends Louable, Reparable",
+            "C'est impossible en PHP"
+          ],
+          "bonne": 0,
+          "explication": "Une seule classe parente (`extends`), mais plusieurs interfaces (`implements`, séparées par des virgules)."
+        },
+        {
+          "id": "u09-l2-e7",
+          "type": "tri",
+          "notions": [
+            "interfaces",
+            "classes-abstraites"
+          ],
+          "question": "Interface ou classe abstraite ?",
+          "categories": [
+            "Interface",
+            "Classe abstraite"
+          ],
+          "items": [
+            [
+              "S'utilise avec implements",
+              0
+            ],
+            [
+              "S'utilise avec extends",
+              1
+            ],
+            [
+              "Une classe peut en utiliser plusieurs",
+              0
+            ],
+            [
+              "Peut contenir des méthodes avec du code et des attributs",
+              1
+            ],
+            [
+              "Ne contient que des signatures de méthodes",
+              0
+            ]
+          ],
+          "explication": "Le contrat (interface) ou le modèle à moitié fini (classe abstraite)."
+        }
+      ]
+    },
+    {
+      "id": "u09-l3",
+      "titre": "Formulaires, PDO et sécurité",
+      "duree": 5,
+      "notions": [
+        "formulaires",
+        "pdo",
+        "exceptions",
+        "injection-sql",
+        "xss",
+        "validation-nettoyage",
+        "inclusion-fichiers"
+      ],
+      "cartes": [
+        {
+          "titre": "Les règles d'or",
+          "texte": "Ne jamais faire confiance aux saisies ; **valider** (côté serveur : la validation côté client se contourne) ; **requêtes préparées** pour le SQL ; **échapper** avec `htmlspecialchars` avant d'afficher.",
+          "fiche": "validation-nettoyage"
+        },
+        {
+          "titre": "La requête préparée",
+          "texte": "`prepare` avec un paramètre `:nom`, `bindValue`, puis `execute`. La saisie reste dans sa case.",
+          "analogie": "Les cases du formulaire : la donnée ne devient jamais un ordre pour la base.",
+          "code": [
+            "$pdo = new PDO('sqlite::memory:');",
+            "$pdo->exec(\"CREATE TABLE films (titre TEXT, annee INTEGER)\");",
+            "$pdo->exec(\"INSERT INTO films VALUES ('Dune', 2021), ('Coco', 2017)\");",
+            "",
+            "$titre = \"Coco\";",
+            "$stmt = $pdo->prepare(\"SELECT annee FROM films WHERE titre = :titre\");",
+            "$stmt->bindValue(':titre', $titre);",
+            "$stmt->execute();",
+            "echo $stmt->fetch()['annee'];"
+          ]
+        },
+        {
+          "titre": "Le signal d'alarme",
+          "texte": "`throw` déclenche l'alarme, le `catch` l'entend et réagit ; dès que l'alarme sonne, la suite du `try` est abandonnée.",
+          "fiche": "exceptions"
+        },
+        {
+          "titre": "include ou require ?",
+          "texte": "Fichier introuvable : `include` donne un avertissement et **continue**, `require` donne une erreur fatale et **s'arrête**. Les versions `_once` n'incluent le fichier qu'une fois : le cours les préfère pour les fonctions et les constantes ; `require` pour les parties d'interface, qu'on peut inclure plusieurs fois.",
+          "fiche": "inclusion-fichiers"
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u09-l3-e1",
+          "type": "bug",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Ce code fonctionne… mais il est dangereux. Touche la ligne fautive, puis choisis l'explication.",
+          "code": [
+            "$titre = $_GET['titre'];",
+            "$sql = \"SELECT * FROM films WHERE titre = '$titre'\";",
+            "$films = $pdo->query($sql)->fetchAll();",
+            "foreach ($films as $film) {",
+            "    echo htmlspecialchars($film['titre']);",
+            "}",
+            ""
+          ],
+          "ligne": 2,
+          "choix": [
+            "La saisie est collée dans le SQL : injection SQL possible ; il faut une requête préparée",
+            "`htmlspecialchars` est inutile ici",
+            "`fetchAll` ne fonctionne pas avec `query`",
+            "Il manque `exit()`"
+          ],
+          "bonne": 0,
+          "explication": "Avec `' OR '1'='1` comme titre, la requête renvoie tous les films. Remède : `prepare` + `:titre` + `bindValue`."
+        },
+        {
+          "id": "u09-l3-e2",
+          "type": "trous",
+          "notions": [
+            "pdo"
+          ],
+          "question": "Complète pour afficher les films sortis après 2020, avec une requête préparée.",
+          "code": [
+            "$pdo = new PDO('sqlite::memory:');",
+            "$pdo->exec(\"CREATE TABLE films (titre TEXT, annee INTEGER)\");",
+            "$pdo->exec(\"INSERT INTO films VALUES ('Dune', 2021), ('Coco', 2017), ('Wish', 2023)\");",
+            "",
+            "$annee = 2020;",
+            "$stmt = $pdo->___(\"SELECT titre FROM films WHERE annee > :annee\");",
+            "$stmt->bindValue(':annee', $annee);",
+            "$stmt->___();",
+            "foreach ($stmt->fetchAll() as $film) {",
+            "    echo $film['titre'] . \"\\n\";",
+            "}",
+            ""
+          ],
+          "solution": [
+            "prepare",
+            "execute"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Dune",
+                  "Wish"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le premier trou prépare la requête (avant de lier les valeurs).",
+            "Le second l'exécute."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "exec",
+                "execute"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "prepare",
+                "fetch"
+              ],
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`prepare` → `bindValue` → `execute` → `fetchAll` : l'ordre des requêtes préparées."
+        },
+        {
+          "id": "u09-l3-e3",
+          "type": "predire",
+          "notions": [
+            "xss"
+          ],
+          "question": "Que reçoit le navigateur ?",
+          "code": [
+            "$commentaire = \"<b>Super</b> film\";",
+            "echo htmlspecialchars($commentaire);",
+            ""
+          ],
+          "choix": [
+            "&lt;b&gt;Super&lt;/b&gt; film",
+            "<b>Super</b> film",
+            "Super film",
+            "&lt;Super&gt; film"
+          ],
+          "bonne": 0,
+          "explication": "`<` et `>` deviennent `&lt;` et `&gt;` : le navigateur affiche les balises comme du texte au lieu de mettre « Super » en gras."
+        },
+        {
+          "id": "u09-l3-e4",
+          "type": "predire",
+          "notions": [
+            "exceptions"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "function diviser(int $a, int $b): float {",
+            "    if ($b === 0) {",
+            "        throw new Exception(\"Division par zéro\");",
+            "    }",
+            "    return $a / $b;",
+            "}",
+            "",
+            "try {",
+            "    echo diviser(10, 2) . \" | \";",
+            "    echo diviser(1, 0) . \" | \";",
+            "    echo \"fin\";",
+            "} catch (Exception $e) {",
+            "    echo \"Erreur : \" . $e->getMessage();",
+            "}",
+            ""
+          ],
+          "choix": [
+            "5 | Erreur : Division par zéro",
+            "5 | Erreur : Division par zéro | fin",
+            "Erreur : Division par zéro",
+            "5 | 0 | fin"
+          ],
+          "bonne": 0,
+          "explication": "Le premier appel affiche 5. Le second déclenche l'alarme : on saute au `catch`, et « fin » n'est jamais affiché."
+        },
+        {
+          "id": "u09-l3-e5",
+          "type": "qcm",
+          "notions": [
+            "inclusion-fichiers"
+          ],
+          "question": "`include 'menu.php';` alors que `menu.php` n'existe pas. Que se passe-t-il ?",
+          "choix": [
+            "Un avertissement, et le script continue",
+            "Une erreur fatale, et le script s'arrête",
+            "Rien du tout",
+            "PHP crée un fichier vide"
+          ],
+          "bonne": 0,
+          "explication": "C'est `require` qui arrête le script (erreur fatale) ; `include` continue après un avertissement."
+        },
+        {
+          "id": "u09-l3-e6",
+          "type": "tri",
+          "notions": [
+            "validation-nettoyage"
+          ],
+          "question": "Valider ou nettoyer / échapper ?",
+          "categories": [
+            "Valider",
+            "Nettoyer / échapper"
+          ],
+          "items": [
+            [
+              "Vérifier qu'un e-mail a le bon format",
+              0
+            ],
+            [
+              "Refuser un âge négatif",
+              0
+            ],
+            [
+              "Afficher un pseudo avec htmlspecialchars",
+              1
+            ],
+            [
+              "Passer une saisie par une requête préparée",
+              1
+            ],
+            [
+              "Exiger au moins 2 caractères pour un nom",
+              0
+            ]
+          ],
+          "explication": "Valider : refuser ce qui ne respecte pas les règles. Nettoyer / échapper : rendre inoffensif ce qu'on accepte."
+        },
+        {
+          "id": "u09-l3-e7",
+          "type": "corriger",
+          "notions": [
+            "xss"
+          ],
+          "question": "Cette page salue la personne dont le nom est dans l'URL (`?nom=…`). Elle est vulnérable aux attaques XSS : corrige-la.",
+          "depart": [
+            "<?php",
+            "$nom = $_GET['nom'] ?? 'inconnu·e';",
+            "echo \"<p>Bonjour \" . $nom . \" !</p>\";",
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Nom normal",
+                "requete": {
+                  "get": {
+                    "nom": "Léa"
+                  }
+                },
+                "sortie": [
+                  "<p>Bonjour Léa !</p>"
+                ]
+              },
+              {
+                "titre": "Nom piégé",
+                "requete": {
+                  "get": {
+                    "nom": "<script>alert(1)</script>"
+                  }
+                },
+                "contient": [
+                  "&lt;script&gt;"
+                ],
+                "neContientPas": [
+                  "<script>"
+                ]
+              },
+              {
+                "titre": "Sans nom",
+                "requete": {
+                  "get": {}
+                },
+                "sortie": [
+                  "<p>Bonjour inconnu·e !</p>"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le danger : la saisie est affichée telle quelle.",
+            "Échappe la saisie au moment de l'afficher.",
+            {
+              "texte": "Presque :",
+              "code": "echo \"<p>Bonjour \" . ___($nom) . \" !</p>\";"
+            }
+          ],
+          "solution": [
+            "<?php",
+            "$nom = $_GET['nom'] ?? 'inconnu·e';",
+            "echo \"<p>Bonjour \" . htmlspecialchars($nom) . \" !</p>\";"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "<?php\n$nom = $_GET['nom'] ?? 'inconnu·e';\necho \"<p>Bonjour \" . $nom . \" !</p>\";\n",
+              "attendu": "echec"
+            },
+            {
+              "code": "<?php\n$nom = $_GET['nom'] ?? 'inconnu·e';\necho \"<p>Bonjour \" . strip_tags($nom) . \" !</p>\";",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "On échappe au moment d'**afficher** : la saisie est mise en vitrine."
+        }
+      ]
+    },
+    {
+      "id": "u09-l4",
+      "titre": "Cookies et sessions",
+      "duree": 5,
+      "notions": [
+        "cookies-php",
+        "i18n",
+        "sessions",
+        "sessions-cookies",
+        "authentification",
+        "autorisation",
+        "mots-de-passe"
+      ],
+      "cartes": [
+        {
+          "titre": "Le ticket de la Poste",
+          "texte": "Le **cookie** est stocké chez le client (le navigateur) ; la **session** est stockée sur le serveur, et le navigateur n'en garde que l'identifiant (dans un cookie).",
+          "analogie": "Au guichet, on te donne un ticket numéroté (le cookie) ; ton dossier reste au guichet (la session).",
+          "fiche": "sessions-cookies"
+        },
+        {
+          "titre": "Les cookies en PHP",
+          "texte": "`setcookie('langue', 'fr', time() + 30 * 24 * 60 * 60);` crée un cookie de 30 jours, **avant tout affichage** ; `$_COOKIE['langue'] ?? 'fr'` le lit à la requête suivante.",
+          "fiche": "cookies-php"
+        },
+        {
+          "titre": "Les sessions en PHP",
+          "texte": "`session_start()` en haut de chaque page, puis `$_SESSION['user_id'] = 1;` pour ranger, `$_SESSION['user_id']` pour lire, `session_destroy()` pour la déconnexion.",
+          "fiche": "sessions"
+        },
+        {
+          "titre": "Qui es-tu ? As-tu le droit ?",
+          "texte": "**Authentification** : vérifier l'identité (e-mail + `password_verify`). **Autorisation** : vérifier les droits selon le rôle (sinon 403). Les mots de passe se stockent hachés avec `password_hash`.",
+          "fiche": "autorisation"
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u09-l4-e1",
+          "type": "tri",
+          "notions": [
+            "sessions-cookies"
+          ],
+          "question": "Où sont stockées ces données ?",
+          "categories": [
+            "Chez le client (cookie)",
+            "Sur le serveur (session)"
+          ],
+          "items": [
+            [
+              "La langue préférée, gardée 30 jours",
+              0
+            ],
+            [
+              "Le rôle de l'utilisateur connecté",
+              1
+            ],
+            [
+              "L'identifiant de session",
+              0
+            ],
+            [
+              "L'id de l'utilisateur connecté",
+              1
+            ],
+            [
+              "Le thème clair ou sombre choisi",
+              0
+            ]
+          ],
+          "explication": "Ce qui décide des droits reste sur le serveur ; les préférences peuvent vivre chez le client."
+        },
+        {
+          "id": "u09-l4-e2",
+          "type": "predire",
+          "notions": [
+            "cookies-php"
+          ],
+          "question": "Le navigateur envoie le cookie `theme=sombre`. Qu'affiche la page ?",
+          "requete": {
+            "cookies": {
+              "theme": "sombre"
+            }
+          },
+          "code": [
+            "$theme = $_COOKIE['theme'] ?? 'clair';",
+            "echo \"Thème : $theme\";",
+            ""
+          ],
+          "choix": [
+            "Thème : sombre",
+            "Thème : clair",
+            "Thème : $theme",
+            "Thème : "
+          ],
+          "bonne": 0,
+          "explication": "Le cookie existe : `??` garde sa valeur. Sans cookie, on aurait « clair »."
+        },
+        {
+          "id": "u09-l4-e3",
+          "type": "trous",
+          "notions": [
+            "cookies-php",
+            "i18n"
+          ],
+          "question": "Complète pour mémoriser la langue choisie (`?langue=…`) pendant 30 jours.",
+          "requete": {
+            "get": {
+              "langue": "de"
+            }
+          },
+          "code": [
+            "$langue = $_GET['langue'] ?? 'fr';",
+            "___('langue', $langue, time() + 30 * 24 * 60 * 60);",
+            "echo \"Langue : \" . $langue;",
+            ""
+          ],
+          "solution": [
+            "setcookie"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Langue : de"
+                ],
+                "cookies": {
+                  "langue": "de"
+                },
+                "dureeCookies": {
+                  "langue": 2592000
+                }
+              }
+            ]
+          },
+          "indices": [
+            "La fonction qui envoie un cookie au navigateur.",
+            "Elle s'écrit en un mot : « set » + « cookie »."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "cookie"
+              ],
+              "attendu": "erreur",
+              "diagnostic": "fonction-inconnue"
+            },
+            {
+              "trous": [
+                "session_start"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "`setcookie(nom, valeur, expiration)` ; l'expiration est un moment précis : maintenant + 30 jours en secondes."
+        },
+        {
+          "id": "u09-l4-e4",
+          "type": "bug",
+          "notions": [
+            "sessions"
+          ],
+          "question": "Sur le serveur, ce code provoque « Session cannot be started after headers have already been sent ». Touche la ligne fautive.",
+          "code": [
+            "<h1>Mon panier</h1>",
+            "<?php",
+            "session_start();",
+            "$panier = $_SESSION['panier'] ?? [];",
+            "echo count($panier) . \" article(s)\";",
+            ""
+          ],
+          "ligne": 3,
+          "choix": [
+            "`session_start()` vient après un affichage (le `<h1>`) : il doit être tout en haut du fichier",
+            "`$_SESSION` n'existe pas",
+            "`count` ne marche pas sur un tableau vide",
+            "Il manque `session_destroy()`"
+          ],
+          "bonne": 0,
+          "explication": "`session_start()` envoie un en-tête HTTP (le cookie de session), qui part avant la page : rien ne doit être affiché avant."
+        },
+        {
+          "id": "u09-l4-e5",
+          "type": "qcm",
+          "notions": [
+            "mots-de-passe",
+            "authentification"
+          ],
+          "question": "À la connexion, comment vérifier le mot de passe saisi ?",
+          "choix": [
+            "password_verify($saisie, $user['password'])",
+            "password_hash($saisie) === $user['password']",
+            "$saisie === $user['password']",
+            "md5($saisie) === $user['password']"
+          ],
+          "bonne": 0,
+          "explication": "`password_hash` donne une empreinte différente à chaque fois (sel aléatoire) : seule `password_verify` sait comparer."
+        },
+        {
+          "id": "u09-l4-e6",
+          "type": "ecrire",
+          "notions": [
+            "autorisation",
+            "authentification"
+          ],
+          "question": "Écris `peutModifier(array $session, int $auteurId): bool` : `true` seulement si la personne est connectée (`user_id` dans la session) ET qu'elle est `admin` ou l'auteur·trice (son `user_id` vaut `$auteurId`).",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "fonction": "peutModifier",
+            "cas": [
+              {
+                "titre": "L'autrice",
+                "args": [
+                  {
+                    "user_id": 3,
+                    "role": "author"
+                  },
+                  3
+                ],
+                "attendu": true
+              },
+              {
+                "titre": "Une autre autrice",
+                "args": [
+                  {
+                    "user_id": 4,
+                    "role": "author"
+                  },
+                  3
+                ],
+                "attendu": false
+              },
+              {
+                "titre": "Admin",
+                "args": [
+                  {
+                    "user_id": 1,
+                    "role": "admin"
+                  },
+                  3
+                ],
+                "attendu": true
+              },
+              {
+                "titre": "Pas connecté",
+                "args": [
+                  {},
+                  3
+                ],
+                "attendu": false
+              },
+              {
+                "titre": "Rôle sans connexion",
+                "args": [
+                  {
+                    "role": "admin"
+                  },
+                  3
+                ],
+                "attendu": false
+              }
+            ]
+          },
+          "indices": [
+            "D'abord l'authentification : pas de `user_id` → `false`.",
+            "Puis l'autorisation : `admin` OU propriétaire (`||`).",
+            {
+              "texte": "Presque :",
+              "code": "if (!isset($session['user_id'])) {\n    return false;\n}\nreturn ___ || ___;"
+            }
+          ],
+          "solution": [
+            "function peutModifier(array $session, int $auteurId): bool {",
+            "    if (!isset($session['user_id'])) {",
+            "        return false;",
+            "    }",
+            "    return ($session['role'] ?? '') === 'admin' || $session['user_id'] === $auteurId;",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function peutModifier(array $session, int $auteurId): bool {\n    return ($session['role'] ?? '') === 'admin' || ($session['user_id'] ?? null) === $auteurId;\n}",
+              "attendu": "echec"
+            },
+            {
+              "code": "function peutModifier(array $session, int $auteurId): bool {\n    if (!isset($session['user_id'])) {\n        return false;\n    }\n    return ($session['role'] ?? '') === 'admin' && $session['user_id'] === $auteurId;\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Authentifié d'abord, autorisé ensuite : les deux vérifications sont nécessaires."
+        }
+      ]
+    },
+    {
+      "id": "u09-l5",
+      "titre": "Expliquer avec tes mots",
+      "duree": 5,
+      "notions": [
+        "client-serveur",
+        "poo-concepts",
+        "composants",
+        "configuration",
+        "deploiement",
+        "validation-nettoyage"
+      ],
+      "cartes": [
+        {
+          "titre": "Une bonne réponse ouverte",
+          "texte": "Pour une question de théorie : **définis** la notion, donne un **exemple** (un bout de code), et dis **pourquoi** on s'en sert. Trois phrases suffisent souvent.",
+          "astuce": "Le cours demande la « capacité à répondre avec justesse » et « à argumenter » : un exemple concret prouve que tu as compris."
+        },
+        {
+          "titre": "Le restaurant",
+          "texte": "Le navigateur (client) commande une page ; le serveur web la reçoit ; PHP l'exécute et prépare le HTML, en allant chercher les données dans la base ; le navigateur reçoit le HTML, jamais le PHP.",
+          "fiche": "client-serveur"
+        },
+        {
+          "titre": "Une interface en morceaux",
+          "texte": "Les parties communes (en-tête, pied de page, menu) vont dans des fichiers à part, inclus avec `require` : on les écrit une fois, on les modifie à un seul endroit.",
+          "fiche": "composants"
+        },
+        {
+          "titre": "Configurer, déployer",
+          "texte": "Les paramètres de la base vont dans `config/database.ini`, lu par `parse_ini_file` : on ne change que ce fichier entre le local et la production, et il ne va pas sur GitHub (mot de passe). Chez l'hébergeur, la racine du site pointe vers `public`.",
+          "fiche": "configuration"
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u09-l5-e1",
+          "type": "qcm",
+          "notions": [
+            "poo-concepts"
+          ],
+          "question": "Lequel n'est **pas** un avantage de la POO selon le cours ?",
+          "choix": [
+            "La performance",
+            "La lisibilité",
+            "La réutilisabilité",
+            "La maintenabilité"
+          ],
+          "bonne": 0,
+          "explication": "La performance fait partie des désavantages (souvent négligeable aujourd'hui), avec la complexité."
+        },
+        {
+          "id": "u09-l5-e2",
+          "type": "ordre",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Remets dans l'ordre ce qui se passe quand on ouvre `films.php`.",
+          "items": [
+            "Le navigateur envoie la requête",
+            "Le serveur web la reçoit et la confie à PHP",
+            "PHP exécute le code et interroge la base de données",
+            "PHP produit le HTML",
+            "Le navigateur reçoit le HTML et l'affiche"
+          ],
+          "explication": "Le client commande, la cuisine prépare, le plat (le HTML) revient en salle."
+        },
+        {
+          "id": "u09-l5-e3",
+          "type": "assoc",
+          "notions": [
+            "validation-nettoyage",
+            "mots-de-passe"
+          ],
+          "question": "Associe chaque fonction à ce qu'elle protège.",
+          "paires": [
+            [
+              "htmlspecialchars",
+              "Contre les attaques XSS à l'affichage"
+            ],
+            [
+              "prepare + bindValue",
+              "Contre les injections SQL"
+            ],
+            [
+              "password_hash",
+              "Les mots de passe stockés"
+            ],
+            [
+              "filter_var(…, FILTER_VALIDATE_EMAIL)",
+              "La validation d'un e-mail"
+            ]
+          ],
+          "explication": "Chaque danger a son outil."
+        },
+        {
+          "id": "u09-l5-e4",
+          "type": "vf",
+          "notions": [
+            "validation-nettoyage"
+          ],
+          "question": "Avec `required` et `type=\"email\"` dans le formulaire HTML, la validation en PHP devient inutile.",
+          "bonne": false,
+          "explication": "La validation côté client se contourne (outils de développement, requête envoyée à la main) : le serveur doit toujours revalider."
+        },
+        {
+          "id": "u09-l5-e5",
+          "type": "qcm",
+          "notions": [
+            "configuration",
+            "deploiement"
+          ],
+          "question": "Pourquoi le cours met-il les paramètres de la base dans `config/database.ini` ?",
+          "choix": [
+            "Pour changer de base (local, production) sans toucher au code, et garder le mot de passe hors du dépôt",
+            "Parce que PDO ne lit que les fichiers .ini",
+            "Pour accélérer les requêtes",
+            "Pour que le navigateur puisse s'y connecter"
+          ],
+          "bonne": 0,
+          "explication": "Un seul fichier change entre les environnements, et il est dans `.gitignore`."
+        },
+        {
+          "id": "u09-l5-e6",
+          "type": "qcm",
+          "notions": [
+            "composants",
+            "inclusion-fichiers"
+          ],
+          "question": "Pourquoi le cours utilise-t-il `require` (et pas `require_once`) pour les parties d'interface ?",
+          "choix": [
+            "Parce qu'elles peuvent être incluses plusieurs fois dans le même fichier",
+            "Parce que `require_once` est plus lent",
+            "Parce que `require_once` n'inclut pas le HTML",
+            "Parce que `require` ne s'arrête jamais"
+          ],
+          "bonne": 0,
+          "explication": "`require_once` est préféré pour les fonctions et les constantes (éviter une redéfinition) ; une partie d'interface peut servir plusieurs fois."
+        },
+        {
+          "id": "u09-l5-e7",
+          "type": "vf",
+          "notions": [
+            "deploiement"
+          ],
+          "question": "Chez l'hébergeur, le répertoire racine du site doit pointer vers le dossier `public`.",
+          "bonne": true,
+          "explication": "Ainsi `config` (mots de passe) et `src` restent inaccessibles depuis le web."
+        }
+      ]
+    }
+  ],
+  "jeux": [
+    {
+      "id": "u09-sprint",
+      "titre": "Le sprint de révision",
+      "description": "Questions éclair sur les séances 1 à 7.",
+      "tours": 10,
+      "questions": [
+        {
+          "id": "u09-j1",
+          "type": "qcm",
+          "notions": [
+            "variables-constantes"
+          ],
+          "mono": true,
+          "question": "Quel opérateur colle deux textes en PHP ?",
+          "choix": [
+            ".",
+            "+",
+            "&",
+            ","
+          ],
+          "bonne": 0,
+          "explication": "Le point : `\"Bon\" . \"jour\"`."
+        },
+        {
+          "id": "u09-j2",
+          "type": "qcm",
+          "notions": [
+            "classe-objet"
+          ],
+          "mono": true,
+          "question": "Comment appeler la méthode `getNom` de l'objet `$p` ?",
+          "choix": [
+            "$p->getNom()",
+            "$p.getNom()",
+            "$p::getNom()",
+            "getNom($p)"
+          ],
+          "bonne": 0,
+          "explication": "La flèche `->` pour les attributs et méthodes d'un objet."
+        },
+        {
+          "id": "u09-j3",
+          "type": "qcm",
+          "notions": [
+            "constantes-classe"
+          ],
+          "mono": true,
+          "question": "Dans une classe, comment lire sa constante `MAX` ?",
+          "choix": [
+            "self::MAX",
+            "$this->MAX",
+            "$MAX",
+            "this::MAX"
+          ],
+          "bonne": 0,
+          "explication": "Les constantes de classe s'utilisent avec `self::`."
+        },
+        {
+          "id": "u09-j4",
+          "type": "vf",
+          "notions": [
+            "heritage"
+          ],
+          "question": "En PHP, une classe peut étendre deux classes.",
+          "bonne": false,
+          "explication": "Pas d'héritage multiple : une seule classe parente, mais plusieurs interfaces."
+        },
+        {
+          "id": "u09-j5",
+          "type": "vf",
+          "notions": [
+            "classes-abstraites"
+          ],
+          "question": "On peut écrire `new` avec une classe abstraite.",
+          "bonne": false,
+          "explication": "Une classe abstraite sert de modèle : on instancie ses classes enfants."
+        },
+        {
+          "id": "u09-j6",
+          "type": "qcm",
+          "notions": [
+            "encapsulation"
+          ],
+          "question": "Quel mot rend un attribut accessible à la classe **et à ses enfants**, mais pas à l'extérieur ?",
+          "choix": [
+            "protected",
+            "private",
+            "public",
+            "static"
+          ],
+          "bonne": 0,
+          "explication": "`private` : la classe seule ; `protected` : la classe et ses enfants ; `public` : tout le monde."
+        },
+        {
+          "id": "u09-j7",
+          "type": "qcm",
+          "notions": [
+            "pdo"
+          ],
+          "mono": true,
+          "question": "Quelle méthode PDO prépare une requête ?",
+          "choix": [
+            "prepare",
+            "query",
+            "exec",
+            "bind"
+          ],
+          "bonne": 0,
+          "explication": "`$pdo->prepare(…)`, puis `bindValue` et `execute`."
+        },
+        {
+          "id": "u09-j8",
+          "type": "qcm",
+          "notions": [
+            "xss"
+          ],
+          "mono": true,
+          "question": "Quelle fonction protège l'affichage contre le XSS ?",
+          "choix": [
+            "htmlspecialchars",
+            "addslashes",
+            "trim",
+            "strip_tags"
+          ],
+          "bonne": 0,
+          "explication": "Celle du cours : `htmlspecialchars`."
+        },
+        {
+          "id": "u09-j9",
+          "type": "vf",
+          "notions": [
+            "exceptions"
+          ],
+          "question": "Après un `throw`, la ligne suivante du `try` s'exécute quand même.",
+          "bonne": false,
+          "explication": "L'alarme sonne : on saute directement au `catch`."
+        },
+        {
+          "id": "u09-j10",
+          "type": "qcm",
+          "notions": [
+            "cookies-php"
+          ],
+          "mono": true,
+          "question": "Où lit-on un cookie envoyé par le navigateur ?",
+          "choix": [
+            "$_COOKIE",
+            "$_SESSION",
+            "$_GET",
+            "$_SERVER"
+          ],
+          "bonne": 0,
+          "explication": "`$_COOKIE['nom']`."
+        },
+        {
+          "id": "u09-j11",
+          "type": "vf",
+          "notions": [
+            "sessions-cookies"
+          ],
+          "question": "Les données d'une session sont stockées dans le navigateur.",
+          "bonne": false,
+          "explication": "Sur le serveur ; le navigateur ne garde que l'identifiant de session."
+        },
+        {
+          "id": "u09-j12",
+          "type": "qcm",
+          "notions": [
+            "autorisation"
+          ],
+          "question": "Un lecteur ouvre la page d'administration. Quel code HTTP répondre ?",
+          "choix": [
+            "403",
+            "404",
+            "200",
+            "500"
+          ],
+          "bonne": 0,
+          "explication": "403 Forbidden : connu, mais pas autorisé."
+        },
+        {
+          "id": "u09-j13",
+          "type": "vf",
+          "notions": [
+            "inclusion-fichiers"
+          ],
+          "question": "`require` arrête le script si le fichier est introuvable.",
+          "bonne": true,
+          "explication": "Erreur fatale ; `include`, lui, continue."
+        },
+        {
+          "id": "u09-j14",
+          "type": "qcm",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Que reçoit le navigateur quand il demande une page PHP ?",
+          "choix": [
+            "Le HTML produit par PHP",
+            "Le code PHP",
+            "La base de données",
+            "Le fichier php.ini"
+          ],
+          "bonne": 0,
+          "explication": "Le PHP reste en cuisine : seul le plat (le HTML) arrive en salle."
+        }
+      ]
+    }
+  ],
+  "quiz": {
+    "titre": "Quiz : examen blanc éclair",
+    "questions": [
+      {
+        "id": "u09-q1",
+        "type": "predire",
+        "notions": [
+          "tableaux-boucles"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "$notes = ['Ana' => 5.5, 'Léo' => 3.5, 'Mia' => 4];",
+          "$reussi = 0;",
+          "foreach ($notes as $nom => $note) {",
+          "    if ($note >= 4) {",
+          "        $reussi++;",
+          "    }",
+          "}",
+          "echo \"$reussi sur \" . count($notes);",
+          ""
+        ],
+        "choix": [
+          "2 sur 3",
+          "1 sur 3",
+          "3 sur 3",
+          "2 sur 2"
+        ],
+        "bonne": 0,
+        "explication": "Ana (5.5) et Mia (4, car `>=`) réussissent."
+      },
+      {
+        "id": "u09-q2",
+        "type": "predire",
+        "notions": [
+          "constantes-classe",
+          "statique"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "class Ticket {",
+          "    const PREFIXE = \"T-\";",
+          "    private static int $compteur = 0;",
+          "    private string $numero;",
+          "",
+          "    public function __construct() {",
+          "        self::$compteur++;",
+          "        $this->numero = self::PREFIXE . self::$compteur;",
+          "    }",
+          "",
+          "    public function getNumero(): string {",
+          "        return $this->numero;",
+          "    }",
+          "}",
+          "",
+          "$t1 = new Ticket();",
+          "$t2 = new Ticket();",
+          "echo $t1->getNumero() . \" \" . $t2->getNumero();",
+          ""
+        ],
+        "choix": [
+          "T-1 T-2",
+          "T-1 T-1",
+          "T-2 T-2",
+          "PREFIXE1 PREFIXE2"
+        ],
+        "bonne": 0,
+        "explication": "Le compteur `static` est partagé par toute la classe : il vaut 1, puis 2. Chaque objet garde son propre numéro."
+      },
+      {
+        "id": "u09-q3",
+        "type": "trous",
+        "notions": [
+          "interfaces"
+        ],
+        "question": "Complète : `Chat` respecte le contrat `Bavard`.",
+        "code": [
+          "___ Bavard {",
+          "    public function parler(): string;",
+          "}",
+          "",
+          "class Chat ___ Bavard {",
+          "    public function parler(): string {",
+          "        return \"Miaou\";",
+          "    }",
+          "}",
+          "",
+          "$c = new Chat();",
+          "echo $c->parler();",
+          ""
+        ],
+        "solution": [
+          "interface",
+          "implements"
+        ],
+        "tests": {
+          "cas": [
+            {
+              "sortie": [
+                "Miaou"
+              ]
+            }
+          ]
+        },
+        "indices": [
+          "Le premier mot déclare un contrat.",
+          "Le second dit qu'une classe respecte ce contrat."
+        ],
+        "erreursTypiques": [
+          {
+            "trous": [
+              "interface",
+              "extends"
+            ],
+            "attendu": "erreur"
+          },
+          {
+            "trous": [
+              "class",
+              "implements"
+            ],
+            "attendu": "erreur"
+          }
+        ],
+        "explication": "`interface Bavard` déclare le contrat ; `class Chat implements Bavard` le respecte."
+      },
+      {
+        "id": "u09-q4",
+        "type": "bug",
+        "notions": [
+          "classe-objet"
+        ],
+        "question": "Ce code plante. Touche la ligne fautive.",
+        "code": [
+          "class Lampe {",
+          "    private bool $allumee = false;",
+          "",
+          "    public function allumer(): void {",
+          "        $allumee = true;",
+          "    }",
+          "",
+          "    public function estAllumee(): bool {",
+          "        return $this->allumee;",
+          "    }",
+          "}",
+          ""
+        ],
+        "ligne": 5,
+        "choix": [
+          "Il manque `$this->` : on crée une variable locale au lieu de changer l'attribut",
+          "`bool` n'est pas un type PHP",
+          "Une méthode `void` ne peut rien modifier",
+          "`private` empêche la méthode de changer l'attribut"
+        ],
+        "bonne": 0,
+        "explication": "Il faut `$this->allumee = true;`. Sans `$this->`, la lampe ne s'allume jamais (le code ne plante pas : c'est pire, il se tait)."
+      },
+      {
+        "id": "u09-q5",
+        "type": "qcm",
+        "notions": [
+          "constructeur"
+        ],
+        "question": "Quand le destructeur `__destruct()` est-il appelé ?",
+        "choix": [
+          "Quand l'objet est détruit (par exemple à la fin du script)",
+          "À la création de l'objet",
+          "À chaque appel de méthode",
+          "Jamais automatiquement"
+        ],
+        "bonne": 0,
+        "explication": "Le constructeur initialise l'objet à sa création, le destructeur le nettoie à sa destruction."
+      },
+      {
+        "id": "u09-q6",
+        "type": "pointer-code",
+        "notions": [
+          "injection-sql"
+        ],
+        "question": "Touche ce qui rend cette requête vulnérable à l'injection SQL.",
+        "code": [
+          "$stmt = $pdo->prepare(\"SELECT * FROM users WHERE email = '⟦$email⟧'\");",
+          "$stmt->execute();",
+          ""
+        ],
+        "explication": "`prepare` ne protège que si la saisie passe par un paramètre (`:email` + `bindValue`). Ici, elle est collée dans le SQL."
+      },
+      {
+        "id": "u09-q7",
+        "type": "predire",
+        "notions": [
+          "exceptions"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "function verifierAge(int $age): void {",
+          "    if ($age < 0) {",
+          "        throw new InvalidArgumentException(\"Âge négatif\");",
+          "    }",
+          "    echo \"OK \";",
+          "}",
+          "",
+          "try {",
+          "    verifierAge(20);",
+          "    verifierAge(-3);",
+          "    verifierAge(40);",
+          "} catch (InvalidArgumentException $e) {",
+          "    echo $e->getMessage();",
+          "}",
+          ""
+        ],
+        "choix": [
+          "OK Âge négatif",
+          "OK Âge négatif OK ",
+          "Âge négatif",
+          "OK OK "
+        ],
+        "bonne": 0,
+        "explication": "20 passe ; −3 déclenche l'alarme : le `catch` affiche le message, et 40 n'est jamais vérifié."
+      },
+      {
+        "id": "u09-q8",
+        "type": "qcm",
+        "notions": [
+          "formulaires"
+        ],
+        "question": "Après un formulaire invalide, comment le cours garde-t-il les saisies dans les champs ?",
+        "choix": [
+          "En réaffichant la valeur reçue dans l'attribut `value`, échappée avec htmlspecialchars",
+          "Avec un cookie pour chaque champ",
+          "Avec `session_destroy()`",
+          "Le navigateur s'en charge toujours tout seul"
+        ],
+        "bonne": 0,
+        "explication": "`value=\"<?= htmlspecialchars($name ?? '') ?>\"` : l'utilisateur ne retape pas tout, et la saisie reste en vitrine."
+      },
+      {
+        "id": "u09-q9",
+        "type": "corriger",
+        "notions": [
+          "fonctions",
+          "formulaires"
+        ],
+        "question": "Cette fonction doit retourner la liste des erreurs d'un formulaire d'inscription : `\"Le nom est obligatoire.\"` si le nom est vide (après `trim`), `\"L'âge doit être entre 0 et 120.\"` sinon. Elle a deux erreurs : corrige-la.",
+        "depart": [
+          "function validerInscription(string $nom, int $age): array {",
+          "    $erreurs = [];",
+          "    if (empty($nom)) {",
+          "        $erreurs[] = \"Le nom est obligatoire.\";",
+          "    }",
+          "    if ($age < 0 && $age > 120) {",
+          "        $erreurs[] = \"L'âge doit être entre 0 et 120.\";",
+          "    }",
+          "    return $erreurs;",
+          "}",
+          ""
+        ],
+        "tests": {
+          "fonction": "validerInscription",
+          "cas": [
+            {
+              "titre": "Tout va bien",
+              "args": [
+                "Mia",
+                30
+              ],
+              "attendu": []
+            },
+            {
+              "titre": "Nom vide",
+              "args": [
+                "",
+                30
+              ],
+              "attendu": [
+                "Le nom est obligatoire."
+              ]
+            },
+            {
+              "titre": "Nom fait d'espaces",
+              "args": [
+                "   ",
+                30
+              ],
+              "attendu": [
+                "Le nom est obligatoire."
+              ]
+            },
+            {
+              "titre": "Âge négatif",
+              "args": [
+                "Mia",
+                -1
+              ],
+              "attendu": [
+                "L'âge doit être entre 0 et 120."
+              ]
+            },
+            {
+              "titre": "Âge trop grand",
+              "args": [
+                "Mia",
+                130
+              ],
+              "attendu": [
+                "L'âge doit être entre 0 et 120."
+              ]
+            },
+            {
+              "titre": "Les deux",
+              "args": [
+                "",
+                200
+              ],
+              "attendu": [
+                "Le nom est obligatoire.",
+                "L'âge doit être entre 0 et 120."
+              ]
+            }
+          ]
+        },
+        "indices": [
+          "Un nom fait d'espaces devrait être refusé : que fait `trim` ?",
+          "Un âge peut-il être à la fois négatif ET plus grand que 120 ?",
+          {
+            "texte": "Les deux conditions :",
+            "code": "if (empty(___($nom))) { … }\nif ($age < 0 ___ $age > 120) { … }"
+          }
+        ],
+        "solution": [
+          "function validerInscription(string $nom, int $age): array {",
+          "    $erreurs = [];",
+          "    if (empty(trim($nom))) {",
+          "        $erreurs[] = \"Le nom est obligatoire.\";",
+          "    }",
+          "    if ($age < 0 || $age > 120) {",
+          "        $erreurs[] = \"L'âge doit être entre 0 et 120.\";",
+          "    }",
+          "    return $erreurs;",
+          "}",
+          ""
+        ],
+        "erreursTypiques": [
+          {
+            "code": "function validerInscription(string $nom, int $age): array {\n    $erreurs = [];\n    if (empty(trim($nom))) {\n        $erreurs[] = \"Le nom est obligatoire.\";\n    }\n    if ($age < 0 && $age > 120) {\n        $erreurs[] = \"L'âge doit être entre 0 et 120.\";\n    }\n    return $erreurs;\n}\n",
+            "attendu": "echec"
+          }
+        ],
+        "explication": "`trim` retire les espaces autour ; « hors de l'intervalle » se dit avec OU (`||`)."
+      },
+      {
+        "id": "u09-q10",
+        "type": "qcm",
+        "notions": [
+          "composants",
+          "render-fonction"
+        ],
+        "question": "Pourquoi le cours préfère-t-il des composants en fonctions à paramètres explicites (`renderHeader(string $title)`) plutôt qu'un `require` qui lit des variables globales ?",
+        "choix": [
+          "On voit ce dont le composant a besoin, et il ne dépend pas de variables définies ailleurs",
+          "Les fonctions sont plus rapides que require",
+          "require ne peut pas inclure de HTML",
+          "Les variables globales n'existent pas en PHP"
+        ],
+        "bonne": 0,
+        "explication": "Paramètres explicites : le composant dit ce qu'il attend, et on peut le réutiliser partout."
+      },
+      {
+        "id": "u09-q11",
+        "type": "trous",
+        "notions": [
+          "sessions"
+        ],
+        "question": "Complète la page qui compte les visites de la personne.",
+        "requete": {
+          "session": {
+            "visites": 2
+          }
+        },
+        "code": [
+          "___();",
+          "$_SESSION['visites'] = ($___['visites'] ?? 0) + 1;",
+          "echo \"Visite n° \" . $_SESSION['visites'];",
+          ""
+        ],
+        "solution": [
+          "session_start",
+          "_SESSION"
+        ],
+        "tests": {
+          "cas": [
+            {
+              "sortie": [
+                "Visite n° 3"
+              ],
+              "session": {
+                "visites": 3
+              }
+            },
+            {
+              "titre": "Première visite",
+              "requete": {
+                "methode": "GET"
+              },
+              "sortie": [
+                "Visite n° 1"
+              ]
+            }
+          ]
+        },
+        "indices": [
+          "Le premier trou ouvre la session.",
+          "Le second est le tableau de la session (sans le `$`, déjà écrit)."
+        ],
+        "erreursTypiques": [
+          {
+            "trous": [
+              "session_destroy",
+              "_SESSION"
+            ],
+            "attendu": "echec"
+          },
+          {
+            "trous": [
+              "session_start",
+              "_COOKIE"
+            ],
+            "attendu": "echec"
+          }
+        ],
+        "explication": "`session_start()` puis `$_SESSION['visites']` : le dossier au guichet se retrouve d'une page à l'autre."
+      },
+      {
+        "id": "u09-q12",
+        "type": "vf",
+        "notions": [
+          "mots-de-passe"
+        ],
+        "question": "`password_hash('secret')` donne le même résultat à chaque appel.",
+        "bonne": false,
+        "explication": "Un sel aléatoire change l'empreinte à chaque fois : c'est pour ça qu'on compare avec `password_verify`."
+      },
+      {
+        "id": "u09-q13",
+        "type": "qcm",
+        "notions": [
+          "i18n"
+        ],
+        "question": "Comment le cours organise-t-il les traductions d'une application multilingue ?",
+        "choix": [
+          "Un tableau associatif de traductions par langue, avec les mêmes clés, dans lequel on choisit la langue de l'utilisateur",
+          "Un `if` autour de chaque texte de la page",
+          "Une copie complète du site par langue",
+          "Une traduction automatique par le navigateur"
+        ],
+        "bonne": 0,
+        "explication": "Mêmes clés dans chaque langue : la page affiche `$translations[$language]['welcome']`, quelle que soit la langue choisie."
+      },
+      {
+        "id": "u09-q14",
+        "type": "tri",
+        "notions": [
+          "authentification",
+          "autorisation"
+        ],
+        "question": "Authentification ou autorisation ?",
+        "categories": [
+          "Authentification",
+          "Autorisation"
+        ],
+        "items": [
+          [
+            "password_verify",
+            0
+          ],
+          [
+            "http_response_code(403)",
+            1
+          ],
+          [
+            "Vérifier le rôle admin",
+            1
+          ],
+          [
+            "Formulaire de connexion",
+            0
+          ]
+        ],
+        "explication": "Qui es-tu, puis as-tu le droit."
+      },
+      {
+        "id": "u09-q15",
+        "type": "erreurs",
+        "notions": [
+          "classe-objet",
+          "pdo",
+          "sessions"
+        ],
+        "question": "Traduis ces messages qu'on peut te demander d'expliquer.",
+        "paires": [
+          [
+            "Using $this when not in object context",
+            "`$this` utilisé hors d'un objet (fonction ou méthode statique)"
+          ],
+          [
+            "Cannot instantiate abstract class",
+            "`new` sur une classe abstraite"
+          ],
+          [
+            "SQLSTATE[HY000]: no such table",
+            "La table n'existe pas (nom mal écrit ?)"
+          ],
+          [
+            "Cannot modify header information - headers already sent",
+            "Un affichage a eu lieu avant `header`, `setcookie` ou `session_start`"
+          ]
+        ],
+        "explication": "Lire le message, c'est déjà la moitié de la correction."
+      },
+      {
+        "id": "u09-q16",
+        "type": "qcm",
+        "notions": [
+          "deploiement"
+        ],
+        "question": "Pour téléverser l'application chez l'hébergeur, quel protocole le cours recommande-t-il ?",
+        "choix": [
+          "SFTP",
+          "FTP",
+          "HTTP",
+          "SMTP"
+        ],
+        "bonne": 0,
+        "explication": "SFTP passe par une connexion SSH sécurisée."
+      }
+    ]
+  },
+  "boss": [
+    {
+      "id": "u09-b1",
+      "titre": "L'examen blanc",
+      "source": "Évaluation intermédiaire du 25.11.2026 (format : papier, 90 minutes, sans ressources, séances 1 à 7)",
+      "notions": [
+        "poo-concepts",
+        "classe-objet",
+        "heritage",
+        "pdo",
+        "injection-sql",
+        "xss",
+        "cookies-php",
+        "sessions",
+        "autorisation"
+      ],
+      "regles": [
+        "Aucune ressource : réponds sans relire les fiches.",
+        "Prédis la sortie sans exécuter le code : c'est ce qu'on te demandera sur papier.",
+        "Pour réussir, il faut 80 % de bonnes réponses."
+      ],
+      "enonce": "**Le format du cours** : l'évaluation intermédiaire dure 90 minutes, sur papier, sans ressources. Elle mélange théorie, bouts de code à expliquer ou à compléter, et QCM, sur les séances 1 à 7.\n\n**Le scénario de cet examen blanc** : le ciné-club de ton quartier a une petite application PHP. Les membres se connectent, notent des films, et choisissent leur langue. On te montre des morceaux du code : explique-les, complète-les, trouve leurs failles.",
+      "questions": [
+        {
+          "id": "u09-b1-q1",
+          "type": "ordre",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Un membre ouvre `films.php`. Remets les étapes dans l'ordre.",
+          "items": [
+            "Le navigateur demande films.php",
+            "Le serveur web confie le fichier à PHP",
+            "PHP lit les films dans la base de données",
+            "PHP produit le HTML de la liste",
+            "Le navigateur affiche la liste"
+          ],
+          "explication": "Le restaurant : la commande, la cuisine, le garde-manger, le plat, la salle."
+        },
+        {
+          "id": "u09-b1-q2",
+          "type": "predire",
+          "notions": [
+            "classe-objet",
+            "constantes-classe"
+          ],
+          "question": "La classe `Film` du ciné-club. Qu'affiche ce code ?",
+          "code": [
+            "class Film {",
+            "    const NOTE_MAX = 5;",
+            "    private string $titre;",
+            "    private array $notes = [];",
+            "",
+            "    public function __construct(string $titre) {",
+            "        $this->titre = $titre;",
+            "    }",
+            "",
+            "    public function noter(int $note): void {",
+            "        if ($note >= 1 && $note <= self::NOTE_MAX) {",
+            "            $this->notes[] = $note;",
+            "        }",
+            "    }",
+            "",
+            "    public function moyenne(): float {",
+            "        if (count($this->notes) === 0) {",
+            "            return 0;",
+            "        }",
+            "        return array_sum($this->notes) / count($this->notes);",
+            "    }",
+            "}",
+            "",
+            "$film = new Film(\"Coco\");",
+            "$film->noter(4);",
+            "$film->noter(7);",
+            "$film->noter(5);",
+            "echo $film->moyenne();",
+            ""
+          ],
+          "choix": [
+            "4.5",
+            "5.3333333333333",
+            "16",
+            "5"
+          ],
+          "bonne": 0,
+          "explication": "La note 7 dépasse `NOTE_MAX` : elle est ignorée. Moyenne de 4 et 5 : 4.5."
+        },
+        {
+          "id": "u09-b1-q3",
+          "type": "trous",
+          "notions": [
+            "heritage",
+            "classes-abstraites"
+          ],
+          "question": "Les membres « premium » ont une réduction. Complète la hiérarchie.",
+          "code": [
+            "___ class Membre {",
+            "    protected string $nom;",
+            "",
+            "    public function __construct(string $nom) {",
+            "        $this->nom = $nom;",
+            "    }",
+            "",
+            "    abstract public function prixSeance(): float;",
+            "}",
+            "",
+            "class MembrePremium ___ Membre {",
+            "    public function prixSeance(): float {",
+            "        return 8.5;",
+            "    }",
+            "}",
+            "",
+            "$ana = new MembrePremium(\"Ana\");",
+            "echo $ana->prixSeance();",
+            ""
+          ],
+          "solution": [
+            "abstract",
+            "extends"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "8.5"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "La classe `Membre` a une méthode sans corps : quel mot doit alors précéder `class` ?",
+            "`MembrePremium` hérite de `Membre`."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "",
+                "extends"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "abstract",
+                "implements"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "Une classe avec une méthode abstraite est abstraite ; ses enfants l'étendent et écrivent la méthode."
+        },
+        {
+          "id": "u09-b1-q4",
+          "type": "bug",
+          "notions": [
+            "injection-sql",
+            "pdo"
+          ],
+          "question": "La recherche de films du ciné-club. Touche la ligne qui ouvre une faille.",
+          "code": [
+            "$recherche = $_GET['q'] ?? '';",
+            "$sql = \"SELECT titre FROM films WHERE titre LIKE '%\" . $recherche . \"%'\";",
+            "$stmt = $pdo->prepare($sql);",
+            "$stmt->execute();",
+            "$films = $stmt->fetchAll();",
+            ""
+          ],
+          "ligne": 2,
+          "choix": [
+            "La saisie est concaténée dans le SQL : `prepare` ne protège rien sans paramètre",
+            "`LIKE` est interdit avec PDO",
+            "`fetchAll` doit venir avant `execute`",
+            "`?? ''` est inutile"
+          ],
+          "bonne": 0,
+          "explication": "Il faut `LIKE :q` et `bindValue(':q', '%' . $recherche . '%')`."
+        },
+        {
+          "id": "u09-b1-q5",
+          "type": "trous",
+          "notions": [
+            "pdo"
+          ],
+          "question": "Complète l'ajout d'une note dans la base, de façon sûre.",
+          "code": [
+            "$pdo = new PDO('sqlite::memory:');",
+            "$pdo->exec(\"CREATE TABLE notes (film TEXT, note INTEGER)\");",
+            "",
+            "$film = \"Coco\";",
+            "$note = 4;",
+            "$stmt = $pdo->prepare(\"INSERT INTO notes (film, note) VALUES (:film, :note)\");",
+            "$stmt->___(':film', $film);",
+            "$stmt->___(':note', $note);",
+            "$stmt->execute();",
+            "",
+            "echo $pdo->query(\"SELECT COUNT(*) FROM notes\")->fetchColumn();",
+            ""
+          ],
+          "solution": [
+            "bindValue",
+            "bindValue"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "1"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "La méthode qui lie une valeur à un paramètre nommé.",
+            "C'est la même pour les deux paramètres."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "bindValue",
+                "execute"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "bind",
+                "bind"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "Chaque `:paramètre` reçoit sa valeur avec `bindValue`, puis `execute` lance la requête."
+        },
+        {
+          "id": "u09-b1-q6",
+          "type": "predire",
+          "notions": [
+            "xss"
+          ],
+          "question": "Un membre a écrit ce commentaire. Que reçoit le navigateur ?",
+          "code": [
+            "$commentaire = 'Génial <script>alert(\"hack\")</script>';",
+            "echo \"<p>\" . htmlspecialchars($commentaire) . \"</p>\";",
+            ""
+          ],
+          "choix": [
+            "<p>Génial &lt;script&gt;alert(&quot;hack&quot;)&lt;/script&gt;</p>",
+            "<p>Génial <script>alert(\"hack\")</script></p>",
+            "<p>Génial </p>",
+            "&lt;p&gt;Génial&lt;/p&gt;"
+          ],
+          "bonne": 0,
+          "explication": "Seule la saisie est échappée (le `<p>` du code reste du HTML) ; les guillemets deviennent `&quot;`. Le script s'affiche, il ne s'exécute pas."
+        },
+        {
+          "id": "u09-b1-q7",
+          "type": "tri",
+          "notions": [
+            "validation-nettoyage"
+          ],
+          "question": "Le formulaire « noter un film ». Valider ou nettoyer / échapper ?",
+          "categories": [
+            "Valider",
+            "Nettoyer / échapper"
+          ],
+          "items": [
+            [
+              "La note est un entier entre 1 et 5",
+              0
+            ],
+            [
+              "Le titre n'est pas vide",
+              0
+            ],
+            [
+              "Le commentaire est affiché avec htmlspecialchars",
+              1
+            ],
+            [
+              "La note passe par bindValue",
+              1
+            ]
+          ],
+          "explication": "Valider : refuser ce qui est faux ; nettoyer : rendre inoffensif ce qu'on garde."
+        },
+        {
+          "id": "u09-b1-q8",
+          "type": "trous",
+          "notions": [
+            "cookies-php",
+            "i18n"
+          ],
+          "question": "Le choix de langue du ciné-club, gardé un an (365 jours). Complète.",
+          "requete": {
+            "get": {
+              "langue": "it"
+            }
+          },
+          "code": [
+            "$langues = ['fr', 'de', 'it'];",
+            "$langue = $_GET['langue'] ?? ($_COOKIE['langue'] ?? 'fr');",
+            "if (!in_array($langue, $langues)) {",
+            "    $langue = 'fr';",
+            "}",
+            "setcookie('langue', $langue, ___ + 365 * 24 * 60 * 60);",
+            "echo \"Langue : $langue\";",
+            ""
+          ],
+          "solution": [
+            "time()"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "Langue : it"
+                ],
+                "cookies": {
+                  "langue": "it"
+                },
+                "dureeCookies": {
+                  "langue": 31536000
+                }
+              },
+              {
+                "titre": "Langue inconnue",
+                "requete": {
+                  "get": {
+                    "langue": "xx"
+                  }
+                },
+                "sortie": [
+                  "Langue : fr"
+                ]
+              },
+              {
+                "titre": "Depuis le cookie",
+                "requete": {
+                  "cookies": {
+                    "langue": "de"
+                  }
+                },
+                "sortie": [
+                  "Langue : de"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "L'expiration est un moment précis, compté en secondes depuis 1970.",
+            "La fonction qui donne « maintenant » en secondes."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "0"
+              ],
+              "attendu": "echec"
+            },
+            {
+              "trous": [
+                "time"
+              ],
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "`time()` donne maintenant ; on y ajoute la durée en secondes."
+        },
+        {
+          "id": "u09-b1-q9",
+          "type": "qcm",
+          "notions": [
+            "sessions-cookies",
+            "autorisation"
+          ],
+          "question": "Un collègue propose de garder le rôle du membre (`admin` ou `member`) dans un cookie. Qu'en penses-tu ?",
+          "choix": [
+            "Mauvaise idée : le membre peut modifier son cookie et se donner le rôle admin ; le rôle va dans la session, côté serveur",
+            "Bonne idée : c'est plus rapide qu'une session",
+            "Bonne idée, à condition de l'échapper avec htmlspecialchars",
+            "Aucune importance"
+          ],
+          "bonne": 0,
+          "explication": "Le ticket est dans la poche du client : il peut le falsifier. Le dossier, lui, reste au guichet."
+        },
+        {
+          "id": "u09-b1-q10",
+          "type": "ordre",
+          "notions": [
+            "authentification",
+            "mots-de-passe",
+            "sessions"
+          ],
+          "question": "La connexion d'un membre. Remets les étapes dans l'ordre.",
+          "items": [
+            "Lire l'e-mail et le mot de passe dans $_POST",
+            "Chercher le membre par son e-mail (requête préparée)",
+            "Vérifier le mot de passe avec password_verify",
+            "session_start() et ranger user_id et role dans $_SESSION",
+            "Rediriger vers l'accueil avec header('Location: …') et exit()"
+          ],
+          "explication": "Lire, chercher, vérifier, mémoriser, rediriger."
+        },
+        {
+          "id": "u09-b1-q11",
+          "type": "ecrire",
+          "notions": [
+            "autorisation",
+            "sessions"
+          ],
+          "question": "Écris `peutSupprimerCommentaire(array $session, int $auteurId): bool` : seuls les membres **connectés** qui sont `admin` ou l'auteur·trice du commentaire peuvent le supprimer.",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "fonction": "peutSupprimerCommentaire",
+            "cas": [
+              {
+                "titre": "Son propre commentaire",
+                "args": [
+                  {
+                    "user_id": 7,
+                    "role": "member"
+                  },
+                  7
+                ],
+                "attendu": true
+              },
+              {
+                "titre": "Le commentaire d'un autre",
+                "args": [
+                  {
+                    "user_id": 8,
+                    "role": "member"
+                  },
+                  7
+                ],
+                "attendu": false
+              },
+              {
+                "titre": "Admin",
+                "args": [
+                  {
+                    "user_id": 1,
+                    "role": "admin"
+                  },
+                  7
+                ],
+                "attendu": true
+              },
+              {
+                "titre": "Pas connecté",
+                "args": [
+                  {},
+                  7
+                ],
+                "attendu": false
+              },
+              {
+                "titre": "Rôle admin sans connexion",
+                "args": [
+                  {
+                    "role": "admin"
+                  },
+                  7
+                ],
+                "attendu": false
+              }
+            ]
+          },
+          "indices": [
+            "Pas de `user_id` dans la session : `false`, tout de suite.",
+            "Sinon : admin OU auteur·trice.",
+            {
+              "texte": "Presque :",
+              "code": "if (!isset($session['user_id'])) {\n    return false;\n}\nreturn ___;"
+            }
+          ],
+          "solution": [
+            "function peutSupprimerCommentaire(array $session, int $auteurId): bool {",
+            "    if (!isset($session['user_id'])) {",
+            "        return false;",
+            "    }",
+            "    return ($session['role'] ?? '') === 'admin' || $session['user_id'] === $auteurId;",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function peutSupprimerCommentaire(array $session, int $auteurId): bool {\n    return ($session['role'] ?? '') === 'admin' || ($session['user_id'] ?? 0) === $auteurId;\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Authentification d'abord, autorisation ensuite."
+        },
+        {
+          "id": "u09-b1-q12",
+          "type": "qcm",
+          "notions": [
+            "poo-concepts"
+          ],
+          "question": "Question de théorie : un membre du ciné-club demande pourquoi l'application est écrite en POO. Quelle réponse reprend le cours ?",
+          "choix": [
+            "Le code est plus lisible, réutilisable et maintenable, au prix d'un peu de complexité",
+            "La POO est toujours plus rapide que le procédural",
+            "PHP n'accepte que la POO depuis la version 8",
+            "La POO supprime les failles de sécurité"
+          ],
+          "bonne": 0,
+          "explication": "Avantages : lisibilité, réutilisabilité, maintenabilité. Désavantages : complexité, performance (souvent négligeable)."
+        }
+      ]
+    }
+  ],
+  "parcours": [
+    "u09-l1",
+    "u09-l2",
+    "u09-l3",
+    "jeu:u09-sprint",
+    "u09-l4",
+    "u09-l5",
+    "quiz",
+    "boss:u09-b1"
+  ]
+}
