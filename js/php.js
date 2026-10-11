@@ -415,7 +415,11 @@ function analyseStatiquePhp(code, tests = {}){
     if ((j.t === "html" || j.t === "tag") && /\S/.test(j.v) || (j.t === "kw" && /^(echo|print|<\?=)$/i.test(j.v))) affiche = true;
     if (affiche && j.t === "fn" && /^(setcookie|header|session_start)$/i.test(j.v)) { const l = ligneDe(code, j.pos); conseils.push({ id:"entete-envoye", ligne:l, message:`Ligne ${l} : \`${j.v}()\` envoie un en-tête HTTP, qui part AVANT la page. Il doit venir avant tout affichage (echo, HTML, même une ligne vide avant \`<?php\`) : sinon PHP répond « headers already sent ». Place-le tout en haut du fichier.` }); break; }
   }
-  const mx = /\b(?:echo|print)\s+\$_(GET|POST|COOKIE|REQUEST)\b/.exec(nu);
+  // saisie de l'utilisateur affichée telle quelle (echo, print ou <?=) : XSS
+  let mx = null;
+  for (const m of nu.matchAll(/(?:\becho\b|\bprint\b|<\?=)([^;]*?)(?:;|\?>|$)/g)) {
+    if (/\$_(GET|POST|COOKIE|REQUEST)\b/.test(m[1]) && !/htmlspecialchars\s*\(/.test(m[1])) { mx = m; break; }
+  }
   if (mx) conseils.push({ id:"xss", ligne: ligneDe(code, mx.index), message: `Ligne ${ligneDe(code, mx.index)} : tu affiches une saisie de l'utilisateur telle quelle. Si elle contient \`<script>\`, il s'exécute (XSS) : mets-la en vitrine avec \`htmlspecialchars(…)\`.` });
   const mh = /\b(md5|sha1)\s*\(/.exec(nu);
   if (mh && /pass|mdp|mot/i.test(code)) conseils.push({ id:"hachage-faible", ligne: ligneDe(code, mh.index), message: `Ligne ${ligneDe(code, mh.index)} : \`${mh[1]}\` n'est pas fait pour les mots de passe (trop rapide à casser). Utilise \`password_hash()\` pour enregistrer et \`password_verify()\` pour vérifier.` });

@@ -1,0 +1,3027 @@
+{
+  "id": "u04",
+  "titre": "Formulaires, PDO et exceptions",
+  "sousTitre": "Séance 3 · $_POST, validation, requêtes préparées, try/catch, configuration, déploiement",
+  "objectif": "Traiter un formulaire de façon sûre, enregistrer et lire des données avec PDO et des requêtes préparées, gérer les erreurs avec des exceptions, et préparer le déploiement avec un fichier de configuration.",
+  "icone": "⛁",
+  "fiches": [
+    {
+      "id": "formulaires",
+      "titre": "Formulaires : du navigateur à $_POST",
+      "icone": "✉",
+      "resume": "`<form action=\"create.php\" method=\"POST\">` envoie les champs au serveur ; chaque champ arrive dans `$_POST` sous la clé de son attribut `name`. On vérifie que le formulaire a été soumis avec `$_SERVER[\"REQUEST_METHOD\"] === \"POST\"`.",
+      "texte": "- `action` : la page qui reçoit les données ; `method` : `POST` (données dans le corps de la requête, recommandé) ou `GET` (données dans l'URL, `?query=…`, pour une recherche ou des données non sensibles).\n- `<label for=\"email\">` correspond à l'`id` du champ ; l'attribut **`name`** est la clé dans `$_POST`.\n- Côté serveur : `$email = $_POST[\"email\"];`.\n\n**Valider côté serveur** : un tableau `$errors` collecte les messages (`empty`, `strlen`, `filter_var($email, FILTER_VALIDATE_EMAIL)`…). S'il reste vide, on traite ; sinon, on affiche les erreurs.\n\n**Conserver les saisies** : `value=\"<?= htmlspecialchars($firstName ?? '') ?>\"` : l'opérateur `??` donne une chaîne vide si la variable n'existe pas, et `htmlspecialchars` affiche la saisie en toute sécurité.\n\n**Valider côté client** (`required`, `minlength`, `type=\"email\"`, `min`) améliore l'expérience, mais se contourne : la validation côté serveur reste **obligatoire**.",
+      "exemples": [
+        {
+          "titre": "Un formulaire et son traitement",
+          "code": [
+            "<?php",
+            "$name = $_POST[\"name\"] ?? \"\";",
+            "$errors = [];",
+            "if ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {",
+            "    if (strlen($name) < 2) {",
+            "        $errors[] = \"Le nom doit contenir au moins 2 caractères.\";",
+            "    }",
+            "}",
+            "?>",
+            "<form action=\"index.php\" method=\"POST\">",
+            "    <label for=\"name\">Nom</label>",
+            "    <input type=\"text\" id=\"name\" name=\"name\" value=\"<?= htmlspecialchars($name) ?>\" required minlength=\"2\">",
+            "    <button type=\"submit\">Envoyer</button>",
+            "</form>",
+            ""
+          ],
+          "requete": {
+            "methode": "POST",
+            "post": {
+              "name": "A"
+            }
+          },
+          "note": "L'exemple simule l'envoi du formulaire avec le nom « A »."
+        }
+      ],
+      "pieges": [
+        "Sans attribut `name`, le champ n'arrive pas dans `$_POST`.",
+        "La validation côté client ne protège rien : un attaquant envoie sa requête sans passer par ton formulaire.",
+        "Avant l'envoi (GET), `$_POST[\"name\"]` n'existe pas : utilise `?? \"\"`."
+      ]
+    },
+    {
+      "id": "pdo",
+      "titre": "PDO et requêtes préparées",
+      "icone": "⛁",
+      "resume": "PDO parle à la base de données (SQLite, MySQL/MariaDB…). Une requête **préparée** a des paramètres `:nom` : on `prepare`, on lie les valeurs (`bindValue` ou `execute([...])`), puis on `execute`. Les données restent des données, jamais du SQL.",
+      "analogie": "**Les cases du formulaire.** La requête préparée est un formulaire avec des cases : `:name`, `:price`. Ce que l'utilisateur écrit va DANS la case et y reste, même s'il écrit `'; DROP TABLE users; --` : ça ne devient jamais une commande.",
+      "texte": "``` $pdo = new PDO(\"sqlite:\" . DATABASE_FILE);                     // SQLite : un fichier $pdo = new PDO(\"mysql:host=mariadb;port=3306;dbname=my_database;charset=utf8mb4\", $user, $password);  // MySQL/MariaDB ```\n\n- `$stmt = $pdo->prepare($sql);` prépare la requête ;\n- `$stmt->bindValue(':email', $email);` lie une valeur (ou `$stmt->execute([':email' => $email])`) ;\n- `$stmt->execute();` l'exécute ;\n- `$stmt->fetchAll()` donne toutes les lignes, `$stmt->fetch()` la suivante (ou `false`) ;\n- `$pdo->lastInsertId()` donne l'id de la ligne ajoutée.\n\nPDO rend le code indépendant de la base : seule la chaîne de connexion (le DSN) et quelques détails de SQL changent entre SQLite et MySQL.\n\n*Dans l'appli, les exercices utilisent SQLite (en mémoire), comme en ProgServ1 : le code PDO est le même qu'avec MariaDB.*",
+      "exemples": [
+        {
+          "titre": "Insérer puis lire",
+          "code": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->exec(\"CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, age INTEGER NOT NULL)\");",
+            "",
+            "$stmt = $pdo->prepare(\"INSERT INTO users (name, age) VALUES (:name, :age)\");",
+            "$stmt->bindValue(':name', \"Ana\");",
+            "$stmt->bindValue(':age', 31);",
+            "$stmt->execute();",
+            "echo \"Id : \" . $pdo->lastInsertId() . \"<br>\";",
+            "",
+            "$stmt = $pdo->prepare(\"SELECT name, age FROM users\");",
+            "$stmt->execute();",
+            "foreach ($stmt->fetchAll() as $user) {",
+            "    echo $user['name'] . \" (\" . $user['age'] . \")<br>\";",
+            "}",
+            ""
+          ]
+        }
+      ],
+      "pieges": [
+        "Ne colle jamais une variable dans le SQL (`\"… WHERE name = '$name'\"`) : c'est la porte ouverte à l'injection SQL.",
+        "Le nom du paramètre doit être identique dans la requête et dans `bindValue` (`:email`).",
+        "Sans `execute()`, la requête préparée ne fait rien."
+      ]
+    },
+    {
+      "id": "exceptions",
+      "titre": "Exceptions : le signal d'alarme",
+      "icone": "!",
+      "resume": "Une exception signale une erreur : on la **lance** avec `throw new Exception(\"…\")` et on l'**attrape** avec `try { … } catch (Exception $e) { … }`. Non attrapée, elle arrête le script. PDO lance des `PDOException`.",
+      "analogie": "**Le signal d'alarme** (l'image du cours) : `throw` déclenche l'alarme quelque part dans le code. Si personne ne l'entend, tout s'arrête brusquement. Si un `catch` est là, il réagit : prévenir l'utilisateur, corriger, ou relancer l'alarme plus loin.",
+      "texte": "- `$e->getMessage()` : le message ; `$e->getCode()` : le code (pour PDO, le code SQLSTATE, par exemple `\"23000\"` pour une violation de contrainte d'unicité).\n- Plusieurs `catch` à la suite : du plus précis au plus général : `catch (PDOException $e) { … } catch (Exception $e) { … }`.\n- Dans les sources des exercices, le constructeur d'une classe lance une `InvalidArgumentException` si une donnée est invalide ; la page l'attrape et ajoute le message à `$errors`.",
+      "exemples": [
+        {
+          "titre": "Attraper une violation d'unicité",
+          "code": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->exec(\"CREATE TABLE users (email TEXT NOT NULL UNIQUE)\");",
+            "$stmt = $pdo->prepare(\"INSERT INTO users (email) VALUES (:email)\");",
+            "try {",
+            "    $stmt->execute([':email' => 'alice@example.com']);",
+            "    $stmt->execute([':email' => 'alice@example.com']);",
+            "} catch (PDOException $e) {",
+            "    if ($e->getCode() === \"23000\") {",
+            "        echo \"L'adresse e-mail est déjà utilisée.\";",
+            "    } else {",
+            "        echo \"Erreur : \" . $e->getMessage();",
+            "    }",
+            "}",
+            ""
+          ]
+        }
+      ],
+      "pieges": [
+        "Le code SQLSTATE est une **chaîne** : `$e->getCode() === \"23000\"`.",
+        "Un `catch (Exception $e)` placé en premier attraperait tout : mets le plus précis d'abord."
+      ]
+    },
+    {
+      "id": "configuration",
+      "titre": "Fichier de configuration",
+      "icone": "⚙",
+      "resume": "Les paramètres de connexion (hôte, port, base, utilisateur, mot de passe) vont dans un fichier `config/database.ini`, lu avec `parse_ini_file()`. Ce fichier reste hors du dossier `public` et hors de Git (`.gitignore`, avec un `database.ini.example` à la place).",
+      "texte": "``` host = \"mariadb\" port = 3306 database = \"my_database\" username = \"username\" password = \"password\" ```\n\n``` $config = parse_ini_file(__DIR__ . '/../config/database.ini', true); if (!$config) { throw new Exception(\"Erreur lors de la lecture du fichier de configuration\"); } $host = $config['host']; ```\n\nAvantages : on change d'environnement (local, Infomaniak) sans toucher au code, et les secrets ne sont pas dans le code source.",
+      "pieges": [
+        "Dans `public/`, le fichier serait téléchargeable par n'importe qui : mot de passe compris.",
+        "Ne committe pas le vrai fichier : committe un `database.ini.example`."
+      ]
+    },
+    {
+      "id": "deploiement",
+      "titre": "MariaDB, Docker et Infomaniak",
+      "icone": "☁",
+      "resume": "MariaDB est un fork de MySQL, entièrement compatible. En local, le template du cours la lance avec Docker Compose (`docker compose up`), avec phpMyAdmin sur http://localhost:9090. En production, on déploie chez Infomaniak avec une base dédiée.",
+      "texte": "**En local (template du cours)** : `docker compose up` démarre l'application, MariaDB et phpMyAdmin (décrits dans `compose.yaml`) ; `docker compose down` (ou Ctrl+C) les arrête. Par défaut : utilisateur `username`, mot de passe `password`, base `my_database`.\n\n**SQLite ou MariaDB ?** SQLite (un seul fichier) est idéale pour de petites applications ou le développement ; en production, MySQL/MariaDB gèrent mieux la concurrence et offrent plus de fonctionnalités.\n\n**Déployer chez Infomaniak**, en résumé :\n\n- acquérir un hébergement (nom de domaine ou sous-domaine) ;\n- créer une base MySQL/MariaDB et noter hôte, port, nom, utilisateur, mot de passe ;\n- créer un site PHP et configurer son répertoire racine ;\n- téléverser les fichiers par FTP/SFTP ;\n- adapter la configuration pour se connecter à la base d'Infomaniak ;\n- tester l'application en ligne.",
+      "pieges": [
+        "La configuration locale (`mariadb`, `username`/`password`) ne marche pas en production : il faut les informations notées chez Infomaniak.",
+        "Le répertoire racine du site doit pointer vers `public`."
+      ]
+    }
+  ],
+  "lecons": [
+    {
+      "id": "u04-l1",
+      "titre": "Formulaires : du navigateur à $_POST",
+      "duree": 6,
+      "notions": [
+        "formulaires"
+      ],
+      "cartes": [
+        {
+          "titre": "Le formulaire HTML",
+          "texte": "`action` : où envoyer ; `method` : comment. L'attribut **`name`** de chaque champ devient la clé côté serveur.",
+          "code": [
+            "<form action=\"create.php\" method=\"POST\">",
+            "    <label for=\"first-name\">Prénom</label>",
+            "    <input type=\"text\" id=\"first-name\" name=\"first-name\">",
+            "    <button type=\"submit\">Créer</button>",
+            "</form>",
+            ""
+          ],
+          "executable": false,
+          "fiche": "formulaires"
+        },
+        {
+          "titre": "POST ou GET ?",
+          "texte": "Avec `POST`, les données voyagent dans le corps de la requête HTTP. Avec `GET`, elles s'affichent dans l'URL : `create.php?query=ma recherche`. Le cours recommande `POST` pour les formulaires, `GET` pour une recherche ou des données non sensibles."
+        },
+        {
+          "titre": "Récupérer les données",
+          "texte": "Côté serveur, on vérifie que le formulaire a bien été envoyé en POST, puis on lit `$_POST` avec les noms des champs. Cet exemple simule l'envoi avec le prénom « Ana ».",
+          "code": [
+            "if ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {",
+            "    $firstName = $_POST[\"first-name\"];",
+            "    echo \"Bonjour \" . htmlspecialchars($firstName);",
+            "} else {",
+            "    echo \"Formulaire pas encore envoyé\";",
+            "}",
+            ""
+          ],
+          "requete": {
+            "methode": "POST",
+            "post": {
+              "first-name": "Ana"
+            }
+          }
+        },
+        {
+          "titre": "Avant l'envoi, la clé n'existe pas",
+          "texte": "À la première visite (GET), `$_POST` est vide : lire `$_POST[\"first-name\"]` provoque l'avertissement `Undefined array key`. L'opérateur `??` donne une valeur par défaut.",
+          "code": [
+            "$firstName = $_POST[\"first-name\"] ?? \"\";",
+            "echo \"Prénom : [\" . $firstName . \"]\";",
+            ""
+          ]
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u04-l1-e1",
+          "type": "pointer-code",
+          "notions": [
+            "formulaires"
+          ],
+          "question": "Touche l'attribut qui décide de la clé dans `$_POST`.",
+          "code": "<input type=\"email\" id=\"email\" ⟦name=\"email\"⟧>",
+          "explication": "C'est `name` qui donne la clé : `$_POST[\"email\"]`. L'`id` sert au `<label for>`."
+        },
+        {
+          "id": "u04-l1-e2",
+          "type": "qcm",
+          "notions": [
+            "formulaires"
+          ],
+          "question": "Pourquoi le cours recommande-t-il `POST` pour un formulaire d'inscription ?",
+          "choix": [
+            "Les données voyagent dans le corps de la requête, pas dans l'URL",
+            "POST chiffre automatiquement les mots de passe",
+            "GET ne peut pas envoyer de texte",
+            "POST est plus rapide"
+          ],
+          "bonne": 0,
+          "explication": "Avec GET, les données apparaissent dans l'URL (historique, liens partagés). GET convient à une recherche."
+        },
+        {
+          "id": "u04-l1-e3",
+          "type": "ecrire",
+          "notions": [
+            "formulaires"
+          ],
+          "question": "Écris le traitement : si le formulaire est envoyé en POST, affiche « Bienvenue <ville> ! » avec le champ `city` (passé à `htmlspecialchars`) ; sinon, affiche « Choisis une ville ».",
+          "depart": [
+            ""
+          ],
+          "requete": {
+            "methode": "POST",
+            "post": {
+              "city": "Yverdon"
+            }
+          },
+          "tests": {
+            "cas": [
+              {
+                "titre": "Envoi : Yverdon",
+                "requete": {
+                  "methode": "POST",
+                  "post": {
+                    "city": "Yverdon"
+                  }
+                },
+                "sortie": [
+                  "Bienvenue Yverdon !"
+                ]
+              },
+              {
+                "titre": "Envoi : Sion",
+                "requete": {
+                  "methode": "POST",
+                  "post": {
+                    "city": "Sion"
+                  }
+                },
+                "sortie": [
+                  "Bienvenue Sion !"
+                ]
+              },
+              {
+                "titre": "Première visite (GET)",
+                "requete": {
+                  "methode": "GET"
+                },
+                "sortie": [
+                  "Choisis une ville"
+                ]
+              },
+              {
+                "titre": "Saisie piégée",
+                "requete": {
+                  "methode": "POST",
+                  "post": {
+                    "city": "<b>Bulle</b>"
+                  }
+                },
+                "neContientPas": [
+                  "<b>Bulle</b>"
+                ],
+                "siEchec": "Passe la saisie dans `htmlspecialchars(…)` avant de l'afficher."
+              }
+            ]
+          },
+          "indices": [
+            "Teste `$_SERVER[\"REQUEST_METHOD\"] === \"POST\"`.",
+            "Dans le `if`, lis `$_POST[\"city\"]` ; dans le `else`, affiche l'autre message.",
+            {
+              "texte": "La structure :",
+              "code": "if (___) {\n    echo \"Bienvenue \" . htmlspecialchars(___) . \" !\";\n} else {\n    echo \"Choisis une ville\";\n}"
+            }
+          ],
+          "solution": [
+            "if ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {",
+            "    echo \"Bienvenue \" . htmlspecialchars($_POST[\"city\"]) . \" !\";",
+            "} else {",
+            "    echo \"Choisis une ville\";",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "echo \"Bienvenue \" . htmlspecialchars($_POST[\"city\"]) . \" !\";",
+              "attendu": "echec",
+              "diagnostic": "cle-inconnue"
+            },
+            {
+              "code": "if ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {\n    echo \"Bienvenue \" . $_POST[\"city\"] . \" !\";\n} else {\n    echo \"Choisis une ville\";\n}",
+              "attendu": "echec",
+              "diagnostic": "xss"
+            }
+          ],
+          "explication": "Le même fichier gère les deux cas : première visite (GET) et envoi (POST)."
+        },
+        {
+          "id": "u04-l1-e4",
+          "type": "predire",
+          "notions": [
+            "formulaires"
+          ],
+          "question": "Première visite : la page est demandée en GET, `$_POST` est vide. Qu'affiche ce code ?",
+          "code": [
+            "$email = $_POST[\"email\"] ?? \"aucun\";",
+            "echo \"E-mail : \" . $email;",
+            ""
+          ],
+          "explication": "La clé n'existe pas : `??` donne la valeur par défaut « aucun », sans avertissement."
+        },
+        {
+          "id": "u04-l1-e5",
+          "type": "assoc",
+          "notions": [
+            "formulaires"
+          ],
+          "question": "Associe chaque morceau à son rôle.",
+          "paires": [
+            [
+              "action=\"create.php\"",
+              "La page qui reçoit les données"
+            ],
+            [
+              "method=\"POST\"",
+              "Données dans le corps de la requête"
+            ],
+            [
+              "name=\"age\"",
+              "La clé dans $_POST"
+            ],
+            [
+              "for=\"age\"",
+              "Relie le label au champ (son id)"
+            ]
+          ],
+          "mono": true,
+          "explication": "Chaque attribut a son rôle, côté navigateur ou côté serveur."
+        }
+      ]
+    },
+    {
+      "id": "u04-l2",
+      "titre": "Valider et conserver les saisies",
+      "duree": 7,
+      "notions": [
+        "formulaires"
+      ],
+      "cartes": [
+        {
+          "titre": "Un tableau d'erreurs",
+          "texte": "Chaque règle non respectée ajoute un message à `$errors`. À la fin, s'il est vide, tout va bien.",
+          "code": [
+            "$name = \"A\";",
+            "$email = \"pas-un-email\";",
+            "$errors = [];",
+            "",
+            "if (empty($name) || strlen($name) < 2) {",
+            "    $errors[] = \"Le nom doit contenir au moins 2 caractères.\";",
+            "}",
+            "if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {",
+            "    $errors[] = \"Un email valide est requis.\";",
+            "}",
+            "",
+            "foreach ($errors as $error) {",
+            "    echo $error . \"<br>\";",
+            "}",
+            ""
+          ],
+          "fiche": "formulaires"
+        },
+        {
+          "titre": "Afficher les erreurs dans la page",
+          "texte": "Le cours alterne PHP et HTML : `<?php if (…) { ?> … <?php } ?>`.",
+          "code": [
+            "<?php $errors = [\"Le nom est requis.\"]; ?>",
+            "<?php if (empty($errors)) { ?>",
+            "    <p style=\"color: green;\">Le formulaire a été soumis avec succès !</p>",
+            "<?php } else { ?>",
+            "    <p style=\"color: red;\">Le formulaire contient des erreurs :</p>",
+            "    <ul>",
+            "        <?php foreach ($errors as $error) { ?>",
+            "            <li><?php echo $error; ?></li>",
+            "        <?php } ?>",
+            "    </ul>",
+            "<?php } ?>",
+            ""
+          ]
+        },
+        {
+          "titre": "Garder ce qui a été tapé",
+          "texte": "En cas d'erreur, on réaffiche le formulaire avec les valeurs saisies : `value=\"<?= htmlspecialchars($name ?? '') ?>\"`. Personne n'aime tout retaper.",
+          "code": [
+            "<?php $name = $_POST[\"name\"] ?? \"\"; ?>",
+            "<input type=\"text\" name=\"name\" value=\"<?= htmlspecialchars($name) ?>\">",
+            ""
+          ],
+          "requete": {
+            "methode": "POST",
+            "post": {
+              "name": "Zoé \"la grande\""
+            }
+          },
+          "apres": "Les guillemets de la saisie deviennent `&quot;` : ils ne cassent pas l'attribut `value`."
+        },
+        {
+          "titre": "Côté client : un plus, pas une protection",
+          "texte": "`required`, `minlength=\"2\"`, `type=\"email\"`, `min=\"0\"` : le navigateur vérifie avant l'envoi. Mais ces attributs se contournent facilement.",
+          "piege": "La validation côté serveur reste **obligatoire**, toujours."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u04-l2-e1",
+          "type": "ecrire",
+          "notions": [
+            "formulaires"
+          ],
+          "question": "Écris `validateRegistration(array $data): array` qui retourne la liste des erreurs, dans cet ordre : nom de moins de 2 caractères (« Le nom doit contenir au moins 2 caractères. »), email invalide (« Un email valide est requis. »), âge négatif (« L'âge doit être un nombre positif. »).",
+          "depart": [
+            "function validateRegistration(array $data): array {",
+            "    $errors = [];",
+            "",
+            "    return $errors;",
+            "}",
+            ""
+          ],
+          "tests": {
+            "fonction": "validateRegistration",
+            "cas": [
+              {
+                "titre": "Tout est juste",
+                "args": [
+                  {
+                    "name": "Ana",
+                    "email": "ana@example.com",
+                    "age": 31
+                  }
+                ],
+                "attendu": []
+              },
+              {
+                "titre": "Nom trop court",
+                "args": [
+                  {
+                    "name": "A",
+                    "email": "ana@example.com",
+                    "age": 31
+                  }
+                ],
+                "attendu": [
+                  "Le nom doit contenir au moins 2 caractères."
+                ]
+              },
+              {
+                "titre": "Email invalide",
+                "args": [
+                  {
+                    "name": "Ana",
+                    "email": "ana.example.com",
+                    "age": 31
+                  }
+                ],
+                "attendu": [
+                  "Un email valide est requis."
+                ]
+              },
+              {
+                "titre": "Tout est faux",
+                "args": [
+                  {
+                    "name": "",
+                    "email": "",
+                    "age": -4
+                  }
+                ],
+                "attendu": [
+                  "Le nom doit contenir au moins 2 caractères.",
+                  "Un email valide est requis.",
+                  "L'âge doit être un nombre positif."
+                ]
+              },
+              {
+                "titre": "Âge 0 accepté",
+                "args": [
+                  {
+                    "name": "Léo",
+                    "email": "leo@example.com",
+                    "age": 0
+                  }
+                ],
+                "attendu": []
+              }
+            ]
+          },
+          "indices": [
+            "Trois `if`, chacun ajoute son message avec `$errors[] = …;`.",
+            "Pour l'email : `!filter_var($data[\"email\"], FILTER_VALIDATE_EMAIL)` ; pour l'âge : `$data[\"age\"] < 0`.",
+            {
+              "texte": "La première règle :",
+              "code": "if (empty($data[\"name\"]) || strlen($data[\"name\"]) < 2) {\n    $errors[] = \"Le nom doit contenir au moins 2 caractères.\";\n}"
+            }
+          ],
+          "solution": [
+            "function validateRegistration(array $data): array {",
+            "    $errors = [];",
+            "    if (empty($data[\"name\"]) || strlen($data[\"name\"]) < 2) {",
+            "        $errors[] = \"Le nom doit contenir au moins 2 caractères.\";",
+            "    }",
+            "    if (empty($data[\"email\"]) || !filter_var($data[\"email\"], FILTER_VALIDATE_EMAIL)) {",
+            "        $errors[] = \"Un email valide est requis.\";",
+            "    }",
+            "    if (!isset($data[\"age\"]) || $data[\"age\"] < 0) {",
+            "        $errors[] = \"L'âge doit être un nombre positif.\";",
+            "    }",
+            "    return $errors;",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function validateRegistration(array $data): array {\n    $errors = [];\n    if (empty($data[\"name\"]) || strlen($data[\"name\"]) < 2) {\n        $errors[] = \"Le nom doit contenir au moins 2 caractères.\";\n    }\n    if (empty($data[\"email\"]) || !filter_var($data[\"email\"], FILTER_VALIDATE_EMAIL)) {\n        $errors[] = \"Un email valide est requis.\";\n    }\n    if (!isset($data[\"age\"]) || $data[\"age\"] <= 0) {\n        $errors[] = \"L'âge doit être un nombre positif.\";\n    }\n    return $errors;\n}",
+              "attendu": "echec"
+            },
+            {
+              "code": "function validateRegistration(array $data): array {\n    $errors = [];\n    if (empty($data[\"name\"]) || strlen($data[\"name\"]) < 2) {\n        return [\"Le nom doit contenir au moins 2 caractères.\"];\n    }\n    if (empty($data[\"email\"]) || !filter_var($data[\"email\"], FILTER_VALIDATE_EMAIL)) {\n        $errors[] = \"Un email valide est requis.\";\n    }\n    if (!isset($data[\"age\"]) || $data[\"age\"] < 0) {\n        $errors[] = \"L'âge doit être un nombre positif.\";\n    }\n    return $errors;\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "On collecte TOUTES les erreurs (pas seulement la première) pour que l'utilisateur corrige tout d'un coup."
+        },
+        {
+          "id": "u04-l2-e2",
+          "type": "qcm",
+          "notions": [
+            "formulaires"
+          ],
+          "question": "Le champ a `required minlength=\"2\"`. Faut-il encore vérifier la longueur en PHP ?",
+          "choix": [
+            "Oui : la validation côté client se contourne",
+            "Non : le navigateur bloque déjà l'envoi",
+            "Seulement pour les e-mails",
+            "Non, sauf en GET"
+          ],
+          "bonne": 0,
+          "explication": "Un utilisateur malveillant peut modifier le HTML ou envoyer sa requête directement : seul le serveur est fiable."
+        },
+        {
+          "id": "u04-l2-e3",
+          "type": "trous",
+          "notions": [
+            "formulaires"
+          ],
+          "question": "Complète pour conserver la saisie, sans erreur à la première visite.",
+          "requete": {
+            "methode": "POST",
+            "post": {
+              "email": "ana@example.com"
+            }
+          },
+          "code": [
+            "<?php $email = $_POST[\"email\"] ___ \"\"; ?>",
+            "<input type=\"email\" name=\"email\" value=\"<?= ___($email) ?>\">",
+            ""
+          ],
+          "solution": [
+            "??",
+            "htmlspecialchars"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Après envoi",
+                "contient": [
+                  "value=\"ana@example.com\""
+                ]
+              },
+              {
+                "titre": "Première visite",
+                "requete": {
+                  "methode": "GET"
+                },
+                "contient": [
+                  "value=\"\""
+                ]
+              },
+              {
+                "titre": "Saisie avec guillemets",
+                "requete": {
+                  "methode": "POST",
+                  "post": {
+                    "email": "a\"b"
+                  }
+                },
+                "contient": [
+                  "value=\"a&quot;b\""
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "L'opérateur qui donne une valeur par défaut si la clé n'existe pas.",
+            "La fonction qui échappe les caractères spéciaux."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "??",
+                "echo"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "||",
+                "htmlspecialchars"
+              ],
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`??` évite l'avertissement à la première visite ; `htmlspecialchars` empêche la saisie de casser la page."
+        },
+        {
+          "id": "u04-l2-e4",
+          "type": "tri",
+          "notions": [
+            "formulaires"
+          ],
+          "question": "Côté client ou côté serveur ?",
+          "categories": [
+            "Côté client (navigateur)",
+            "Côté serveur (PHP)"
+          ],
+          "items": [
+            [
+              "required",
+              0
+            ],
+            [
+              "minlength=\"2\"",
+              0
+            ],
+            [
+              "filter_var($email, FILTER_VALIDATE_EMAIL)",
+              1
+            ],
+            [
+              "strlen($name) < 2",
+              1
+            ],
+            [
+              "type=\"email\"",
+              0
+            ],
+            [
+              "$errors[] = \"…\";",
+              1
+            ]
+          ],
+          "mono": true,
+          "explication": "Les attributs HTML sont vérifiés par le navigateur ; les fonctions PHP par le serveur."
+        },
+        {
+          "id": "u04-l2-e5",
+          "type": "predire",
+          "notions": [
+            "formulaires"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "$errors = [];",
+            "$age = -3;",
+            "if ($age < 0) {",
+            "    $errors[] = \"Âge invalide\";",
+            "}",
+            "if (empty($errors)) {",
+            "    echo \"Envoyé !\";",
+            "} else {",
+            "    echo count($errors) . \" erreur(s)\";",
+            "}",
+            ""
+          ],
+          "explication": "Une règle échoue : le tableau contient un message, `empty($errors)` est faux."
+        }
+      ]
+    },
+    {
+      "id": "u04-l3",
+      "titre": "PDO et requêtes préparées",
+      "duree": 8,
+      "notions": [
+        "pdo"
+      ],
+      "cartes": [
+        {
+          "titre": "Se connecter",
+          "texte": "PDO crée une connexion à partir d'une chaîne de connexion (le DSN). Le cours utilise SQLite en ProgServ1, MySQL/MariaDB en ProgServ2 : le reste du code PDO est le même.",
+          "code": [
+            "// SQLite : un fichier",
+            "$pdo = new PDO(\"sqlite:\" . __DIR__ . '/mydatabase.db');",
+            "",
+            "// MySQL / MariaDB",
+            "$dsn = \"mysql:host=mariadb;port=3306;dbname=my_database;charset=utf8mb4\";",
+            "$pdo = new PDO($dsn, \"username\", \"password\");",
+            ""
+          ],
+          "executable": false,
+          "fiche": "pdo"
+        },
+        {
+          "titre": "Préparer, lier, exécuter",
+          "texte": "Les valeurs ne sont jamais collées dans le SQL : la requête a des cases `:title`, `:year`, remplies par `bindValue`.",
+          "code": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->exec(\"CREATE TABLE books (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, year INTEGER NOT NULL)\");",
+            "",
+            "$stmt = $pdo->prepare(\"INSERT INTO books (title, year) VALUES (:title, :year)\");",
+            "$stmt->bindValue(':title', \"Dune\");",
+            "$stmt->bindValue(':year', 1965);",
+            "$stmt->execute();",
+            "",
+            "echo \"Livre n° \" . $pdo->lastInsertId();",
+            ""
+          ],
+          "analogie": "La requête préparée est un formulaire à cases : la donnée reste dans sa case, elle ne devient jamais du SQL."
+        },
+        {
+          "titre": "Lire des lignes",
+          "texte": "`fetchAll()` donne toutes les lignes, chacune un tableau associatif (colonne ⇒ valeur). `fetch()` donne une seule ligne, ou `false` s'il n'y en a plus.",
+          "code": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);",
+            "$pdo->exec(\"CREATE TABLE books (title TEXT, year INTEGER)\");",
+            "$pdo->exec(\"INSERT INTO books VALUES ('Dune', 1965), ('Heidi', 1880)\");",
+            "",
+            "$stmt = $pdo->prepare(\"SELECT title, year FROM books WHERE year > :year\");",
+            "$stmt->execute([':year' => 1900]);",
+            "foreach ($stmt->fetchAll() as $book) {",
+            "    echo $book['title'] . \" (\" . $book['year'] . \")<br>\";",
+            "}",
+            ""
+          ],
+          "astuce": "`execute([':year' => 1900])` est un raccourci : il lie les valeurs et exécute en une fois."
+        },
+        {
+          "titre": "Pourquoi préparer ?",
+          "texte": "Si on colle la saisie dans le SQL, un utilisateur qui tape `'; DROP TABLE users; --` écrit du SQL à ta place. Avec une requête préparée, ce texte est traité comme une simple chaîne.",
+          "piege": "Le cours revient sur l'injection SQL en séance 5 : retiens déjà « jamais de variable collée dans le SQL »."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u04-l3-e1",
+          "type": "ordre",
+          "notions": [
+            "pdo"
+          ],
+          "question": "Remets dans l'ordre l'insertion d'un utilisateur avec PDO.",
+          "items": [
+            "Écrire la requête avec des paramètres :email, :age",
+            "$stmt = $pdo->prepare($sql);",
+            "$stmt->bindValue(':email', $email); (et les autres)",
+            "$stmt->execute();",
+            "$pdo->lastInsertId() pour connaître l'id créé"
+          ],
+          "mono": true,
+          "explication": "Préparer, lier, exécuter : toujours dans cet ordre."
+        },
+        {
+          "id": "u04-l3-e2",
+          "type": "ecrire",
+          "notions": [
+            "pdo"
+          ],
+          "question": "La table `books (id, title, year)` existe dans `$pdo`. Écris `addBook(PDO $pdo, string $title, int $year): int` qui insère le livre avec une **requête préparée** et retourne son id.",
+          "prelude": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);",
+            "$pdo->exec(\"CREATE TABLE books (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, year INTEGER NOT NULL)\");",
+            "$pdo->exec(\"INSERT INTO books (title, year) VALUES ('Dune', 1965), ('Neuromancer', 1984), ('Heidi', 1880)\");"
+          ],
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Ajouter Momo",
+                "code": "$id = addBook($pdo, 'Momo', 1973);\nreturn [$id, $pdo->query(\"SELECT title FROM books WHERE id = $id\")->fetchColumn()];",
+                "attendu": [
+                  4,
+                  "Momo"
+                ]
+              },
+              {
+                "titre": "Deux ajouts",
+                "code": "addBook($pdo, 'A', 2001);\nreturn addBook($pdo, 'B', 2002);",
+                "attendu": 5
+              },
+              {
+                "titre": "Titre avec apostrophe",
+                "code": "$id = addBook($pdo, \"L'Étranger\", 1942);\nreturn $pdo->query(\"SELECT title FROM books WHERE id = $id\")->fetchColumn();",
+                "attendu": "L'Étranger",
+                "siEchec": "Une apostrophe dans le titre casse une requête fabriquée à la main : utilise des paramètres `:title` et `bindValue`."
+              }
+            ],
+            "obligatoire": [
+              "->prepare",
+              "->execute"
+            ]
+          },
+          "indices": [
+            "Une requête `INSERT INTO books (title, year) VALUES (:title, :year)`.",
+            "`prepare`, deux `bindValue`, `execute`, puis `return $pdo->lastInsertId();`.",
+            {
+              "texte": "Le début :",
+              "code": "$stmt = $pdo->prepare(\"INSERT INTO books (title, year) VALUES (:title, :year)\");\n$stmt->bindValue(':title', ___);\n// …"
+            }
+          ],
+          "solution": [
+            "function addBook(PDO $pdo, string $title, int $year): int {",
+            "    $stmt = $pdo->prepare(\"INSERT INTO books (title, year) VALUES (:title, :year)\");",
+            "    $stmt->bindValue(':title', $title);",
+            "    $stmt->bindValue(':year', $year);",
+            "    $stmt->execute();",
+            "    return $pdo->lastInsertId();",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function addBook(PDO $pdo, string $title, int $year): int {\n    $pdo->exec(\"INSERT INTO books (title, year) VALUES ('$title', $year)\");\n    return $pdo->lastInsertId();\n}",
+              "attendu": "echec",
+              "diagnostic": "obligatoire"
+            },
+            {
+              "code": "function addBook(PDO $pdo, string $title, int $year): int {\n    $stmt = $pdo->prepare(\"INSERT INTO books (title, year) VALUES (:title, :year)\");\n    $stmt->bindValue(':title', $title);\n    $stmt->bindValue(':annee', $year);\n    $stmt->execute();\n    return $pdo->lastInsertId();\n}",
+              "attendu": "echec",
+              "diagnostic": "sql-parametres"
+            },
+            {
+              "code": "function addBook(PDO $pdo, string $title, int $year): int {\n    $stmt = $pdo->prepare(\"INSERT INTO books (title, year) VALUES (:title, :year)\");\n    $stmt->bindValue(':title', $title);\n    $stmt->bindValue(':year', $year);\n    return $pdo->lastInsertId();\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Préparer, lier, exécuter : l'apostrophe de « L'Étranger » reste dans sa case, sans casser la requête."
+        },
+        {
+          "id": "u04-l3-e3",
+          "type": "ecrire",
+          "notions": [
+            "pdo"
+          ],
+          "question": "Écris `findBooksAfter(PDO $pdo, int $year): array` qui retourne les **titres** des livres parus après `$year` (strictement), triés par année (`ORDER BY year`).",
+          "prelude": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);",
+            "$pdo->exec(\"CREATE TABLE books (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, year INTEGER NOT NULL)\");",
+            "$pdo->exec(\"INSERT INTO books (title, year) VALUES ('Dune', 1965), ('Neuromancer', 1984), ('Heidi', 1880)\");"
+          ],
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Après 1900",
+                "code": "return findBooksAfter($pdo, 1900);",
+                "attendu": [
+                  "Dune",
+                  "Neuromancer"
+                ]
+              },
+              {
+                "titre": "Après 1800",
+                "code": "return findBooksAfter($pdo, 1800);",
+                "attendu": [
+                  "Heidi",
+                  "Dune",
+                  "Neuromancer"
+                ]
+              },
+              {
+                "titre": "Aucun",
+                "code": "return findBooksAfter($pdo, 2000);",
+                "attendu": []
+              }
+            ],
+            "obligatoire": [
+              "->prepare"
+            ]
+          },
+          "indices": [
+            "`SELECT title FROM books WHERE year > :year ORDER BY year`.",
+            "Exécute avec `execute([':year' => $year])`, puis parcours `fetchAll()` pour garder seulement les titres.",
+            {
+              "texte": "La fin :",
+              "code": "$titles = [];\nforeach ($stmt->fetchAll() as $row) {\n    $titles[] = ___;\n}\nreturn $titles;"
+            }
+          ],
+          "solution": [
+            "function findBooksAfter(PDO $pdo, int $year): array {",
+            "    $stmt = $pdo->prepare(\"SELECT title FROM books WHERE year > :year ORDER BY year\");",
+            "    $stmt->execute([':year' => $year]);",
+            "    $titles = [];",
+            "    foreach ($stmt->fetchAll() as $row) {",
+            "        $titles[] = $row['title'];",
+            "    }",
+            "    return $titles;",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function findBooksAfter(PDO $pdo, int $year): array {\n    $stmt = $pdo->prepare(\"SELECT title FROM books WHERE year >= :year ORDER BY year\");\n    $stmt->execute([':year' => $year]);\n    $titles = [];\n    foreach ($stmt->fetchAll() as $row) {\n        $titles[] = $row['title'];\n    }\n    return $titles;\n}",
+              "attendu": "conseil"
+            },
+            {
+              "code": "function findBooksAfter(PDO $pdo, int $year): array {\n    $stmt = $pdo->prepare(\"SELECT title FROM books WHERE year > :year ORDER BY year\");\n    $stmt->execute([':year' => $year]);\n    return $stmt->fetchAll();\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`fetchAll()` donne des lignes (des tableaux) ; on n'en garde que la colonne voulue."
+        },
+        {
+          "id": "u04-l3-e4",
+          "type": "bug",
+          "notions": [
+            "pdo"
+          ],
+          "question": "Une seule ligne de ce code est dangereuse. Laquelle ?",
+          "code": [
+            "$email = $_POST[\"email\"];",
+            "$stmt = $pdo->prepare(\"SELECT * FROM users WHERE email = '$email'\");",
+            "$stmt->execute();",
+            "$user = $stmt->fetch();",
+            ""
+          ],
+          "ligne": 2,
+          "choix": [
+            "La variable est collée dans le SQL : `prepare` ne protège rien si on n'utilise pas de paramètre `:email`",
+            "`fetch` doit être `fetchAll`",
+            "`$_POST` ne peut pas contenir d'e-mail",
+            "`execute` doit recevoir le SQL"
+          ],
+          "bonne": 0,
+          "explication": "`prepare` seul ne suffit pas : il faut un paramètre (`email = :email`) et lier la valeur."
+        },
+        {
+          "id": "u04-l3-e5",
+          "type": "qcm",
+          "notions": [
+            "pdo"
+          ],
+          "question": "Que retourne `$stmt->fetch()` quand il n'y a plus (ou pas) de ligne ?",
+          "choix": [
+            "false",
+            "null",
+            "[] (tableau vide)",
+            "Une exception"
+          ],
+          "bonne": 0,
+          "explication": "D'où l'erreur classique « Call to a member function … on bool » quand on oublie de vérifier."
+        },
+        {
+          "id": "u04-l3-e6",
+          "type": "vf",
+          "notions": [
+            "pdo"
+          ],
+          "question": "Avec PDO, passer de SQLite à MySQL/MariaDB demande surtout de changer la chaîne de connexion (et un peu de SQL).",
+          "bonne": true,
+          "explication": "C'est l'intérêt de PDO : une interface commune pour plusieurs bases."
+        }
+      ]
+    },
+    {
+      "id": "u04-l4",
+      "titre": "Le signal d'alarme : exceptions",
+      "duree": 7,
+      "notions": [
+        "exceptions"
+      ],
+      "cartes": [
+        {
+          "titre": "throw déclenche l'alarme",
+          "texte": "`throw new Exception(\"…\")` signale une erreur. Si personne ne l'attrape, le script s'arrête.",
+          "code": [
+            "function divide(int $a, int $b): float {",
+            "    if ($b === 0) {",
+            "        throw new Exception(\"Division par zéro impossible.\");",
+            "    }",
+            "    return $a / $b;",
+            "}",
+            "",
+            "echo divide(10, 4) . \"<br>\";",
+            "echo divide(1, 0);",
+            "echo \"Cette ligne n'est jamais atteinte.\";",
+            ""
+          ],
+          "erreurVoulue": true,
+          "analogie": "Le signal d'alarme sonne quelque part dans le code ; si personne ne l'entend, tout s'arrête brusquement.",
+          "fiche": "exceptions"
+        },
+        {
+          "titre": "try / catch l'entend",
+          "texte": "Le code à risque va dans `try` ; `catch` réagit. Le script continue après.",
+          "code": [
+            "function divide(int $a, int $b): float {",
+            "    if ($b === 0) {",
+            "        throw new Exception(\"Division par zéro impossible.\");",
+            "    }",
+            "    return $a / $b;",
+            "}",
+            "",
+            "try {",
+            "    echo divide(1, 0);",
+            "} catch (Exception $e) {",
+            "    echo \"Problème : \" . $e->getMessage() . \"<br>\";",
+            "}",
+            "echo \"Le programme continue.\";",
+            ""
+          ]
+        },
+        {
+          "titre": "PDO lance des PDOException",
+          "texte": "Violation d'une contrainte (e-mail en double), table inconnue… : PDO lance une `PDOException`. Son code SQLSTATE dit ce qui s'est passé : `\"23000\"` pour une violation de contrainte.",
+          "code": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->exec(\"CREATE TABLE users (email TEXT NOT NULL UNIQUE)\");",
+            "$stmt = $pdo->prepare(\"INSERT INTO users (email) VALUES (:email)\");",
+            "try {",
+            "    $stmt->execute([':email' => 'alice@example.com']);",
+            "    $stmt->execute([':email' => 'alice@example.com']);",
+            "} catch (PDOException $e) {",
+            "    echo \"Code : \" . $e->getCode();",
+            "}",
+            ""
+          ]
+        },
+        {
+          "titre": "Plusieurs catch",
+          "texte": "Du plus précis au plus général : `PDOException` d'abord, `Exception` ensuite. Dans les sources de l'exercice, le constructeur lance une `InvalidArgumentException` si une donnée est invalide.",
+          "code": [
+            "try {",
+            "    throw new InvalidArgumentException(\"Le nom est requis.\");",
+            "} catch (PDOException $e) {",
+            "    echo \"Base de données : \" . $e->getMessage();",
+            "} catch (Exception $e) {",
+            "    echo \"Autre erreur : \" . $e->getMessage();",
+            "}",
+            ""
+          ]
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u04-l4-e1",
+          "type": "predire",
+          "notions": [
+            "exceptions"
+          ],
+          "question": "Qu'affiche ce code ?",
+          "code": [
+            "try {",
+            "    echo \"A<br>\";",
+            "    throw new Exception(\"B\");",
+            "    echo \"C<br>\";",
+            "} catch (Exception $e) {",
+            "    echo $e->getMessage() . \"<br>\";",
+            "}",
+            "echo \"D\";",
+            ""
+          ],
+          "explication": "Après `throw`, on saute directement au `catch` : « C » n'est jamais affiché ; le programme reprend après le bloc."
+        },
+        {
+          "id": "u04-l4-e2",
+          "type": "ecrire",
+          "notions": [
+            "exceptions"
+          ],
+          "question": "Écris `safeDivide(int $a, int $b): string` : elle appelle `divide($a, $b)` (déjà écrite, elle lance une exception si `$b` vaut 0) et retourne le résultat sous forme de texte, ou « Erreur : » suivi du message de l'exception.",
+          "prelude": [
+            "function divide(int $a, int $b): float {",
+            "    if ($b === 0) {",
+            "        throw new Exception(\"Division par zéro impossible.\");",
+            "    }",
+            "    return $a / $b;",
+            "}",
+            ""
+          ],
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "fonction": "safeDivide",
+            "cas": [
+              {
+                "args": [
+                  10,
+                  4
+                ],
+                "attendu": "2.5"
+              },
+              {
+                "args": [
+                  9,
+                  3
+                ],
+                "attendu": "3"
+              },
+              {
+                "titre": "Division par zéro",
+                "args": [
+                  1,
+                  0
+                ],
+                "attendu": "Erreur : Division par zéro impossible."
+              }
+            ]
+          },
+          "indices": [
+            "Mets l'appel à `divide` dans un `try`, et retourne son résultat converti en texte.",
+            "Dans `catch (Exception $e)`, retourne `\"Erreur : \" . $e->getMessage()`.",
+            {
+              "texte": "La structure :",
+              "code": "try {\n    return (string) divide($a, $b);\n} catch (___ $e) {\n    return ___;\n}"
+            }
+          ],
+          "solution": [
+            "function safeDivide(int $a, int $b): string {",
+            "    try {",
+            "        return (string) divide($a, $b);",
+            "    } catch (Exception $e) {",
+            "        return \"Erreur : \" . $e->getMessage();",
+            "    }",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function safeDivide(int $a, int $b): string {\n    return (string) divide($a, $b);\n}",
+              "attendu": "erreur",
+              "diagnostic": "exception-non-attrapee"
+            },
+            {
+              "code": "function safeDivide(int $a, int $b): string {\n    try {\n        return (string) divide($a, $b);\n    } catch (Exception $e) {\n        return \"Erreur\";\n    }\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Sans `try / catch`, l'alarme arrête tout. Avec, on la transforme en message pour l'utilisateur."
+        },
+        {
+          "id": "u04-l4-e3",
+          "type": "ecrire",
+          "notions": [
+            "exceptions",
+            "pdo"
+          ],
+          "question": "La table `users (email UNIQUE)` existe dans `$pdo`. Écris `register(PDO $pdo, string $email): string` qui insère l'e-mail (requête préparée) et retourne « OK », ou « L'adresse e-mail est déjà utilisée. » si une `PDOException` de code `\"23000\"` survient.",
+          "prelude": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->exec(\"CREATE TABLE users (email TEXT NOT NULL UNIQUE)\");",
+            "$pdo->exec(\"INSERT INTO users (email) VALUES ('alice@example.com')\");",
+            ""
+          ],
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Nouvelle adresse",
+                "code": "return register($pdo, 'bob@example.com');",
+                "attendu": "OK"
+              },
+              {
+                "titre": "Adresse déjà utilisée",
+                "code": "return register($pdo, 'alice@example.com');",
+                "attendu": "L'adresse e-mail est déjà utilisée."
+              },
+              {
+                "titre": "Deux fois la même",
+                "code": "register($pdo, 'zoe@example.com');\nreturn register($pdo, 'zoe@example.com');",
+                "attendu": "L'adresse e-mail est déjà utilisée."
+              }
+            ],
+            "obligatoire": [
+              "->prepare",
+              "catch"
+            ]
+          },
+          "indices": [
+            "Dans un `try` : `prepare`, `execute([':email' => $email])`, puis `return \"OK\";`.",
+            "`catch (PDOException $e)` : si `$e->getCode() === \"23000\"`, retourne le message.",
+            {
+              "texte": "Le catch :",
+              "code": "} catch (PDOException $e) {\n    if ($e->getCode() === ___) {\n        return \"L'adresse e-mail est déjà utilisée.\";\n    }\n    return \"Erreur : \" . $e->getMessage();\n}"
+            }
+          ],
+          "solution": [
+            "function register(PDO $pdo, string $email): string {",
+            "    try {",
+            "        $stmt = $pdo->prepare(\"INSERT INTO users (email) VALUES (:email)\");",
+            "        $stmt->execute([':email' => $email]);",
+            "        return \"OK\";",
+            "    } catch (PDOException $e) {",
+            "        if ($e->getCode() === \"23000\") {",
+            "            return \"L'adresse e-mail est déjà utilisée.\";",
+            "        }",
+            "        return \"Erreur : \" . $e->getMessage();",
+            "    }",
+            "}",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function register(PDO $pdo, string $email): string {\n    $stmt = $pdo->prepare(\"INSERT INTO users (email) VALUES (:email)\");\n    $stmt->execute([':email' => $email]);\n    return \"OK\";\n}",
+              "attendu": "echec"
+            },
+            {
+              "code": "function register(PDO $pdo, string $email): string {\n    try {\n        $stmt = $pdo->prepare(\"INSERT INTO users (email) VALUES (:email)\");\n        $stmt->execute([':email' => $email]);\n        return \"OK\";\n    } catch (PDOException $e) {\n        if ($e->getCode() === 23000) {\n            return \"L'adresse e-mail est déjà utilisée.\";\n        }\n        return \"Erreur\";\n    }\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Le code SQLSTATE est une chaîne : `\"23000\"` (avec des guillemets) pour une violation de contrainte d'unicité."
+        },
+        {
+          "id": "u04-l4-e4",
+          "type": "qcm",
+          "notions": [
+            "exceptions"
+          ],
+          "question": "Que fait une exception que personne n'attrape ?",
+          "choix": [
+            "Elle arrête le script avec un message d'erreur",
+            "Elle est ignorée",
+            "Elle est affichée et le script continue",
+            "Elle relance la page"
+          ],
+          "bonne": 0,
+          "explication": "Le signal d'alarme sans personne pour l'entendre : arrêt brutal."
+        },
+        {
+          "id": "u04-l4-e5",
+          "type": "ordre",
+          "notions": [
+            "exceptions"
+          ],
+          "question": "Range ces blocs dans le bon ordre.",
+          "items": [
+            "try {",
+            "    // code qui peut échouer",
+            "} catch (PDOException $e) {",
+            "    // erreur de base de données",
+            "} catch (Exception $e) {",
+            "    // toute autre erreur",
+            "}"
+          ],
+          "mono": true,
+          "explication": "Le `catch` le plus précis vient d'abord : sinon `Exception` attraperait tout."
+        },
+        {
+          "id": "u04-l4-e6",
+          "type": "vf",
+          "notions": [
+            "exceptions"
+          ],
+          "question": "Après un `throw` dans un `try`, les lignes suivantes du `try` s'exécutent quand même.",
+          "bonne": false,
+          "explication": "On saute directement au `catch` correspondant."
+        }
+      ]
+    },
+    {
+      "id": "u04-l5",
+      "titre": "Configuration, MariaDB et déploiement",
+      "duree": 7,
+      "notions": [
+        "configuration",
+        "deploiement"
+      ],
+      "cartes": [
+        {
+          "titre": "Les paramètres hors du code",
+          "texte": "Hôte, port, base, utilisateur, mot de passe : dans un fichier `config/database.ini`, lu avec `parse_ini_file()`.",
+          "code": [
+            "host = \"mariadb\"",
+            "port = 3306",
+            "database = \"my_database\"",
+            "username = \"username\"",
+            "password = \"password\""
+          ],
+          "executable": false,
+          "fiche": "configuration"
+        },
+        {
+          "titre": "Lire le fichier",
+          "texte": "`parse_ini_file` retourne un tableau associatif (ou `false` en cas de problème).",
+          "code": [
+            "$config = parse_ini_file(__DIR__ . '/config/database.ini', true);",
+            "if (!$config) {",
+            "    throw new Exception(\"Erreur lors de la lecture du fichier de configuration\");",
+            "}",
+            "echo $config['host'] . \":\" . $config['port'];",
+            ""
+          ],
+          "fichiers": {
+            "config/database.ini": [
+              "host = \"mariadb\"",
+              "port = 3306",
+              "database = \"my_database\"",
+              "username = \"username\"",
+              "password = \"password\""
+            ]
+          },
+          "piege": "Le fichier de configuration ne va pas dans `public/` (il serait téléchargeable), ni dans Git : on committe un `database.ini.example` à la place."
+        },
+        {
+          "titre": "MariaDB en local avec Docker",
+          "texte": "MariaDB est un fork de MySQL, entièrement compatible. Le template du projet la lance avec Docker Compose : `docker compose up` (et `docker compose down` pour arrêter). phpMyAdmin s'ouvre sur http://localhost:9090.",
+          "fiche": "deploiement"
+        },
+        {
+          "titre": "En ligne chez Infomaniak",
+          "texte": "Hébergement, base de données (noter ses informations de connexion), site PHP avec son répertoire racine, envoi des fichiers par SFTP, configuration adaptée, test en ligne.",
+          "astuce": "Un seul déploiement par groupe pour le projet libre, mais chaque membre doit savoir le refaire seul."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u04-l5-e1",
+          "type": "ecrire",
+          "notions": [
+            "configuration"
+          ],
+          "question": "Écris `buildDsn(array $config): string` qui fabrique la chaîne de connexion MySQL à partir de la configuration : `mysql:host=mariadb;port=3306;dbname=my_database;charset=utf8mb4`.",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "fonction": "buildDsn",
+            "cas": [
+              {
+                "titre": "Configuration locale",
+                "args": [
+                  {
+                    "host": "mariadb",
+                    "port": 3306,
+                    "database": "my_database",
+                    "username": "username",
+                    "password": "password"
+                  }
+                ],
+                "attendu": "mysql:host=mariadb;port=3306;dbname=my_database;charset=utf8mb4"
+              },
+              {
+                "titre": "Configuration de production",
+                "args": [
+                  {
+                    "host": "abc12.myd.infomaniak.com",
+                    "port": 3306,
+                    "database": "abc12_progserv",
+                    "username": "abc12_app",
+                    "password": "s3cret"
+                  }
+                ],
+                "attendu": "mysql:host=abc12.myd.infomaniak.com;port=3306;dbname=abc12_progserv;charset=utf8mb4"
+              }
+            ]
+          },
+          "indices": [
+            "Colle les morceaux : `\"mysql:host=\" . $config['host'] . \";port=\" . …`.",
+            "La clé du nom de la base est `database`, mais dans le DSN on écrit `dbname=`.",
+            {
+              "texte": "Presque :",
+              "code": "return \"mysql:host=\" . $config['host'] . \";port=\" . ___ . \";dbname=\" . ___ . \";charset=utf8mb4\";"
+            }
+          ],
+          "solution": [
+            "function buildDsn(array $config): string {",
+            "    return \"mysql:host=\" . $config['host'] . \";port=\" . $config['port'] . \";dbname=\" . $config['database'] . \";charset=utf8mb4\";",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function buildDsn(array $config): string {\n    return \"mysql:host=mariadb;port=3306;dbname=my_database;charset=utf8mb4\";\n}",
+              "attendu": "echec",
+              "diagnostic": "donnees-en-dur"
+            },
+            {
+              "code": "function buildDsn(array $config): string {\n    return \"mysql:host=\" . $config['host'] . \";port=\" . $config['port'] . \";database=\" . $config['database'] . \";charset=utf8mb4\";\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "En lisant la configuration au lieu d'écrire les valeurs en dur, le même code marche en local et chez Infomaniak."
+        },
+        {
+          "id": "u04-l5-e2",
+          "type": "qcm",
+          "notions": [
+            "configuration"
+          ],
+          "question": "Où ranger `database.ini` dans le projet ?",
+          "choix": [
+            "Dans `config/`, hors du dossier `public`, et pas dans Git",
+            "Dans `public/`, pour que PHP le trouve",
+            "Dans le README",
+            "Dans chaque fichier PHP"
+          ],
+          "bonne": 0,
+          "explication": "Hors de `public` : il ne doit pas être téléchargeable. Hors de Git : il contient des secrets (on committe un `.example`)."
+        },
+        {
+          "id": "u04-l5-e3",
+          "type": "ordre",
+          "notions": [
+            "deploiement"
+          ],
+          "question": "Remets dans l'ordre le déploiement chez Infomaniak.",
+          "items": [
+            "Acquérir un hébergement (domaine ou sous-domaine)",
+            "Créer la base MySQL/MariaDB et noter ses informations de connexion",
+            "Créer le site PHP et configurer son répertoire racine",
+            "Téléverser les fichiers par FTP/SFTP",
+            "Adapter la configuration pour la base d'Infomaniak",
+            "Tester l'application en ligne"
+          ],
+          "explication": "Les six étapes résumées dans le cours."
+        },
+        {
+          "id": "u04-l5-e4",
+          "type": "vf",
+          "notions": [
+            "deploiement"
+          ],
+          "question": "MariaDB est un fork de MySQL, entièrement compatible avec lui.",
+          "bonne": true,
+          "explication": "Créé par les développeurs originaux de MySQL après son rachat par Oracle."
+        },
+        {
+          "id": "u04-l5-e5",
+          "type": "assoc",
+          "notions": [
+            "deploiement"
+          ],
+          "question": "Associe chaque commande ou adresse à son rôle.",
+          "paires": [
+            [
+              "docker compose up",
+              "Démarre l'application, MariaDB et phpMyAdmin"
+            ],
+            [
+              "docker compose down",
+              "Arrête les conteneurs"
+            ],
+            [
+              "http://localhost:9090",
+              "phpMyAdmin"
+            ],
+            [
+              "compose.yaml",
+              "Décrit les services"
+            ]
+          ],
+          "mono": true,
+          "explication": "Le template du cours fournit tout cela pour le développement local."
+        },
+        {
+          "id": "u04-l5-e6",
+          "type": "qcm",
+          "notions": [
+            "deploiement"
+          ],
+          "question": "Pourquoi utiliser MySQL/MariaDB plutôt que SQLite en production ?",
+          "choix": [
+            "Meilleure gestion de la concurrence et fonctionnalités avancées",
+            "SQLite ne sait pas stocker de texte",
+            "SQLite est interdit chez Infomaniak",
+            "MySQL n'a pas besoin de mot de passe"
+          ],
+          "bonne": 0,
+          "explication": "SQLite (un fichier) convient aux petites applications et au développement ; un SGBD comme MariaDB tient mieux la charge."
+        }
+      ]
+    }
+  ],
+  "jeux": [
+    {
+      "id": "u04-eclair",
+      "titre": "PDO éclair",
+      "description": "Dix questions rapides : formulaires, PDO, exceptions, configuration.",
+      "tours": 10,
+      "questions": [
+        {
+          "id": "u04-j1",
+          "type": "qcm",
+          "notions": [
+            "pdo"
+          ],
+          "mono": true,
+          "question": "Quelle méthode prépare une requête ?",
+          "choix": [
+            "prepare",
+            "query",
+            "bind",
+            "send"
+          ],
+          "bonne": 0,
+          "explication": "`$pdo->prepare($sql)`."
+        },
+        {
+          "id": "u04-j2",
+          "type": "qcm",
+          "notions": [
+            "pdo"
+          ],
+          "mono": true,
+          "question": "Quelle méthode lie une valeur à `:email` ?",
+          "choix": [
+            "bindValue",
+            "setValue",
+            "attach",
+            "fill"
+          ],
+          "bonne": 0,
+          "explication": "`$stmt->bindValue(':email', $email)`."
+        },
+        {
+          "id": "u04-j3",
+          "type": "vf",
+          "notions": [
+            "pdo"
+          ],
+          "question": "`$pdo->lastInsertId()` donne l'id de la dernière ligne insérée.",
+          "bonne": true,
+          "explication": "Utile pour retourner l'id après un INSERT."
+        },
+        {
+          "id": "u04-j4",
+          "type": "qcm",
+          "notions": [
+            "exceptions"
+          ],
+          "question": "Quel code SQLSTATE signale une violation de contrainte (doublon) ?",
+          "choix": [
+            "\"23000\"",
+            "\"404\"",
+            "\"500\"",
+            "\"42S02\""
+          ],
+          "bonne": 0,
+          "explication": "`23000` : violation de contrainte d'intégrité."
+        },
+        {
+          "id": "u04-j5",
+          "type": "vf",
+          "notions": [
+            "formulaires"
+          ],
+          "question": "La validation côté client suffit si elle est bien faite.",
+          "bonne": false,
+          "explication": "Elle se contourne : le serveur valide toujours."
+        },
+        {
+          "id": "u04-j6",
+          "type": "qcm",
+          "notions": [
+            "formulaires"
+          ],
+          "mono": true,
+          "question": "Quel test vérifie que le formulaire a été envoyé ?",
+          "choix": [
+            "$_SERVER[\"REQUEST_METHOD\"] === \"POST\"",
+            "isset($_SERVER)",
+            "$_POST === true",
+            "method === POST"
+          ],
+          "bonne": 0,
+          "explication": "C'est la condition du cours."
+        },
+        {
+          "id": "u04-j7",
+          "type": "qcm",
+          "notions": [
+            "configuration"
+          ],
+          "mono": true,
+          "question": "Quelle fonction lit un fichier .ini ?",
+          "choix": [
+            "parse_ini_file",
+            "read_ini",
+            "file_get_ini",
+            "ini_load"
+          ],
+          "bonne": 0,
+          "explication": "`parse_ini_file($chemin, true)`."
+        },
+        {
+          "id": "u04-j8",
+          "type": "vf",
+          "notions": [
+            "exceptions"
+          ],
+          "question": "`catch (Exception $e)` doit venir avant `catch (PDOException $e)`.",
+          "bonne": false,
+          "explication": "Le plus précis d'abord : sinon `Exception` attrape tout."
+        },
+        {
+          "id": "u04-j9",
+          "type": "qcm",
+          "notions": [
+            "formulaires"
+          ],
+          "question": "Que donne `$_POST[\"nom\"] ?? \"\"` à la première visite (GET) ?",
+          "choix": [
+            "\"\" (chaîne vide), sans avertissement",
+            "null, avec un avertissement",
+            "Une erreur fatale",
+            "\"nom\""
+          ],
+          "bonne": 0,
+          "explication": "`??` donne la valeur de droite si la clé n'existe pas."
+        },
+        {
+          "id": "u04-j10",
+          "type": "vf",
+          "notions": [
+            "deploiement"
+          ],
+          "question": "Chez Infomaniak, on se connecte à la base avec les informations notées à sa création, pas avec celles du Docker local.",
+          "bonne": true,
+          "explication": "D'où l'intérêt du fichier de configuration."
+        },
+        {
+          "id": "u04-j11",
+          "type": "qcm",
+          "notions": [
+            "pdo"
+          ],
+          "question": "Que vaut `$stmt->fetch()` s'il n'y a aucune ligne ?",
+          "choix": [
+            "false",
+            "null",
+            "0",
+            "\"\""
+          ],
+          "bonne": 0,
+          "explication": "`false` : vérifie-le avant d'utiliser la ligne."
+        },
+        {
+          "id": "u04-j12",
+          "type": "qcm",
+          "notions": [
+            "pdo"
+          ],
+          "question": "Dans quel cas `prepare` protège-t-il vraiment de l'injection SQL ?",
+          "choix": [
+            "Quand les valeurs passent par des paramètres :nom",
+            "Toujours, même avec une variable collée dans le SQL",
+            "Seulement avec MySQL",
+            "Seulement en POST"
+          ],
+          "bonne": 0,
+          "explication": "Sans paramètre, la variable collée reste du SQL."
+        }
+      ]
+    }
+  ],
+  "quiz": {
+    "titre": "Quiz : formulaires, PDO et déploiement",
+    "questions": [
+      {
+        "id": "u04-q1",
+        "type": "qcm",
+        "notions": [
+          "formulaires"
+        ],
+        "question": "Dans `<input name=\"last-name\">`, comment lire la valeur en PHP (formulaire en POST) ?",
+        "choix": [
+          "$_POST[\"last-name\"]",
+          "$_POST[\"last_name\"]",
+          "$_GET[\"last-name\"]",
+          "$last-name"
+        ],
+        "bonne": 0,
+        "mono": true,
+        "explication": "La clé est exactement l'attribut `name`."
+      },
+      {
+        "id": "u04-q2",
+        "type": "predire",
+        "notions": [
+          "formulaires"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "$errors = [];",
+          "$name = \"Lu\";",
+          "$email = \"lu@example\";",
+          "if (strlen($name) < 2) {",
+          "    $errors[] = \"Nom trop court\";",
+          "}",
+          "if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {",
+          "    $errors[] = \"Email invalide\";",
+          "}",
+          "echo count($errors) . \" : \" . implode(\", \", $errors);",
+          ""
+        ],
+        "explication": "« Lu » a 2 caractères (accepté) ; `lu@example` n'est pas une adresse valide pour `filter_var`."
+      },
+      {
+        "id": "u04-q3",
+        "type": "qcm",
+        "notions": [
+          "formulaires"
+        ],
+        "question": "Pourquoi écrire `value=\"<?= htmlspecialchars($name ?? '') ?>\"` ?",
+        "choix": [
+          "Pour garder la saisie, sans avertissement ni HTML injecté",
+          "Pour vider le champ après l'envoi",
+          "Pour chiffrer la saisie",
+          "Pour valider la saisie"
+        ],
+        "bonne": 0,
+        "explication": "`??` gère la première visite, `htmlspecialchars` affiche la saisie en sécurité."
+      },
+      {
+        "id": "u04-q4",
+        "type": "vf",
+        "notions": [
+          "formulaires"
+        ],
+        "question": "Avec GET, les données du formulaire apparaissent dans l'URL.",
+        "bonne": true,
+        "explication": "Par exemple `?query=ma recherche`."
+      },
+      {
+        "id": "u04-q5",
+        "type": "ordre",
+        "notions": [
+          "pdo"
+        ],
+        "question": "Remets dans l'ordre.",
+        "items": [
+          "$pdo = new PDO($dsn, $user, $password);",
+          "$stmt = $pdo->prepare($sql);",
+          "$stmt->bindValue(':name', $name);",
+          "$stmt->execute();",
+          "$rows = $stmt->fetchAll();"
+        ],
+        "mono": true,
+        "explication": "Connexion, préparation, liaison, exécution, lecture."
+      },
+      {
+        "id": "u04-q6",
+        "type": "bug",
+        "notions": [
+          "pdo"
+        ],
+        "question": "Touche la ligne qui empêche la requête de fonctionner.",
+        "code": [
+          "$sql = \"INSERT INTO users (email) VALUES (:email)\";",
+          "$stmt = $pdo->prepare($sql);",
+          "$stmt->bindValue(':mail', $email);",
+          "$stmt->execute();",
+          ""
+        ],
+        "ligne": 3,
+        "choix": [
+          "Le paramètre s'appelle `:email` dans la requête, pas `:mail`",
+          "Il faut `query` au lieu de `prepare`",
+          "`execute` doit recevoir `$sql`",
+          "Il manque `fetch()`"
+        ],
+        "bonne": 0,
+        "explication": "Les noms des paramètres doivent correspondre exactement."
+      },
+      {
+        "id": "u04-q7",
+        "type": "qcm",
+        "notions": [
+          "pdo"
+        ],
+        "mono": true,
+        "question": "Quelle est la bonne chaîne de connexion MySQL du cours ?",
+        "choix": [
+          "mysql:host=mariadb;port=3306;dbname=my_database;charset=utf8mb4",
+          "mysql://mariadb:3306/my_database",
+          "sqlite:mariadb;3306",
+          "host=mariadb&port=3306"
+        ],
+        "bonne": 0,
+        "explication": "Le DSN commence par le type de base, puis les paramètres séparés par des points-virgules."
+      },
+      {
+        "id": "u04-q8",
+        "type": "predire",
+        "notions": [
+          "exceptions"
+        ],
+        "question": "Qu'affiche ce code ?",
+        "code": [
+          "function check(int $age): void {",
+          "    if ($age < 0) {",
+          "        throw new InvalidArgumentException(\"L'âge doit être positif.\");",
+          "    }",
+          "}",
+          "",
+          "try {",
+          "    check(5);",
+          "    echo \"5 ok<br>\";",
+          "    check(-1);",
+          "    echo \"-1 ok<br>\";",
+          "} catch (InvalidArgumentException $e) {",
+          "    echo $e->getMessage();",
+          "}",
+          ""
+        ],
+        "explication": "`check(-1)` lance l'exception : « -1 ok » n'est jamais affiché, on saute au `catch`."
+      },
+      {
+        "id": "u04-q9",
+        "type": "qcm",
+        "notions": [
+          "exceptions"
+        ],
+        "question": "Une `PDOException` de code `\"23000\"` à l'inscription signifie le plus souvent…",
+        "choix": [
+          "que l'adresse e-mail (unique) existe déjà",
+          "que la base est introuvable",
+          "que le mot de passe est faux",
+          "que le formulaire est vide"
+        ],
+        "bonne": 0,
+        "explication": "Violation de contrainte d'unicité : le cours affiche « L'adresse e-mail est déjà utilisée. »"
+      },
+      {
+        "id": "u04-q10",
+        "type": "trous",
+        "notions": [
+          "exceptions"
+        ],
+        "question": "Complète.",
+        "code": [
+          "___ {",
+          "    throw new Exception(\"Oups\");",
+          "} ___ (Exception $e) {",
+          "    echo \"Attrapée : \" . $e->getMessage();",
+          "}",
+          ""
+        ],
+        "solution": [
+          "try",
+          "catch"
+        ],
+        "tests": {
+          "cas": [
+            {
+              "sortie": [
+                "Attrapée : Oups"
+              ]
+            }
+          ]
+        },
+        "indices": [
+          "« Essayer », puis « attraper »."
+        ],
+        "erreursTypiques": [
+          {
+            "trous": [
+              "try",
+              "except"
+            ],
+            "attendu": "erreur"
+          }
+        ],
+        "explication": "`try { … } catch (Exception $e) { … }`."
+      },
+      {
+        "id": "u04-q11",
+        "type": "qcm",
+        "notions": [
+          "configuration"
+        ],
+        "question": "Quel est l'intérêt principal d'un fichier `database.ini` ?",
+        "choix": [
+          "Changer de base (local, production) sans toucher au code, et garder les secrets hors du code",
+          "Accélérer les requêtes",
+          "Remplacer PDO",
+          "Créer les tables automatiquement"
+        ],
+        "bonne": 0,
+        "explication": "La configuration change d'un environnement à l'autre ; le code reste le même."
+      },
+      {
+        "id": "u04-q12",
+        "type": "vf",
+        "notions": [
+          "configuration"
+        ],
+        "question": "On committe le vrai `database.ini` dans Git pour que toute l'équipe l'ait.",
+        "bonne": false,
+        "explication": "On l'ajoute au `.gitignore` et on committe un `database.ini.example`."
+      },
+      {
+        "id": "u04-q13",
+        "type": "qcm",
+        "notions": [
+          "deploiement"
+        ],
+        "mono": true,
+        "question": "Quelle commande démarre MariaDB et phpMyAdmin du template ?",
+        "choix": [
+          "docker compose up",
+          "php -S 0.0.0.0:8080",
+          "mysql start",
+          "npm run db"
+        ],
+        "bonne": 0,
+        "explication": "Docker Compose démarre les services décrits dans `compose.yaml`."
+      },
+      {
+        "id": "u04-q14",
+        "type": "tri",
+        "notions": [
+          "deploiement",
+          "configuration"
+        ],
+        "question": "En local (template) ou en production (Infomaniak) ?",
+        "categories": [
+          "En local",
+          "En production"
+        ],
+        "items": [
+          [
+            "docker compose up",
+            0
+          ],
+          [
+            "phpMyAdmin sur localhost:9090",
+            0
+          ],
+          [
+            "Téléverser par SFTP",
+            1
+          ],
+          [
+            "Hôte de base « mariadb »",
+            0
+          ],
+          [
+            "Base créée dans le Manager Infomaniak",
+            1
+          ]
+        ],
+        "explication": "Le local sert à développer ; la production rend l'application accessible sur Internet."
+      },
+      {
+        "id": "u04-q15",
+        "type": "ecrire",
+        "notions": [
+          "pdo"
+        ],
+        "question": "Écris `countUsers(PDO $pdo): int` qui retourne le nombre de lignes de la table `users` (requête `SELECT COUNT(*) FROM users`).",
+        "prelude": [
+          "$pdo = new PDO(\"sqlite::memory:\");",
+          "$pdo->exec(\"CREATE TABLE users (name TEXT)\");",
+          "$pdo->exec(\"INSERT INTO users VALUES ('Ana'), ('Léo'), ('Mia')\");",
+          ""
+        ],
+        "depart": [
+          ""
+        ],
+        "tests": {
+          "cas": [
+            {
+              "titre": "Trois utilisateurs",
+              "code": "return countUsers($pdo);",
+              "attendu": 3
+            },
+            {
+              "titre": "Après un ajout",
+              "code": "$pdo->exec(\"INSERT INTO users VALUES ('Zoé')\");\nreturn countUsers($pdo);",
+              "attendu": 4
+            },
+            {
+              "titre": "Table vide",
+              "code": "$pdo->exec(\"DELETE FROM users\");\nreturn countUsers($pdo);",
+              "attendu": 0
+            }
+          ]
+        },
+        "indices": [
+          "`prepare`, `execute`, puis lis la seule valeur du résultat.",
+          "`$stmt->fetchColumn()` donne la première colonne de la ligne suivante.",
+          {
+            "texte": "Presque :",
+            "code": "$stmt = $pdo->prepare(\"SELECT COUNT(*) FROM users\");\n$stmt->execute();\nreturn ___;"
+          }
+        ],
+        "solution": [
+          "function countUsers(PDO $pdo): int {",
+          "    $stmt = $pdo->prepare(\"SELECT COUNT(*) FROM users\");",
+          "    $stmt->execute();",
+          "    return $stmt->fetchColumn();",
+          "}",
+          ""
+        ],
+        "erreursTypiques": [
+          {
+            "code": "function countUsers(PDO $pdo): int {\n    $stmt = $pdo->prepare(\"SELECT COUNT(*) FROM users\");\n    $stmt->execute();\n    return $stmt->fetchAll();\n}",
+            "attendu": "echec",
+            "diagnostic": "type-retour"
+          }
+        ],
+        "explication": "`COUNT(*)` donne une seule valeur : `fetchColumn()` la lit directement."
+      },
+      {
+        "id": "u04-q16",
+        "type": "qcm",
+        "notions": [
+          "pdo"
+        ],
+        "question": "Un utilisateur tape `'; DROP TABLE users; --` dans le champ « Prénom ». Avec une requête préparée et `bindValue`…",
+        "choix": [
+          "le texte est enregistré tel quel comme prénom",
+          "la table users est supprimée",
+          "PHP refuse la requête",
+          "le prénom devient vide"
+        ],
+        "bonne": 0,
+        "explication": "La donnée reste dans sa case : c'est une simple chaîne, pas une commande."
+      }
+    ]
+  },
+  "boss": [
+    {
+      "id": "u04-b1",
+      "titre": "La classe Tool",
+      "source": "Séance 3, exercice 1 (1re partie : la classe de l'outil)",
+      "notions": [
+        "exceptions",
+        "encapsulation",
+        "constructeur"
+      ],
+      "enonce": "**L'exercice du cours (séance 3, exercice 1)** : en vous basant sur les sources prévues pour l'exercice 1, adaptez cette application web pour permettre la gestion d'une liste d'outils. L'application doit permettre d'ajouter un nouvel outil, d'afficher la liste des outils et de supprimer un outil.\n\nChaque outil doit avoir les propriétés suivantes : ID (généré automatiquement) ; nom (string, unique) ; type (string, par exemple « bêche », « râteau », « tondeuse ») ; date d'achat (date : `DateTime` côté PHP, `DATE` côté base) ; prix (float).\n\nTous les champs doivent être validés côté client et côté serveur avant d'être insérés dans la base de données, et des messages d'erreur appropriés doivent être affichés en cas de validation échouée. L'insertion est sécurisée contre les injections SQL (requêtes préparées) et l'affichage contre les attaques XSS. L'application est structurée avec la POO et utilise PDO.\n\n**Ta mission ici** : écrire la classe `Tool` (fichier `src/classes/Tool.php`), sur le modèle de la classe `User` des sources (affichée au-dessus, à ouvrir).\n\n- Propriétés privées : `id` (`?int`), `name` (string), `type` (string), `purchaseDate` (`DateTime`), `price` (float).\n- Constante `TYPES` : `['spade' => 'Bêche', 'rake' => 'Râteau', 'mower' => 'Tondeuse']` (la clé est enregistrée, le libellé est affiché).\n- Constructeur `__construct(?int $id, string $name, string $type, DateTime $purchaseDate, float $price)` qui **valide** et lance une `InvalidArgumentException` si : le nom est vide ou fait moins de 2 caractères ; le type n'est pas une clé de `TYPES` ; le prix est négatif.\n- Un getter par propriété : `getId()`, `getName()`, `getType()`, `getPurchaseDate()`, `getPrice()`.\n\n*Pour l'appli : la classe n'a pas de namespace (on les verra en séance 9).*",
+      "fichier": "src/classes/Tool.php",
+      "fichiers": {
+        "sources/User.php (source de l'exercice)": [
+          "<?php",
+          "// Extrait des sources de l'exercice (src/classes/Users/User.php)",
+          "namespace Users;",
+          "",
+          "class User implements UsersInterface {",
+          "    // Propriétés privées pour assurer l'encapsulation",
+          "    private ?int $id;",
+          "    private string $firstName;",
+          "    private string $lastName;",
+          "    private string $email;",
+          "    private int $age;",
+          "",
+          "    // Constructeur pour initialiser l'objet",
+          "    public function __construct(?int $id, string $firstName, string $lastName, string $email, int $age) {",
+          "        // Vérification des données",
+          "        if (empty($firstName)) {",
+          "            throw new \\InvalidArgumentException(\"Le prénom est requis.\");",
+          "        } else if (strlen($firstName) < 2) {",
+          "            throw new \\InvalidArgumentException(\"Le prénom doit contenir au moins 2 caractères.\");",
+          "        }",
+          "",
+          "        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {",
+          "            throw new \\InvalidArgumentException(\"Un email valide est requis.\");",
+          "        }",
+          "",
+          "        if ($age < 0) {",
+          "            throw new \\InvalidArgumentException(\"L'âge doit être un nombre positif.\");",
+          "        }",
+          "",
+          "        // Initialisation des propriétés",
+          "        $this->id = $id;",
+          "        $this->firstName = $firstName;",
+          "        $this->lastName = $lastName;",
+          "        $this->email = $email;",
+          "        $this->age = $age;",
+          "    }",
+          "",
+          "    // Getters pour accéder aux propriétés",
+          "    public function getId(): ?int {",
+          "        return $this->id;",
+          "    }",
+          "",
+          "    public function getFirstName(): string {",
+          "        return $this->firstName;",
+          "    }",
+          "",
+          "    // … (les autres getters)",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Un outil valide",
+            "code": "$t = new Tool(null, 'Râteau du jardin', 'rake', new DateTime('2024-03-15'), 29.9);\nreturn [$t->getId(), $t->getName(), $t->getType(), $t->getPurchaseDate()->format('Y-m-d'), $t->getPrice()];",
+            "attendu": [
+              null,
+              "Râteau du jardin",
+              "rake",
+              "2024-03-15",
+              29.9
+            ]
+          },
+          {
+            "titre": "Avec un id",
+            "code": "$t = new Tool(7, 'Bêche', 'spade', new DateTime('2023-10-01'), 45);\nreturn [$t->getId(), $t->getPrice()];",
+            "attendu": [
+              7,
+              45
+            ]
+          },
+          {
+            "titre": "Les types",
+            "code": "return Tool::TYPES;",
+            "attendu": {
+              "spade": "Bêche",
+              "rake": "Râteau",
+              "mower": "Tondeuse"
+            }
+          },
+          {
+            "titre": "Nom vide refusé",
+            "code": "try {\n    new Tool(null, '', 'rake', new DateTime('2024-01-01'), 10);\n    return 'accepté';\n} catch (InvalidArgumentException $e) {\n    return 'refusé';\n}",
+            "attendu": "refusé"
+          },
+          {
+            "titre": "Nom d'une lettre refusé",
+            "code": "try {\n    new Tool(null, 'A', 'rake', new DateTime('2024-01-01'), 10);\n    return 'accepté';\n} catch (InvalidArgumentException $e) {\n    return 'refusé';\n}",
+            "attendu": "refusé"
+          },
+          {
+            "titre": "Nom de 2 lettres accepté",
+            "code": "try {\n    new Tool(null, 'Ax', 'rake', new DateTime('2024-01-01'), 10);\n    return 'accepté';\n} catch (InvalidArgumentException $e) {\n    return 'refusé';\n}",
+            "attendu": "accepté"
+          },
+          {
+            "titre": "Type inconnu refusé",
+            "code": "try {\n    new Tool(null, 'Sécateur', 'pruner', new DateTime('2024-01-01'), 10);\n    return 'accepté';\n} catch (InvalidArgumentException $e) {\n    return 'refusé';\n}",
+            "attendu": "refusé",
+            "siEchec": "Le type doit être une **clé** de `Tool::TYPES` : `array_key_exists($type, self::TYPES)`."
+          },
+          {
+            "titre": "Prix négatif refusé",
+            "code": "try {\n    new Tool(null, 'Tondeuse', 'mower', new DateTime('2024-01-01'), -5);\n    return 'accepté';\n} catch (InvalidArgumentException $e) {\n    return 'refusé';\n}",
+            "attendu": "refusé"
+          },
+          {
+            "titre": "Prix nul accepté",
+            "code": "try {\n    new Tool(null, 'Vieux râteau', 'rake', new DateTime('2020-05-01'), 0);\n    return 'accepté';\n} catch (InvalidArgumentException $e) {\n    return 'refusé';\n}",
+            "attendu": "accepté"
+          },
+          {
+            "titre": "Règle : propriétés privées",
+            "code": "foreach ((new ReflectionClass('Tool'))->getProperties() as $p) {\n    if (!$p->isPrivate()) return $p->getName() . \" n'est pas private\";\n}\nreturn 'ok';",
+            "attendu": "ok"
+          }
+        ]
+      },
+      "indices": [
+        "Reprends la structure de `User` : la constante `TYPES`, les propriétés, puis un constructeur qui vérifie chaque donnée AVANT de l'enregistrer.",
+        "Pour refuser une donnée : `throw new InvalidArgumentException(\"…\");`. Le type se vérifie avec `array_key_exists($type, self::TYPES)`.",
+        {
+          "texte": "Le début du constructeur :",
+          "code": "if (empty($name)) {\n    throw new InvalidArgumentException(\"Le nom de l'outil est requis.\");\n} elseif (___) {\n    throw new InvalidArgumentException(\"Le nom de l'outil doit contenir au moins 2 caractères.\");\n}"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "class Tool {",
+        "    const TYPES = [",
+        "        'spade' => 'Bêche',",
+        "        'rake' => 'Râteau',",
+        "        'mower' => 'Tondeuse',",
+        "    ];",
+        "",
+        "    private ?int $id;",
+        "    private string $name;",
+        "    private string $type;",
+        "    private DateTime $purchaseDate;",
+        "    private float $price;",
+        "",
+        "    public function __construct(?int $id, string $name, string $type, DateTime $purchaseDate, float $price) {",
+        "        if (empty($name)) {",
+        "            throw new InvalidArgumentException(\"Le nom de l'outil est requis.\");",
+        "        } elseif (strlen($name) < 2) {",
+        "            throw new InvalidArgumentException(\"Le nom de l'outil doit contenir au moins 2 caractères.\");",
+        "        }",
+        "",
+        "        if (!array_key_exists($type, self::TYPES)) {",
+        "            throw new InvalidArgumentException(\"Le type de l'outil est invalide.\");",
+        "        }",
+        "",
+        "        if ($price < 0) {",
+        "            throw new InvalidArgumentException(\"Le prix doit être un nombre positif.\");",
+        "        }",
+        "",
+        "        $this->id = $id;",
+        "        $this->name = $name;",
+        "        $this->type = $type;",
+        "        $this->purchaseDate = $purchaseDate;",
+        "        $this->price = $price;",
+        "    }",
+        "",
+        "    public function getId(): ?int {",
+        "        return $this->id;",
+        "    }",
+        "",
+        "    public function getName(): string {",
+        "        return $this->name;",
+        "    }",
+        "",
+        "    public function getType(): string {",
+        "        return $this->type;",
+        "    }",
+        "",
+        "    public function getPurchaseDate(): DateTime {",
+        "        return $this->purchaseDate;",
+        "    }",
+        "",
+        "    public function getPrice(): float {",
+        "        return $this->price;",
+        "    }",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nclass Tool {\n    const TYPES = [\n        'spade' => 'Bêche',\n        'rake' => 'Râteau',\n        'mower' => 'Tondeuse',\n    ];\n\n    private ?int $id;\n    private string $name;\n    private string $type;\n    private DateTime $purchaseDate;\n    private float $price;\n\n    public function __construct(?int $id, string $name, string $type, DateTime $purchaseDate, float $price) {\n        if (empty($name)) {\n            throw new InvalidArgumentException(\"Le nom de l'outil est requis.\");\n        } elseif (strlen($name) < 2) {\n            throw new InvalidArgumentException(\"Le nom de l'outil doit contenir au moins 2 caractères.\");\n        }\n\n        if (!in_array($type, self::TYPES)) {\n            throw new InvalidArgumentException(\"Le type de l'outil est invalide.\");\n        }\n\n        if ($price < 0) {\n            throw new InvalidArgumentException(\"Le prix doit être un nombre positif.\");\n        }\n\n        $this->id = $id;\n        $this->name = $name;\n        $this->type = $type;\n        $this->purchaseDate = $purchaseDate;\n        $this->price = $price;\n    }\n\n    public function getId(): ?int {\n        return $this->id;\n    }\n\n    public function getName(): string {\n        return $this->name;\n    }\n\n    public function getType(): string {\n        return $this->type;\n    }\n\n    public function getPurchaseDate(): DateTime {\n        return $this->purchaseDate;\n    }\n\n    public function getPrice(): float {\n        return $this->price;\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nclass Tool {\n    const TYPES = [\n        'spade' => 'Bêche',\n        'rake' => 'Râteau',\n        'mower' => 'Tondeuse',\n    ];\n\n    private ?int $id;\n    private string $name;\n    private string $type;\n    private DateTime $purchaseDate;\n    private float $price;\n\n    public function __construct(?int $id, string $name, string $type, DateTime $purchaseDate, float $price) {\n        if (empty($name)) {\n            throw new InvalidArgumentException(\"Le nom de l'outil est requis.\");\n        } elseif (strlen($name) < 2) {\n            throw new InvalidArgumentException(\"Le nom de l'outil doit contenir au moins 2 caractères.\");\n        }\n\n        if (!array_key_exists($type, self::TYPES)) {\n            throw new InvalidArgumentException(\"Le type de l'outil est invalide.\");\n        }\n\n        if ($price <= 0) {\n            throw new InvalidArgumentException(\"Le prix doit être un nombre positif.\");\n        }\n\n        $this->id = $id;\n        $this->name = $name;\n        $this->type = $type;\n        $this->purchaseDate = $purchaseDate;\n        $this->price = $price;\n    }\n\n    public function getId(): ?int {\n        return $this->id;\n    }\n\n    public function getName(): string {\n        return $this->name;\n    }\n\n    public function getType(): string {\n        return $this->type;\n    }\n\n    public function getPurchaseDate(): DateTime {\n        return $this->purchaseDate;\n    }\n\n    public function getPrice(): float {\n        return $this->price;\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nclass Tool {\n    const TYPES = [\n        'spade' => 'Bêche',\n        'rake' => 'Râteau',\n        'mower' => 'Tondeuse',\n    ];\n\n    private ?int $id;\n    private string $name;\n    private string $type;\n    private DateTime $purchaseDate;\n    private float $price;\n\n    public function __construct(?int $id, string $name, string $type, DateTime $purchaseDate, float $price) {\n        if (empty($name)) {\n            throw new InvalidArgumentException(\"Le nom de l'outil est requis.\");\n        } elseif (strlen($name) < 2) {\n            throw new InvalidArgumentException(\"Le nom de l'outil doit contenir au moins 2 caractères.\");\n        }\n\n        if (!array_key_exists($type, self::TYPES)) {\n            throw new InvalidArgumentException(\"Le type de l'outil est invalide.\");\n        }\n\n        if ($price < 0) {\n            echo \"Le prix doit être un nombre positif.\";\n        }\n\n        $this->id = $id;\n        $this->name = $name;\n        $this->type = $type;\n        $this->purchaseDate = $purchaseDate;\n        $this->price = $price;\n    }\n\n    public function getId(): ?int {\n        return $this->id;\n    }\n\n    public function getName(): string {\n        return $this->name;\n    }\n\n    public function getType(): string {\n        return $this->type;\n    }\n\n    public function getPurchaseDate(): DateTime {\n        return $this->purchaseDate;\n    }\n\n    public function getPrice(): float {\n        return $this->price;\n    }\n}",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "Un objet `Tool` ne peut exister que valide : le constructeur est le gardien, et il sonne l'alarme (exception) dès qu'une donnée ne va pas."
+    },
+    {
+      "id": "u04-b2",
+      "titre": "ToolsManager : ajouter, lister, supprimer",
+      "source": "Séance 3, exercice 1 (2e partie : la gestion en base de données)",
+      "notions": [
+        "pdo",
+        "exceptions"
+      ],
+      "enonce": "**L'exercice du cours (séance 3, exercice 1)** : en vous basant sur les sources prévues pour l'exercice 1, adaptez cette application web pour permettre la gestion d'une liste d'outils. L'application doit permettre d'ajouter un nouvel outil, d'afficher la liste des outils et de supprimer un outil.\n\nChaque outil doit avoir les propriétés suivantes : ID (généré automatiquement) ; nom (string, unique) ; type (string, par exemple « bêche », « râteau », « tondeuse ») ; date d'achat (date : `DateTime` côté PHP, `DATE` côté base) ; prix (float).\n\nTous les champs doivent être validés côté client et côté serveur avant d'être insérés dans la base de données, et des messages d'erreur appropriés doivent être affichés en cas de validation échouée. L'insertion est sécurisée contre les injections SQL (requêtes préparées) et l'affichage contre les attaques XSS. L'application est structurée avec la POO et utilise PDO.\n\n**Ta mission ici** : écrire `ToolsManager` (fichier `src/classes/ToolsManager.php`), sur le modèle de `UsersManager` des sources :\n\n- le constructeur crée une `Database` (déjà écrite : `getPdo()` donne la connexion PDO ; la table `tools` a les colonnes `id`, `name` (unique), `type`, `purchase_date`, `price`) ;\n- `getTools(): array` retourne tous les outils, sous forme d'objets `Tool` (la date lue en base devient `new DateTime($row['purchase_date'])`) ;\n- `addTool(Tool $tool): int` insère l'outil (date au format `Y-m-d`) et retourne son id ;\n- `removeTool(int $id): bool` supprime l'outil.\n\nToutes les requêtes sont **préparées**. `Tool.php` et `Database.php` sont dans le même dossier.",
+      "fichier": "src/classes/ToolsManager.php",
+      "fichiers": {
+        "src/classes/Database.php": [
+          "<?php",
+          "// Dans l'appli, SQLite (en mémoire) remplace MariaDB : le code PDO est le même.",
+          "class Database {",
+          "    private PDO $pdo;",
+          "",
+          "    public function __construct() {",
+          "        $this->pdo = new PDO(\"sqlite::memory:\");",
+          "        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);",
+          "        $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);",
+          "",
+          "        $sql = \"CREATE TABLE IF NOT EXISTS tools (",
+          "            id INTEGER PRIMARY KEY AUTOINCREMENT,",
+          "            name TEXT NOT NULL UNIQUE,",
+          "            type TEXT NOT NULL,",
+          "            purchase_date TEXT NOT NULL,",
+          "            price REAL NOT NULL",
+          "        );\";",
+          "        $this->pdo->exec($sql);",
+          "    }",
+          "",
+          "    public function getPdo(): PDO {",
+          "        return $this->pdo;",
+          "    }",
+          "}"
+        ],
+        "src/classes/Tool.php": [
+          "<?php",
+          "class Tool {",
+          "    const TYPES = [",
+          "        'spade' => 'Bêche',",
+          "        'rake' => 'Râteau',",
+          "        'mower' => 'Tondeuse',",
+          "    ];",
+          "",
+          "    private ?int $id;",
+          "    private string $name;",
+          "    private string $type;",
+          "    private DateTime $purchaseDate;",
+          "    private float $price;",
+          "",
+          "    public function __construct(?int $id, string $name, string $type, DateTime $purchaseDate, float $price) {",
+          "        if (empty($name)) {",
+          "            throw new InvalidArgumentException(\"Le nom de l'outil est requis.\");",
+          "        } elseif (strlen($name) < 2) {",
+          "            throw new InvalidArgumentException(\"Le nom de l'outil doit contenir au moins 2 caractères.\");",
+          "        }",
+          "",
+          "        if (!array_key_exists($type, self::TYPES)) {",
+          "            throw new InvalidArgumentException(\"Le type de l'outil est invalide.\");",
+          "        }",
+          "",
+          "        if ($price < 0) {",
+          "            throw new InvalidArgumentException(\"Le prix doit être un nombre positif.\");",
+          "        }",
+          "",
+          "        $this->id = $id;",
+          "        $this->name = $name;",
+          "        $this->type = $type;",
+          "        $this->purchaseDate = $purchaseDate;",
+          "        $this->price = $price;",
+          "    }",
+          "",
+          "    public function getId(): ?int {",
+          "        return $this->id;",
+          "    }",
+          "",
+          "    public function getName(): string {",
+          "        return $this->name;",
+          "    }",
+          "",
+          "    public function getType(): string {",
+          "        return $this->type;",
+          "    }",
+          "",
+          "    public function getPurchaseDate(): DateTime {",
+          "        return $this->purchaseDate;",
+          "    }",
+          "",
+          "    public function getPrice(): float {",
+          "        return $this->price;",
+          "    }",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        "require_once __DIR__ . '/Database.php';",
+        "require_once __DIR__ . '/Tool.php';",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Base vide",
+            "code": "return (new ToolsManager())->getTools();",
+            "attendu": []
+          },
+          {
+            "titre": "Ajouter deux outils",
+            "code": "$m = new ToolsManager();\n$a = $m->addTool(new Tool(null, 'Râteau du jardin', 'rake', new DateTime('2024-03-15'), 29.9));\n$b = $m->addTool(new Tool(null, 'Bêche', 'spade', new DateTime('2023-10-01'), 45));\nreturn [$a, $b];",
+            "attendu": [
+              1,
+              2
+            ]
+          },
+          {
+            "titre": "Les relire",
+            "code": "$m = new ToolsManager();\n$a = $m->addTool(new Tool(null, 'Râteau du jardin', 'rake', new DateTime('2024-03-15'), 29.9));\n$b = $m->addTool(new Tool(null, 'Bêche', 'spade', new DateTime('2023-10-01'), 45));\n$noms = fn($tools) => array_map(fn($t) => $t->getName(), $tools);\nreturn $noms($m->getTools());",
+            "attendu": [
+              "Râteau du jardin",
+              "Bêche"
+            ]
+          },
+          {
+            "titre": "Des objets Tool complets",
+            "code": "$m = new ToolsManager();\n$a = $m->addTool(new Tool(null, 'Râteau du jardin', 'rake', new DateTime('2024-03-15'), 29.9));\n$b = $m->addTool(new Tool(null, 'Bêche', 'spade', new DateTime('2023-10-01'), 45));\n$t = $m->getTools()[0];\nreturn [get_class($t), $t->getId(), $t->getType(), $t->getPurchaseDate()->format('Y-m-d'), $t->getPrice()];",
+            "attendu": [
+              "Tool",
+              1,
+              "rake",
+              "2024-03-15",
+              29.9
+            ]
+          },
+          {
+            "titre": "Supprimer",
+            "code": "$m = new ToolsManager();\n$a = $m->addTool(new Tool(null, 'Râteau du jardin', 'rake', new DateTime('2024-03-15'), 29.9));\n$b = $m->addTool(new Tool(null, 'Bêche', 'spade', new DateTime('2023-10-01'), 45));\n$noms = fn($tools) => array_map(fn($t) => $t->getName(), $tools);\n$m->removeTool($a);\nreturn $noms($m->getTools());",
+            "attendu": [
+              "Bêche"
+            ]
+          },
+          {
+            "titre": "Nom en double : PDOException 23000",
+            "code": "$m = new ToolsManager();\n$a = $m->addTool(new Tool(null, 'Râteau du jardin', 'rake', new DateTime('2024-03-15'), 29.9));\n$b = $m->addTool(new Tool(null, 'Bêche', 'spade', new DateTime('2023-10-01'), 45));\ntry {\n    $m->addTool(new Tool(null, 'Bêche', 'spade', new DateTime('2024-01-01'), 30));\n    return 'accepté';\n} catch (PDOException $e) {\n    return $e->getCode();\n}",
+            "attendu": "23000",
+            "siEchec": "Ne cache pas l'exception dans `addTool` : c'est la page qui l'attrapera pour afficher « L'outil existe déjà. »."
+          },
+          {
+            "titre": "Injection SQL dans le nom",
+            "code": "$m = new ToolsManager();\n$m->addTool(new Tool(null, \"x'); DROP TABLE tools; --\", 'rake', new DateTime('2024-01-01'), 1));\n$noms = fn($tools) => array_map(fn($t) => $t->getName(), $tools);\nreturn $noms($m->getTools());",
+            "attendu": [
+              "x'); DROP TABLE tools; --"
+            ],
+            "siEchec": "Le nom doit être enregistré tel quel : utilise des paramètres `:name` et `bindValue`, jamais une variable collée dans le SQL."
+          }
+        ],
+        "obligatoire": [
+          "->prepare",
+          "->bindValue"
+        ]
+      },
+      "indices": [
+        "Une propriété privée garde la `Database` créée dans le constructeur. Chaque méthode commence par `$this->database->getPdo()->prepare(…)`.",
+        "`addTool` : `INSERT INTO tools (name, type, purchase_date, price) VALUES (:name, :type, :purchase_date, :price)`, un `bindValue` par colonne, `execute`, puis `lastInsertId()`. `getTools` transforme chaque ligne de `fetchAll()` en `new Tool(…)`.",
+        {
+          "texte": "La boucle de getTools :",
+          "code": "$tools = [];\nforeach ($stmt->fetchAll() as $row) {\n    $tools[] = new Tool($row['id'], ___, ___, new DateTime($row['purchase_date']), ___);\n}\nreturn $tools;"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "require_once __DIR__ . '/Database.php';",
+        "require_once __DIR__ . '/Tool.php';",
+        "",
+        "class ToolsManager {",
+        "    private Database $database;",
+        "",
+        "    public function __construct() {",
+        "        $this->database = new Database();",
+        "    }",
+        "",
+        "    public function getTools(): array {",
+        "        $stmt = $this->database->getPdo()->prepare(\"SELECT * FROM tools\");",
+        "        $stmt->execute();",
+        "        $tools = [];",
+        "        foreach ($stmt->fetchAll() as $row) {",
+        "            $tools[] = new Tool($row['id'], $row['name'], $row['type'], new DateTime($row['purchase_date']), $row['price']);",
+        "        }",
+        "        return $tools;",
+        "    }",
+        "",
+        "    public function addTool(Tool $tool): int {",
+        "        $sql = \"INSERT INTO tools (name, type, purchase_date, price) VALUES (:name, :type, :purchase_date, :price)\";",
+        "        $stmt = $this->database->getPdo()->prepare($sql);",
+        "        $stmt->bindValue(':name', $tool->getName());",
+        "        $stmt->bindValue(':type', $tool->getType());",
+        "        $stmt->bindValue(':purchase_date', $tool->getPurchaseDate()->format('Y-m-d'));",
+        "        $stmt->bindValue(':price', $tool->getPrice());",
+        "        $stmt->execute();",
+        "        return $this->database->getPdo()->lastInsertId();",
+        "    }",
+        "",
+        "    public function removeTool(int $id): bool {",
+        "        $stmt = $this->database->getPdo()->prepare(\"DELETE FROM tools WHERE id = :id\");",
+        "        $stmt->bindValue(':id', $id);",
+        "        return $stmt->execute();",
+        "    }",
+        "}"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/Database.php';\nrequire_once __DIR__ . '/Tool.php';\n\nclass ToolsManager {\n    private Database $database;\n\n    public function __construct() {\n        $this->database = new Database();\n    }\n\n    public function getTools(): array {\n        $stmt = $this->database->getPdo()->prepare(\"SELECT * FROM tools\");\n        $stmt->execute();\n        $tools = [];\n        foreach ($stmt->fetchAll() as $row) {\n            $tools[] = new Tool($row['id'], $row['name'], $row['type'], new DateTime($row['purchase_date']), $row['price']);\n        }\n        return $tools;\n    }\n\n    public function addTool(Tool $tool): int {\n        $sql = \"INSERT INTO tools (name, type, purchase_date, price) VALUES ('\" . $tool->getName() . \"', '\" . $tool->getType() . \"', '\" . $tool->getPurchaseDate()->format('Y-m-d') . \"', \" . $tool->getPrice() . \")\";\n        $this->database->getPdo()->exec($sql);\n        return $this->database->getPdo()->lastInsertId();\n    }\n\n    public function removeTool(int $id): bool {\n        $stmt = $this->database->getPdo()->prepare(\"DELETE FROM tools WHERE id = :id\");\n        $stmt->bindValue(':id', $id);\n        return $stmt->execute();\n    }\n}",
+          "attendu": "echec",
+          "diagnostic": "sql-concat"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/Database.php';\nrequire_once __DIR__ . '/Tool.php';\n\nclass ToolsManager {\n    private Database $database;\n\n    public function __construct() {\n        $this->database = new Database();\n    }\n\n    public function getTools(): array {\n        $stmt = $this->database->getPdo()->prepare(\"SELECT * FROM tools\");\n        $stmt->execute();\n        $tools = [];\n        foreach ($stmt->fetchAll() as $row) {\n            $tools[] = $row;\n        }\n        return $tools;\n    }\n\n    public function addTool(Tool $tool): int {\n        $sql = \"INSERT INTO tools (name, type, purchase_date, price) VALUES (:name, :type, :purchase_date, :price)\";\n        $stmt = $this->database->getPdo()->prepare($sql);\n        $stmt->bindValue(':name', $tool->getName());\n        $stmt->bindValue(':type', $tool->getType());\n        $stmt->bindValue(':purchase_date', $tool->getPurchaseDate()->format('Y-m-d'));\n        $stmt->bindValue(':price', $tool->getPrice());\n        $stmt->execute();\n        return $this->database->getPdo()->lastInsertId();\n    }\n\n    public function removeTool(int $id): bool {\n        $stmt = $this->database->getPdo()->prepare(\"DELETE FROM tools WHERE id = :id\");\n        $stmt->bindValue(':id', $id);\n        return $stmt->execute();\n    }\n}",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/Database.php';\nrequire_once __DIR__ . '/Tool.php';\n\nclass ToolsManager {\n    private Database $database;\n\n    public function __construct() {\n        $this->database = new Database();\n    }\n\n    public function getTools(): array {\n        $stmt = $this->database->getPdo()->prepare(\"SELECT * FROM tools\");\n        $stmt->execute();\n        $tools = [];\n        foreach ($stmt->fetchAll() as $row) {\n            $tools[] = new Tool($row['id'], $row['name'], $row['type'], new DateTime($row['purchase_date']), $row['price']);\n        }\n        return $tools;\n    }\n\n    public function addTool(Tool $tool): int {\n        $sql = \"INSERT INTO tools (name, type, purchase_date, price) VALUES (:name, :type, :purchase_date, :price)\";\n        $stmt = $this->database->getPdo()->prepare($sql);\n        $stmt->bindValue(':name', $tool->getName());\n        $stmt->bindValue(':type', $tool->getType());\n        $stmt->bindValue(':purchase_date', $tool->getPurchaseDate());\n        $stmt->bindValue(':price', $tool->getPrice());\n        $stmt->execute();\n        return $this->database->getPdo()->lastInsertId();\n    }\n\n    public function removeTool(int $id): bool {\n        $stmt = $this->database->getPdo()->prepare(\"DELETE FROM tools WHERE id = :id\");\n        $stmt->bindValue(':id', $id);\n        return $stmt->execute();\n    }\n}",
+          "attendu": "erreur"
+        }
+      ],
+      "explication": "Le gestionnaire traduit entre objets (`Tool`) et lignes de la base, toujours avec des requêtes préparées."
+    },
+    {
+      "id": "u04-b3",
+      "titre": "La page de création",
+      "source": "Séance 3, exercice 1 (3e partie : le formulaire)",
+      "notions": [
+        "formulaires",
+        "exceptions",
+        "pdo"
+      ],
+      "enonce": "**L'exercice du cours (séance 3, exercice 1)** : en vous basant sur les sources prévues pour l'exercice 1, adaptez cette application web pour permettre la gestion d'une liste d'outils. L'application doit permettre d'ajouter un nouvel outil, d'afficher la liste des outils et de supprimer un outil.\n\nChaque outil doit avoir les propriétés suivantes : ID (généré automatiquement) ; nom (string, unique) ; type (string, par exemple « bêche », « râteau », « tondeuse ») ; date d'achat (date : `DateTime` côté PHP, `DATE` côté base) ; prix (float).\n\nTous les champs doivent être validés côté client et côté serveur avant d'être insérés dans la base de données, et des messages d'erreur appropriés doivent être affichés en cas de validation échouée. L'insertion est sécurisée contre les injections SQL (requêtes préparées) et l'affichage contre les attaques XSS. L'application est structurée avec la POO et utilise PDO.\n\n**Ta mission ici** : la page `public/tools/create.php`, sur le modèle de `create.php` des sources.\n\n- Un formulaire en POST avec les champs `name`, `type` (une liste construite avec `Tool::TYPES`), `purchase-date` (`type=\"date\"`) et `price` (`type=\"number\"`), avec une validation côté client (`required`, `minlength`, `min`).\n- À l'envoi : créer le `Tool` dans un `try` (l'`InvalidArgumentException` devient un message dans `$errors` ; une date illisible aussi), puis, s'il n'y a pas d'erreur, `addTool` et redirection vers `index.php` (`header` + `exit`).\n- Une `PDOException` de code `\"23000\"` devient le message « L'outil existe déjà. ».\n- En cas d'erreur : afficher les messages et **conserver** les saisies, échappées avec `htmlspecialchars`.\n\n`Tool`, `Database` et `ToolsManager` sont écrits ; l'autoloader les charge. *Dans l'appli, la base contient déjà « Râteau du jardin ».*",
+      "fichier": "public/tools/create.php",
+      "fichiers": {
+        "src/utils/autoloader.php": [
+          "<?php",
+          "// Charge les classes automatiquement (src/classes/<NomDeLaClasse>.php)",
+          "spl_autoload_register(function ($class) {",
+          "    $file = __DIR__ . '/../classes/' . str_replace('\\\\', '/', $class) . '.php';",
+          "    if (file_exists($file)) {",
+          "        require_once $file;",
+          "    }",
+          "});"
+        ],
+        "src/classes/Database.php": [
+          "<?php",
+          "// Dans l'appli, SQLite remplace MariaDB. La base contient déjà un outil : « Râteau du jardin ».",
+          "class Database {",
+          "    private PDO $pdo;",
+          "",
+          "    public function __construct() {",
+          "        $this->pdo = new PDO(\"sqlite:\" . __DIR__ . \"/../../tools.db\");",
+          "        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);",
+          "        $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);",
+          "        $this->pdo->exec(\"CREATE TABLE IF NOT EXISTS tools (",
+          "            id INTEGER PRIMARY KEY AUTOINCREMENT,",
+          "            name TEXT NOT NULL UNIQUE,",
+          "            type TEXT NOT NULL,",
+          "            purchase_date TEXT NOT NULL,",
+          "            price REAL NOT NULL",
+          "        );\");",
+          "        $this->pdo->exec(\"INSERT OR IGNORE INTO tools (name, type, purchase_date, price) VALUES ('Râteau du jardin', 'rake', '2024-03-15', 29.9)\");",
+          "    }",
+          "",
+          "    public function getPdo(): PDO {",
+          "        return $this->pdo;",
+          "    }",
+          "}"
+        ],
+        "src/classes/Tool.php": [
+          "<?php",
+          "class Tool {",
+          "    const TYPES = [",
+          "        'spade' => 'Bêche',",
+          "        'rake' => 'Râteau',",
+          "        'mower' => 'Tondeuse',",
+          "    ];",
+          "",
+          "    private ?int $id;",
+          "    private string $name;",
+          "    private string $type;",
+          "    private DateTime $purchaseDate;",
+          "    private float $price;",
+          "",
+          "    public function __construct(?int $id, string $name, string $type, DateTime $purchaseDate, float $price) {",
+          "        if (empty($name)) {",
+          "            throw new InvalidArgumentException(\"Le nom de l'outil est requis.\");",
+          "        } elseif (strlen($name) < 2) {",
+          "            throw new InvalidArgumentException(\"Le nom de l'outil doit contenir au moins 2 caractères.\");",
+          "        }",
+          "",
+          "        if (!array_key_exists($type, self::TYPES)) {",
+          "            throw new InvalidArgumentException(\"Le type de l'outil est invalide.\");",
+          "        }",
+          "",
+          "        if ($price < 0) {",
+          "            throw new InvalidArgumentException(\"Le prix doit être un nombre positif.\");",
+          "        }",
+          "",
+          "        $this->id = $id;",
+          "        $this->name = $name;",
+          "        $this->type = $type;",
+          "        $this->purchaseDate = $purchaseDate;",
+          "        $this->price = $price;",
+          "    }",
+          "",
+          "    public function getId(): ?int {",
+          "        return $this->id;",
+          "    }",
+          "",
+          "    public function getName(): string {",
+          "        return $this->name;",
+          "    }",
+          "",
+          "    public function getType(): string {",
+          "        return $this->type;",
+          "    }",
+          "",
+          "    public function getPurchaseDate(): DateTime {",
+          "        return $this->purchaseDate;",
+          "    }",
+          "",
+          "    public function getPrice(): float {",
+          "        return $this->price;",
+          "    }",
+          "}"
+        ],
+        "src/classes/ToolsManager.php": [
+          "<?php",
+          "require_once __DIR__ . '/Database.php';",
+          "require_once __DIR__ . '/Tool.php';",
+          "",
+          "class ToolsManager {",
+          "    private Database $database;",
+          "",
+          "    public function __construct() {",
+          "        $this->database = new Database();",
+          "    }",
+          "",
+          "    public function getTools(): array {",
+          "        $stmt = $this->database->getPdo()->prepare(\"SELECT * FROM tools\");",
+          "        $stmt->execute();",
+          "        $tools = [];",
+          "        foreach ($stmt->fetchAll() as $row) {",
+          "            $tools[] = new Tool($row['id'], $row['name'], $row['type'], new DateTime($row['purchase_date']), $row['price']);",
+          "        }",
+          "        return $tools;",
+          "    }",
+          "",
+          "    public function addTool(Tool $tool): int {",
+          "        $sql = \"INSERT INTO tools (name, type, purchase_date, price) VALUES (:name, :type, :purchase_date, :price)\";",
+          "        $stmt = $this->database->getPdo()->prepare($sql);",
+          "        $stmt->bindValue(':name', $tool->getName());",
+          "        $stmt->bindValue(':type', $tool->getType());",
+          "        $stmt->bindValue(':purchase_date', $tool->getPurchaseDate()->format('Y-m-d'));",
+          "        $stmt->bindValue(':price', $tool->getPrice());",
+          "        $stmt->execute();",
+          "        return $this->database->getPdo()->lastInsertId();",
+          "    }",
+          "",
+          "    public function removeTool(int $id): bool {",
+          "        $stmt = $this->database->getPdo()->prepare(\"DELETE FROM tools WHERE id = :id\");",
+          "        $stmt->bindValue(':id', $id);",
+          "        return $stmt->execute();",
+          "    }",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        "require __DIR__ . '/../../src/utils/autoloader.php';",
+        "",
+        "$toolsManager = new ToolsManager();",
+        ""
+      ],
+      "requete": {
+        "methode": "GET"
+      },
+      "tests": {
+        "cas": [
+          {
+            "titre": "Première visite : le formulaire",
+            "requete": {
+              "methode": "GET"
+            },
+            "contient": [
+              "<form",
+              "method=\"POST\"",
+              "name=\"name\"",
+              "name=\"type\"",
+              "name=\"purchase-date\"",
+              "name=\"price\"",
+              "value=\"rake\""
+            ],
+            "redirection": false
+          },
+          {
+            "titre": "Validation côté client",
+            "requete": {
+              "methode": "GET"
+            },
+            "contient": [
+              "required"
+            ],
+            "siEchec": "Ajoute la validation côté client : `required` (et `minlength=\"2\"`, `min=\"0\"`)."
+          },
+          {
+            "titre": "Outil valide : redirection",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "Tondeuse Husqvarna",
+                "type": "mower",
+                "purchase-date": "2024-05-02",
+                "price": "350"
+              }
+            },
+            "redirection": "index.php"
+          },
+          {
+            "titre": "Nom trop court : message et saisie gardée",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "T",
+                "type": "mower",
+                "purchase-date": "2024-05-02",
+                "price": "350"
+              }
+            },
+            "contient": [
+              "au moins 2 caractères",
+              "value=\"T\""
+            ],
+            "redirection": false
+          },
+          {
+            "titre": "Prix négatif",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "Tondeuse",
+                "type": "mower",
+                "purchase-date": "2024-05-02",
+                "price": "-5"
+              }
+            },
+            "contient": [
+              "Le prix doit être un nombre positif."
+            ],
+            "redirection": false
+          },
+          {
+            "titre": "Nom déjà pris",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "Râteau du jardin",
+                "type": "rake",
+                "purchase-date": "2024-05-02",
+                "price": "350"
+              }
+            },
+            "contient": [
+              "outil existe déjà."
+            ],
+            "redirection": false,
+            "siEchec": "Attrape la `PDOException` de `addTool` : si son code est `\"23000\"`, ajoute « L'outil existe déjà. » aux erreurs."
+          },
+          {
+            "titre": "Date illisible : pas de plantage",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "Sécateur",
+                "type": "rake",
+                "purchase-date": "pas-une-date",
+                "price": "350"
+              }
+            },
+            "contient": [
+              "<form"
+            ],
+            "redirection": false,
+            "siEchec": "`new DateTime(\"pas-une-date\")` lance une `Exception` : attrape-la aussi, et ajoute un message aux erreurs."
+          },
+          {
+            "titre": "Saisie piégée (XSS)",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "<b>Pelle</b>",
+                "type": "spade",
+                "purchase-date": "2024-01-01",
+                "price": "-1"
+              }
+            },
+            "contient": [
+              "&lt;b&gt;Pelle&lt;/b&gt;"
+            ],
+            "neContientPas": [
+              "value=\"<b>Pelle</b>\""
+            ],
+            "siEchec": "Les saisies réaffichées passent par `htmlspecialchars(…)`."
+          }
+        ]
+      },
+      "indices": [
+        "En haut : si `$_SERVER[\"REQUEST_METHOD\"] === \"POST\"`, lis les quatre champs, crée le `Tool` dans un `try`, puis, si `$errors` est vide, `addTool` dans un autre `try`. En bas : le HTML du formulaire.",
+        "Deux `catch` pour la création : `InvalidArgumentException` (message du `Tool`) puis `Exception` (date illisible). Pour `addTool` : `catch (PDOException $e)` et teste `$e->getCode() === \"23000\"`. Le `header(\"Location: index.php\")` doit être suivi de `exit();`.",
+        {
+          "texte": "Un champ qui garde sa valeur :",
+          "code": "<input type=\"text\" id=\"name\" name=\"name\" value=\"<?= htmlspecialchars($name ?? '') ?>\" required minlength=\"2\">"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "require __DIR__ . '/../../src/utils/autoloader.php';",
+        "",
+        "$toolsManager = new ToolsManager();",
+        "$errors = [];",
+        "",
+        "if ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {",
+        "    $name = $_POST[\"name\"];",
+        "    $type = $_POST[\"type\"];",
+        "    $purchaseDate = $_POST[\"purchase-date\"];",
+        "    $price = $_POST[\"price\"];",
+        "",
+        "    try {",
+        "        $tool = new Tool(null, $name, $type, new DateTime($purchaseDate), (float) $price);",
+        "    } catch (InvalidArgumentException $e) {",
+        "        $errors[] = $e->getMessage();",
+        "    } catch (Exception $e) {",
+        "        $errors[] = \"La date d'achat est invalide.\";",
+        "    }",
+        "",
+        "    if (empty($errors)) {",
+        "        try {",
+        "            $toolsManager->addTool($tool);",
+        "            header(\"Location: index.php\");",
+        "            exit();",
+        "        } catch (PDOException $e) {",
+        "            if ($e->getCode() === \"23000\") {",
+        "                $errors[] = \"L'outil existe déjà.\";",
+        "            } else {",
+        "                $errors[] = \"Erreur lors de l'interaction avec la base de données : \" . $e->getMessage();",
+        "            }",
+        "        }",
+        "    }",
+        "}",
+        "?>",
+        "<h1>Créer un nouvel outil</h1>",
+        "",
+        "<?php if (!empty($errors)) { ?>",
+        "    <p style=\"color: red;\">Le formulaire contient des erreurs :</p>",
+        "    <ul>",
+        "        <?php foreach ($errors as $error) { ?>",
+        "            <li><?= htmlspecialchars($error) ?></li>",
+        "        <?php } ?>",
+        "    </ul>",
+        "<?php } ?>",
+        "",
+        "<form action=\"create.php\" method=\"POST\">",
+        "    <label for=\"name\">Nom</label>",
+        "    <input type=\"text\" id=\"name\" name=\"name\" value=\"<?= htmlspecialchars($name ?? '') ?>\" required minlength=\"2\">",
+        "",
+        "    <label for=\"type\">Type</label>",
+        "    <select id=\"type\" name=\"type\" required>",
+        "        <?php foreach (Tool::TYPES as $key => $value) { ?>",
+        "            <option value=\"<?= $key ?>\"><?= $value ?></option>",
+        "        <?php } ?>",
+        "    </select>",
+        "",
+        "    <label for=\"purchase-date\">Date d'achat</label>",
+        "    <input type=\"date\" id=\"purchase-date\" name=\"purchase-date\" value=\"<?= htmlspecialchars($purchaseDate ?? '') ?>\" required>",
+        "",
+        "    <label for=\"price\">Prix</label>",
+        "    <input type=\"number\" id=\"price\" name=\"price\" value=\"<?= htmlspecialchars($price ?? '') ?>\" required min=\"0\">",
+        "",
+        "    <button type=\"submit\">Créer</button>",
+        "</form>"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nrequire __DIR__ . '/../../src/utils/autoloader.php';\n\n$toolsManager = new ToolsManager();\n$errors = [];\n\nif ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {\n    $name = $_POST[\"name\"];\n    $type = $_POST[\"type\"];\n    $purchaseDate = $_POST[\"purchase-date\"];\n    $price = $_POST[\"price\"];\n\n    try {\n        $tool = new Tool(null, $name, $type, new DateTime($purchaseDate), (float) $price);\n    } catch (InvalidArgumentException $e) {\n        $errors[] = $e->getMessage();\n    } catch (Exception $e) {\n        $errors[] = \"La date d'achat est invalide.\";\n    }\n\n    if (empty($errors)) {\n        try {\n            $toolsManager->addTool($tool);\n            header(\"Location: index.php\");\n            exit();\n        } catch (Exception $e) {\n            $errors[] = \"Erreur.\";\n        }\n    }\n}\n?>\n<h1>Créer un nouvel outil</h1>\n\n<?php if (!empty($errors)) { ?>\n    <p style=\"color: red;\">Le formulaire contient des erreurs :</p>\n    <ul>\n        <?php foreach ($errors as $error) { ?>\n            <li><?= htmlspecialchars($error) ?></li>\n        <?php } ?>\n    </ul>\n<?php } ?>\n\n<form action=\"create.php\" method=\"POST\">\n    <label for=\"name\">Nom</label>\n    <input type=\"text\" id=\"name\" name=\"name\" value=\"<?= htmlspecialchars($name ?? '') ?>\" required minlength=\"2\">\n\n    <label for=\"type\">Type</label>\n    <select id=\"type\" name=\"type\" required>\n        <?php foreach (Tool::TYPES as $key => $value) { ?>\n            <option value=\"<?= $key ?>\"><?= $value ?></option>\n        <?php } ?>\n    </select>\n\n    <label for=\"purchase-date\">Date d'achat</label>\n    <input type=\"date\" id=\"purchase-date\" name=\"purchase-date\" value=\"<?= htmlspecialchars($purchaseDate ?? '') ?>\" required>\n\n    <label for=\"price\">Prix</label>\n    <input type=\"number\" id=\"price\" name=\"price\" value=\"<?= htmlspecialchars($price ?? '') ?>\" required min=\"0\">\n\n    <button type=\"submit\">Créer</button>\n</form>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire __DIR__ . '/../../src/utils/autoloader.php';\n\n$toolsManager = new ToolsManager();\n$errors = [];\n\nif ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {\n    $name = $_POST[\"name\"];\n    $type = $_POST[\"type\"];\n    $purchaseDate = $_POST[\"purchase-date\"];\n    $price = $_POST[\"price\"];\n\n    try {\n        $tool = new Tool(null, $name, $type, new DateTime($purchaseDate), (float) $price);\n    } catch (InvalidArgumentException $e) {\n        $errors[] = $e->getMessage();\n    } catch (Exception $e) {\n        $errors[] = \"La date d'achat est invalide.\";\n    }\n\n    if (empty($errors)) {\n        try {\n            $toolsManager->addTool($tool);\n            header(\"Location: index.php\");\n            exit();\n        } catch (PDOException $e) {\n            if ($e->getCode() === \"23000\") {\n                $errors[] = \"L'outil existe déjà.\";\n            } else {\n                $errors[] = \"Erreur lors de l'interaction avec la base de données : \" . $e->getMessage();\n            }\n        }\n    }\n}\n?>\n<h1>Créer un nouvel outil</h1>\n\n<?php if (!empty($errors)) { ?>\n    <p style=\"color: red;\">Le formulaire contient des erreurs :</p>\n    <ul>\n        <?php foreach ($errors as $error) { ?>\n            <li><?= htmlspecialchars($error) ?></li>\n        <?php } ?>\n    </ul>\n<?php } ?>\n\n<form action=\"create.php\" method=\"POST\">\n    <label for=\"name\">Nom</label>\n    <input type=\"text\" id=\"name\" name=\"name\" value=\"<?= $name ?? '' ?>\" required minlength=\"2\">\n\n    <label for=\"type\">Type</label>\n    <select id=\"type\" name=\"type\" required>\n        <?php foreach (Tool::TYPES as $key => $value) { ?>\n            <option value=\"<?= $key ?>\"><?= $value ?></option>\n        <?php } ?>\n    </select>\n\n    <label for=\"purchase-date\">Date d'achat</label>\n    <input type=\"date\" id=\"purchase-date\" name=\"purchase-date\" value=\"<?= htmlspecialchars($purchaseDate ?? '') ?>\" required>\n\n    <label for=\"price\">Prix</label>\n    <input type=\"number\" id=\"price\" name=\"price\" value=\"<?= htmlspecialchars($price ?? '') ?>\" required min=\"0\">\n\n    <button type=\"submit\">Créer</button>\n</form>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire __DIR__ . '/../../src/utils/autoloader.php';\n\n$toolsManager = new ToolsManager();\n$errors = [];\n\nif ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {\n    $name = $_POST[\"name\"];\n    $type = $_POST[\"type\"];\n    $purchaseDate = $_POST[\"purchase-date\"];\n    $price = $_POST[\"price\"];\n\n    try {\n        $tool = new Tool(null, $name, $type, new DateTime($purchaseDate), (float) $price);\n    } catch (InvalidArgumentException $e) {\n        $errors[] = $e->getMessage();\n    }\n\n    if (empty($errors)) {\n        try {\n            $toolsManager->addTool($tool);\n            header(\"Location: index.php\");\n            exit();\n        } catch (PDOException $e) {\n            if ($e->getCode() === \"23000\") {\n                $errors[] = \"L'outil existe déjà.\";\n            } else {\n                $errors[] = \"Erreur lors de l'interaction avec la base de données : \" . $e->getMessage();\n            }\n        }\n    }\n}\n?>\n<h1>Créer un nouvel outil</h1>\n\n<?php if (!empty($errors)) { ?>\n    <p style=\"color: red;\">Le formulaire contient des erreurs :</p>\n    <ul>\n        <?php foreach ($errors as $error) { ?>\n            <li><?= htmlspecialchars($error) ?></li>\n        <?php } ?>\n    </ul>\n<?php } ?>\n\n<form action=\"create.php\" method=\"POST\">\n    <label for=\"name\">Nom</label>\n    <input type=\"text\" id=\"name\" name=\"name\" value=\"<?= htmlspecialchars($name ?? '') ?>\" required minlength=\"2\">\n\n    <label for=\"type\">Type</label>\n    <select id=\"type\" name=\"type\" required>\n        <?php foreach (Tool::TYPES as $key => $value) { ?>\n            <option value=\"<?= $key ?>\"><?= $value ?></option>\n        <?php } ?>\n    </select>\n\n    <label for=\"purchase-date\">Date d'achat</label>\n    <input type=\"date\" id=\"purchase-date\" name=\"purchase-date\" value=\"<?= htmlspecialchars($purchaseDate ?? '') ?>\" required>\n\n    <label for=\"price\">Prix</label>\n    <input type=\"number\" id=\"price\" name=\"price\" value=\"<?= htmlspecialchars($price ?? '') ?>\" required min=\"0\">\n\n    <button type=\"submit\">Créer</button>\n</form>",
+          "attendu": "erreur",
+          "diagnostic": "exception-non-attrapee"
+        }
+      ],
+      "explication": "La page orchestre tout : validation par le constructeur (exceptions), insertion préparée, gestion du doublon, redirection, et réaffichage sûr des saisies."
+    },
+    {
+      "id": "u04-b4",
+      "titre": "Mise en ligne chez Infomaniak",
+      "source": "Séance 3, exercice 2 : déployer l'application de l'exercice 1 sur Infomaniak",
+      "notions": [
+        "deploiement",
+        "configuration"
+      ],
+      "enonce": "**L'exercice du cours** : « Déployez ensuite l'application web de l'exercice 1 sur Infomaniak en suivant les instructions fournies dans le contenu du cours. »\n\nTon application de gestion d'outils tourne en local avec Docker Compose et MariaDB. Tu la mets en ligne chez Infomaniak. Réponds aux questions comme si tu le faisais pour de vrai.",
+      "questions": [
+        {
+          "id": "u04-b4-q1",
+          "type": "ordre",
+          "notions": [
+            "deploiement"
+          ],
+          "question": "Remets les étapes du déploiement dans l'ordre.",
+          "items": [
+            "Acquérir un hébergement (domaine ou sous-domaine)",
+            "Créer la base MySQL/MariaDB et noter hôte, port, nom, utilisateur, mot de passe",
+            "Créer le site PHP et configurer son répertoire racine",
+            "Téléverser les fichiers par FTP/SFTP",
+            "Adapter config/database.ini pour la base d'Infomaniak",
+            "Tester l'application en ligne"
+          ],
+          "explication": "Les six étapes du cours, dans l'ordre."
+        },
+        {
+          "id": "u04-b4-q2",
+          "type": "qcm",
+          "notions": [
+            "deploiement"
+          ],
+          "question": "En local, `database.ini` contient `host = \"mariadb\"`. Que mettre en production ?",
+          "choix": [
+            "L'hôte de la base notée lors de sa création chez Infomaniak",
+            "Toujours « mariadb »",
+            "« localhost:9090 »",
+            "L'adresse du site web"
+          ],
+          "bonne": 0,
+          "explication": "« mariadb » est le nom du conteneur Docker local : il n'existe pas chez Infomaniak."
+        },
+        {
+          "id": "u04-b4-q3",
+          "type": "qcm",
+          "notions": [
+            "deploiement"
+          ],
+          "question": "Vers quel dossier doit pointer le répertoire racine du site ?",
+          "choix": [
+            "Le dossier `public`",
+            "La racine du projet (avec `config` et `src`)",
+            "Le dossier `src`",
+            "Le dossier `config`"
+          ],
+          "bonne": 0,
+          "explication": "Seul `public` doit être accessible : `config` (mots de passe) et `src` restent invisibles depuis le web."
+        },
+        {
+          "id": "u04-b4-q4",
+          "type": "qcm",
+          "notions": [
+            "client-serveur"
+          ],
+          "question": "Pour téléverser les fichiers, quel protocole choisir ?",
+          "choix": [
+            "SFTP",
+            "FTP",
+            "HTTP",
+            "SMTP"
+          ],
+          "bonne": 0,
+          "explication": "SFTP passe par une connexion SSH sécurisée ; FTP n'est pas sécurisé."
+        },
+        {
+          "id": "u04-b4-q5",
+          "type": "vf",
+          "notions": [
+            "configuration"
+          ],
+          "question": "Le fichier `database.ini` de production doit être committé dans le dépôt GitHub du projet.",
+          "bonne": false,
+          "explication": "Il contient le mot de passe de la base : `.gitignore`, et un `database.ini.example` dans le dépôt."
+        },
+        {
+          "id": "u04-b4-q6",
+          "type": "tri",
+          "notions": [
+            "deploiement"
+          ],
+          "question": "Que change-t-on entre le local et la production ?",
+          "categories": [
+            "Change",
+            "Ne change pas"
+          ],
+          "items": [
+            [
+              "Le contenu de config/database.ini",
+              0
+            ],
+            [
+              "Le code des classes Tool et ToolsManager",
+              1
+            ],
+            [
+              "Les requêtes préparées",
+              1
+            ],
+            [
+              "L'hôte et le mot de passe de la base",
+              0
+            ]
+          ],
+          "explication": "Grâce au fichier de configuration, seul `database.ini` change ; le code reste le même."
+        },
+        {
+          "id": "u04-b4-q7",
+          "type": "qcm",
+          "notions": [
+            "deploiement"
+          ],
+          "question": "Le groupe n'a besoin que d'un déploiement pour le projet libre. Que recommande le cours ?",
+          "choix": [
+            "Que chaque membre comprenne les étapes et sache déployer seul (par exemple sur un sous-domaine)",
+            "Qu'une seule personne sache le faire",
+            "Ne déployer qu'à la fin du semestre",
+            "Déployer sans base de données"
+          ],
+          "bonne": 0,
+          "explication": "Un sous-domaine par membre permet à chacun de s'entraîner."
+        }
+      ]
+    }
+  ],
+  "parcours": [
+    "u04-l1",
+    "u04-l2",
+    "u04-l3",
+    "jeu:u04-eclair",
+    "u04-l4",
+    "u04-l5",
+    "quiz",
+    "boss:u04-b1",
+    "boss:u04-b2",
+    "boss:u04-b3",
+    "boss:u04-b4"
+  ]
+}

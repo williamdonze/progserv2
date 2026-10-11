@@ -47,7 +47,7 @@ def jouer_session(pg, titre):
         pg.evaluate("async () => { await window.__q.resoudre(); }")
         pg.wait_for_selector("[data-check]:not([disabled])", timeout=5000)
         pg.click("[data-check]")
-        pg.wait_for_selector(".sheet", timeout=8000)
+        pg.wait_for_selector(".sheet", timeout=30000)
         if pg.query_selector(".sheet.ko"):
             detail = pg.inner_text(".sheet .expl")[:300]
             problemes.append(f"{titre} · {kind} · « {info['titre']} » : faux alors que résolu → {detail}")
@@ -55,7 +55,7 @@ def jouer_session(pg, titre):
                 # exercice de code : on passe après avoir enregistré le problème
                 for _ in range(3):
                     pg.click("[data-fix]"); pg.evaluate("async () => { await window.__q.resoudre(); }")
-                    pg.click("[data-check]"); pg.wait_for_selector(".sheet", timeout=8000)
+                    pg.click("[data-check]"); pg.wait_for_selector(".sheet", timeout=30000)
                     if pg.query_selector("[data-cont]"): break
                 if pg.query_selector("[data-skip]"): pg.click("[data-skip]")
         n += 1
@@ -76,6 +76,26 @@ try:
             pg.screenshot(path=str(CAP / "00-accueil.png"))
 
         code_js = pg.evaluate("() => aModule('code-js')")
+        code_php = pg.evaluate("() => aModule('code-php')")
+        # 1 bis. module « code-php » : un exercice de PHP raté puis corrigé (le moteur PHP démarre : délais plus longs)
+        if code_php:
+            pg.evaluate("""() => runSession([{ kind:'q', q:{ type:'ecrire', id:'demo-php', question:'Affiche Bonjour le monde', depart:[''],
+                tests:{ cas:[{ sortie:['Bonjour le monde'] }] }, indices:['echo'], solution:['echo "Bonjour le monde";'], explication:'demo' } }], { title:'démo', onEnd:() => ({}) })""")
+            pg.wait_for_selector(".editeur textarea")
+            pg.fill(".editeur textarea", 'echo Bonjour le monde;')
+            pg.click("[data-check]")
+            pg.wait_for_selector(".sheet.ko [data-fix]", timeout=60000)
+            texte = pg.inner_text(".sheet")
+            if "guillemets" not in texte:
+                problemes.append(f"PHP faux : le message n'explique pas les guillemets → {texte[:200]}")
+            if args.captures:
+                pg.screenshot(path=str(CAP / "code-faux-feuille.png"))
+            pg.click("[data-fix]")
+            pg.fill(".editeur textarea", 'echo "Bonjour le monde";')
+            pg.click("[data-check]")
+            pg.wait_for_selector(".sheet.ok", timeout=20000)
+            pg.click("[data-cont]"); pg.click("[data-done]")
+            pg.wait_for_selector(".node")
         # 1. module « code-js » : un exercice de code raté puis corrigé (exercice de démonstration, indépendant du contenu)
         if code_js:
             pg.evaluate("""() => runSession([{ kind:'q', q:{ type:'ecrire', id:'demo-code', question:'Affiche Bonjour le monde', depart:[''],
@@ -136,7 +156,7 @@ try:
         pg.click("[data-cont]"); pg.click("[data-done]")
 
         # 4. les autres vues
-        for vue in ["theorie"] + (["console"] if code_js else []) + ["profil", "defi"]:
+        for vue in ["theorie"] + (["console"] if code_js or code_php else []) + ["profil", "defi"]:
             pg.click(f'.tab[data-go="{vue}"]')
             pg.wait_for_timeout(150)
             if args.captures:
@@ -157,6 +177,13 @@ try:
             pg.wait_for_selector("main .diag")
             if "fruit" not in pg.inner_text("main .resultat"):
                 problemes.append("console libre : l'erreur n'est pas expliquée")
+        if code_php:
+            pg.click('.tab[data-go="console"]')
+            pg.fill(".editeur textarea", "<?php\n$fruits = [\"kiwi\"];\nforeach ($fruits as $fruit) {\n    echo $fruits;\n}")
+            pg.click("main [data-run]")
+            pg.wait_for_selector("main .diag", timeout=20000)
+            if "Array" not in pg.inner_text("main .resultat"):
+                problemes.append("console libre (PHP) : l'avertissement n'est pas expliqué")
         # 5. la sauvegarde survit à un rechargement
         xp = pg.evaluate("() => ST.xp")
         pg.reload(); pg.wait_for_selector(".node")
