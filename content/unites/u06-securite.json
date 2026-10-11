@@ -1,0 +1,1869 @@
+{
+  "id": "u06",
+  "titre": "Sécurité des saisies",
+  "sousTitre": "Séance 5 · validation, nettoyage, injection SQL, XSS",
+  "objectif": "Distinguer validation et nettoyage, comprendre l'injection SQL et les attaques XSS, et s'en protéger avec des requêtes préparées et htmlspecialchars.",
+  "icone": "🛡",
+  "fiches": [
+    {
+      "id": "validation-nettoyage",
+      "titre": "Valider, nettoyer, échapper",
+      "icone": "✓",
+      "resume": "**Valider** : vérifier qu'une saisie respecte des règles (sinon, la refuser). **Nettoyer** : supprimer ou échapper les caractères spéciaux pour qu'ils ne deviennent pas du code. **Échapper** : remplacer un caractère spécial par une séquence lue comme du texte (`<` devient `&lt;`).",
+      "texte": "`htmlspecialchars()` échappe les caractères spéciaux du HTML :\n\n- `<` devient `&lt;`\n- `>` devient `&gt;`\n- `&` devient `&amp;`\n- `\"` devient `&quot;`\n- `'` devient `&#039;` (ou `&apos;`)\n\nLes règles d'or du cours :\n\n- ne **jamais** faire confiance aux saisies des utilisateurs ;\n- toujours **valider et filtrer** les entrées avant de les utiliser ;\n- toujours **nettoyer** les données qui vont dans une requête SQL (requêtes préparées) ;\n- toujours **échapper** les données avant de les afficher dans une page web.",
+      "exemples": [
+        {
+          "titre": "Un lien affiché comme du texte",
+          "code": [
+            "$string = \"<a href='index.php'>Accueil</a>\";",
+            "echo htmlspecialchars($string);",
+            ""
+          ],
+          "note": "Le navigateur affiche littéralement `<a href='index.php'>Accueil</a>`, au lieu d'un lien cliquable."
+        }
+      ],
+      "pieges": [
+        "Valider ne suffit pas : une saisie peut être « valide » (un nom de groupe) et contenir quand même `<script>` ou une apostrophe."
+      ]
+    },
+    {
+      "id": "injection-sql",
+      "titre": "L'injection SQL",
+      "icone": "💉",
+      "resume": "Quand une saisie est collée dans une requête SQL, un attaquant peut y écrire du SQL : `'); DROP TABLE users; --` termine la requête, en ajoute une autre (`;`) et met la fin en commentaire (`--`). Remède : les requêtes préparées.",
+      "analogie": "**Les cases du formulaire.** Coller la saisie dans le SQL, c'est laisser l'utilisateur écrire directement sur l'ordre donné à la base. La requête préparée, c'est un formulaire à cases : sa saisie reste dans sa case et ne devient jamais un ordre.",
+      "texte": "Code vulnérable :\n\n``` $sql = \"INSERT INTO users (email, password) VALUES ('$email', '$password')\"; $pdo->exec($sql); ```\n\nAvec le mot de passe `'); DROP TABLE users; --`, la requête devient :\n\n``` INSERT INTO users (email, password) VALUES ('me@example.com', ''); DROP TABLE users; --') ```\n\nDeux instructions : l'insertion, puis la **suppression de la table**. Le `;` sépare les requêtes, `--` commence un commentaire SQL (la fin est ignorée).\n\nConséquences possibles : fuite de données, modification non autorisée, suppression.\n\nLe cours recommande les requêtes préparées pour **toutes** les requêtes, même celles sans saisie de l'utilisateur.",
+      "pieges": [
+        "`$pdo->prepare(\"… '$email' …\")` ne protège rien : il faut un paramètre `:email` et `bindValue`.",
+        "Une simple apostrophe (« O'Neil », « Guns N' Roses ») suffit déjà à casser une requête collée."
+      ]
+    },
+    {
+      "id": "xss",
+      "titre": "Les attaques XSS",
+      "icone": "</>",
+      "resume": "XSS (Cross-Site Scripting) : une saisie affichée telle quelle peut contenir du JavaScript (`<script>…</script>`), exécuté dans le navigateur des visiteurs. Remède : échapper avec `htmlspecialchars()` tout ce qu'on affiche.",
+      "analogie": "**La vitrine.** `htmlspecialchars` met la saisie sous verre : on la voit, mais elle ne peut plus rien faire.",
+      "texte": "Code vulnérable : `<li><?= $user[\"email\"] ?></li>`.\n\nSi quelqu'un enregistre comme e-mail `<script>alert(\"Vous avez été piraté !\");</script>`, chaque visiteur de la page exécute ce script. En vrai, il pourrait voler des cookies de session, rediriger vers un site malveillant…\n\nCorrection : `<li><?= htmlspecialchars($user[\"email\"]) ?></li>`.",
+      "pieges": [
+        "On échappe au moment de l'**affichage**, partout où une donnée arrive dans le HTML (texte, attribut `value`, titre…).",
+        "Une donnée qui vient de ta base a pu être saisie par un attaquant : elle s'échappe aussi."
+      ]
+    },
+    {
+      "id": "ethique-securite",
+      "titre": "Sécurité : responsabilité",
+      "icone": "⚖",
+      "resume": "Les conséquences d'une injection SQL ou d'une attaque XSS peuvent être graves (perte ou fuite de données) et engager ta responsabilité. On s'entraîne sur des applications de test, jamais sur une application réelle sans autorisation explicite ; une faille trouvée se signale à la personne responsable.",
+      "texte": "Le cours insiste :\n\n- former sa pratique de la sécurité avec des **applications de test** ;\n- ne **pas** tester une application réelle sans l'autorisation explicite de l'entreprise ou de la personne responsable ;\n- **signaler** une faille trouvée, pour qu'elle soit corrigée et que les données des utilisateurs restent protégées."
+    }
+  ],
+  "lecons": [
+    {
+      "id": "u06-l1",
+      "titre": "Valider ou nettoyer ?",
+      "duree": 5,
+      "notions": [
+        "validation-nettoyage"
+      ],
+      "cartes": [
+        {
+          "titre": "Deux étapes différentes",
+          "texte": "**Valider**, c'est vérifier que la saisie respecte des règles (un e-mail ressemble à un e-mail) ; sinon, on la refuse. **Nettoyer**, c'est supprimer ou échapper les caractères spéciaux pour qu'ils ne soient jamais pris pour du code.",
+          "fiche": "validation-nettoyage"
+        },
+        {
+          "titre": "Échapper",
+          "texte": "Échapper remplace un caractère spécial par une séquence lue comme du texte : `<` (qui ouvre une balise) devient `&lt;`.",
+          "code": [
+            "$string = \"<a href='index.php'>Accueil</a>\";",
+            "echo htmlspecialchars($string);",
+            ""
+          ],
+          "apres": "Le navigateur affichera le texte du lien, au lieu d'un lien cliquable."
+        },
+        {
+          "titre": "La table des remplacements",
+          "texte": "`<` → `&lt;` · `>` → `&gt;` · `&` → `&amp;` · `\"` → `&quot;` · `'` → `&#039;`"
+        },
+        {
+          "titre": "Les règles d'or",
+          "texte": "Ne jamais faire confiance aux saisies ; valider et filtrer ; nettoyer pour la base (requêtes préparées) ; échapper pour l'affichage (`htmlspecialchars`).",
+          "analogie": "La donnée reste dans sa case (requête préparée) et elle est mise en vitrine (`htmlspecialchars`) : on la voit, elle n'agit pas."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u06-l1-e1",
+          "type": "tri",
+          "notions": [
+            "validation-nettoyage"
+          ],
+          "question": "Validation ou nettoyage ?",
+          "categories": [
+            "Validation",
+            "Nettoyage"
+          ],
+          "items": [
+            [
+              "Vérifier qu'un e-mail est valide",
+              0
+            ],
+            [
+              "Refuser un nom de moins de 2 caractères",
+              0
+            ],
+            [
+              "Transformer < en &lt;",
+              1
+            ],
+            [
+              "Lier une saisie à un paramètre :email",
+              1
+            ],
+            [
+              "Vérifier qu'un âge est positif",
+              0
+            ],
+            [
+              "htmlspecialchars($comment)",
+              1
+            ]
+          ],
+          "explication": "Valider : accepter ou refuser. Nettoyer : rendre la donnée inoffensive."
+        },
+        {
+          "id": "u06-l1-e2",
+          "type": "predire",
+          "notions": [
+            "validation-nettoyage"
+          ],
+          "question": "Qu'envoie ce code au navigateur ?",
+          "code": [
+            "echo htmlspecialchars('5 > 3 & \"vrai\"');",
+            ""
+          ],
+          "explication": "`>` devient `&gt;`, `&` devient `&amp;`, chaque `\"` devient `&quot;`."
+        },
+        {
+          "id": "u06-l1-e3",
+          "type": "assoc",
+          "notions": [
+            "validation-nettoyage"
+          ],
+          "question": "Associe chaque caractère à sa séquence d'échappement.",
+          "mono": true,
+          "paires": [
+            [
+              "<",
+              "&lt;"
+            ],
+            [
+              ">",
+              "&gt;"
+            ],
+            [
+              "&",
+              "&amp;"
+            ],
+            [
+              "\"",
+              "&quot;"
+            ]
+          ],
+          "explication": "La table du cours."
+        },
+        {
+          "id": "u06-l1-e4",
+          "type": "vf",
+          "notions": [
+            "validation-nettoyage"
+          ],
+          "question": "Une saisie qui passe la validation peut quand même être dangereuse.",
+          "bonne": true,
+          "explication": "« Guns N' Roses » est un nom de groupe valide… et son apostrophe casse une requête collée. On valide ET on nettoie."
+        },
+        {
+          "id": "u06-l1-e5",
+          "type": "qcm",
+          "notions": [
+            "validation-nettoyage"
+          ],
+          "question": "Quelle est la première règle du cours sur les saisies ?",
+          "choix": [
+            "Ne jamais leur faire confiance",
+            "Les afficher le plus vite possible",
+            "Les stocker en majuscules",
+            "Les valider côté client"
+          ],
+          "bonne": 0,
+          "explication": "Une saisie peut toujours être manipulée par une personne attaquante."
+        }
+      ]
+    },
+    {
+      "id": "u06-l2",
+      "titre": "L'injection SQL",
+      "duree": 7,
+      "notions": [
+        "injection-sql"
+      ],
+      "cartes": [
+        {
+          "titre": "Coller une saisie dans le SQL",
+          "texte": "Le code vulnérable du cours fabrique la requête en collant les saisies dedans.",
+          "code": [
+            "$sql = \"INSERT INTO users (email, password) VALUES ('$email', '$password')\";",
+            "$pdo->exec($sql);",
+            ""
+          ],
+          "executable": false,
+          "fiche": "injection-sql"
+        },
+        {
+          "titre": "L'attaque, pour de vrai",
+          "texte": "Exécute : le mot de passe ferme la requête, en ajoute une autre, et met le reste en commentaire. La table disparaît.",
+          "code": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->exec(\"CREATE TABLE users (email TEXT, password TEXT)\");",
+            "",
+            "$email = \"me@example.com\";",
+            "$password = \"'); DROP TABLE users; --\";",
+            "",
+            "$sql = \"INSERT INTO users (email, password) VALUES ('$email', '$password')\";",
+            "echo $sql . \"<br>\";",
+            "$pdo->exec($sql);",
+            "",
+            "$tables = $pdo->query(\"SELECT name FROM sqlite_master WHERE type = 'table'\")->fetchAll();",
+            "echo \"Tables restantes : \" . count($tables);"
+          ],
+          "analogie": "L'utilisateur n'a pas rempli une case : il a écrit directement sur l'ordre donné à la base."
+        },
+        {
+          "titre": "Lire la requête piégée",
+          "texte": "`INSERT … VALUES ('me@example.com', ''); DROP TABLE users; --')` : le `;` sépare deux instructions, le `--` commente la fin. Résultat : une insertion, puis la suppression de la table.",
+          "piege": "D'autres injections permettent de modifier des données ou d'en extraire (fuite de données)."
+        },
+        {
+          "titre": "La même chose, préparée",
+          "texte": "Avec des paramètres, la saisie reste une donnée. La table est intacte, le « mot de passe » est enregistré tel quel.",
+          "code": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->exec(\"CREATE TABLE users (email TEXT, password TEXT)\");",
+            "",
+            "$stmt = $pdo->prepare(\"INSERT INTO users (email, password) VALUES (:email, :password)\");",
+            "$stmt->bindValue(':email', \"me@example.com\");",
+            "$stmt->bindValue(':password', \"'); DROP TABLE users; --\");",
+            "$stmt->execute();",
+            "",
+            "echo \"Mot de passe enregistré : \" . $pdo->query(\"SELECT password FROM users\")->fetchColumn();",
+            ""
+          ]
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u06-l2-e1",
+          "type": "pointer-code",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Dans la requête piégée, touche la partie qui supprime la table.",
+          "code": "INSERT INTO users (email, password) VALUES ('me@example.com', '');⟦ DROP TABLE users;⟧ --')",
+          "explication": "Après le `;`, une seconde instruction : `DROP TABLE users`."
+        },
+        {
+          "id": "u06-l2-e2",
+          "type": "qcm",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Dans `'); DROP TABLE users; --`, à quoi sert `--` ?",
+          "choix": [
+            "À mettre en commentaire la fin de la requête d'origine",
+            "À soustraire deux valeurs",
+            "À fermer la table",
+            "À séparer deux requêtes"
+          ],
+          "bonne": 0,
+          "explication": "Le `;` sépare les instructions ; `--` neutralise ce qui reste (`')`), pour que la requête reste valide."
+        },
+        {
+          "id": "u06-l2-e3",
+          "type": "ecrire",
+          "notions": [
+            "injection-sql",
+            "pdo"
+          ],
+          "question": "Écris `findUser(PDO $pdo, string $email): ?array` qui retourne la ligne (`id`, `email`) de l'utilisateur, ou `null` s'il n'existe pas. Elle doit résister à l'injection : avec l'e-mail `' OR '1'='1`, personne n'est trouvé.",
+          "prelude": [
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->exec(\"CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL UNIQUE, password TEXT NOT NULL)\");",
+            "$pdo->exec(\"INSERT INTO users (email, password) VALUES ('ana@example.com', 'x'), ('leo@example.com', 'y')\");"
+          ],
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Ana existe",
+                "code": "return findUser($pdo, 'ana@example.com');",
+                "attendu": {
+                  "id": 1,
+                  "email": "ana@example.com"
+                }
+              },
+              {
+                "titre": "Inconnu",
+                "code": "return findUser($pdo, 'zoe@example.com');",
+                "attendu": null
+              },
+              {
+                "titre": "Tentative d'injection",
+                "code": "return findUser($pdo, \"' OR '1'='1\");",
+                "attendu": null,
+                "siEchec": "Avec une variable collée dans le SQL, `' OR '1'='1` rend la condition toujours vraie : tout le monde est trouvé. Utilise un paramètre `:email`."
+              },
+              {
+                "titre": "Apostrophe dans l'e-mail",
+                "code": "return findUser($pdo, \"o'neil@example.com\");",
+                "attendu": null
+              }
+            ],
+            "obligatoire": [
+              "->prepare",
+              "->bindValue"
+            ]
+          },
+          "indices": [
+            "Une requête `SELECT id, email FROM users WHERE email = :email`.",
+            "`prepare`, `bindValue`, `execute`, puis `fetch(PDO::FETCH_ASSOC)` : il donne `false` si aucune ligne.",
+            {
+              "texte": "La fin :",
+              "code": "$user = $stmt->fetch(PDO::FETCH_ASSOC);\nreturn $user === false ? ___ : $user;"
+            }
+          ],
+          "solution": [
+            "function findUser(PDO $pdo, string $email): ?array {",
+            "    $stmt = $pdo->prepare(\"SELECT id, email FROM users WHERE email = :email\");",
+            "    $stmt->bindValue(':email', $email);",
+            "    $stmt->execute();",
+            "    $user = $stmt->fetch(PDO::FETCH_ASSOC);",
+            "    return $user === false ? null : $user;",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function findUser(PDO $pdo, string $email): ?array {\n    $stmt = $pdo->query(\"SELECT id, email FROM users WHERE email = '$email'\");\n    $user = $stmt->fetch(PDO::FETCH_ASSOC);\n    return $user === false ? null : $user;\n}",
+              "attendu": "echec",
+              "diagnostic": "sql-concat"
+            },
+            {
+              "code": "function findUser(PDO $pdo, string $email): ?array {\n    $stmt = $pdo->prepare(\"SELECT id, email FROM users WHERE email = :email\");\n    $stmt->bindValue(':email', $email);\n    $stmt->execute();\n    $user = $stmt->fetch(PDO::FETCH_ASSOC);\n    return $user;\n}",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Avec `' OR '1'='1` collé, la condition devient toujours vraie : l'attaquant se connecterait sans connaître d'e-mail. Le paramètre `:email` empêche cela."
+        },
+        {
+          "id": "u06-l2-e4",
+          "type": "bug",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Une seule ligne ouvre la porte à l'injection SQL. Laquelle ?",
+          "code": [
+            "$name = $_POST[\"name\"];",
+            "$stmt = $pdo->prepare(\"SELECT * FROM products WHERE name = :name\");",
+            "$stmt->bindValue(':name', $name);",
+            "$stmt->execute();",
+            "$log = $pdo->exec(\"INSERT INTO logs (search) VALUES ('$name')\");",
+            ""
+          ],
+          "ligne": 5,
+          "choix": [
+            "La saisie est collée dans le SQL du journal (logs)",
+            "`bindValue` est mal utilisé ligne 3",
+            "La ligne 2 devrait utiliser `query`",
+            "`$_POST` est interdit ligne 1"
+          ],
+          "bonne": 0,
+          "explication": "La recherche est bien préparée, mais le journal colle `$name` dans une requête : la faille est là."
+        },
+        {
+          "id": "u06-l2-e5",
+          "type": "vf",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Le cours recommande les requêtes préparées même pour `CREATE TABLE`, qui ne contient aucune saisie.",
+          "bonne": true,
+          "explication": "Par habitude : toutes les requêtes passent par `prepare`, sans exception."
+        },
+        {
+          "id": "u06-l2-e6",
+          "type": "qcm",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Que permet une injection SQL ?",
+          "choix": [
+            "Fuite, modification ou suppression de données",
+            "Uniquement d'afficher un message",
+            "Uniquement de ralentir le site",
+            "Rien si le site est en HTTPS"
+          ],
+          "bonne": 0,
+          "explication": "La personne attaquante écrit du SQL : elle peut lire, modifier ou supprimer."
+        }
+      ]
+    },
+    {
+      "id": "u06-l3",
+      "titre": "Les attaques XSS",
+      "duree": 6,
+      "notions": [
+        "xss"
+      ],
+      "cartes": [
+        {
+          "titre": "Du JavaScript glissé dans une saisie",
+          "texte": "XSS (Cross-Site Scripting) : une saisie affichée sans précaution peut contenir une balise `<script>`. Le navigateur de chaque visiteur l'exécute.",
+          "code": [
+            "<?php $email = '<script>alert(\"Vous avez été piraté !\");</script>'; ?>",
+            "<ul>",
+            "    <li><?= $email ?></li>",
+            "</ul>",
+            ""
+          ],
+          "apres": "Regarde ce que reçoit le navigateur : une vraie balise `<script>`. (L'aperçu de l'appli n'exécute jamais de script.)",
+          "fiche": "xss"
+        },
+        {
+          "titre": "Les risques",
+          "texte": "Ici, une simple boîte de dialogue. Mais un script peut voler des cookies de session, rediriger vers un site malveillant ou agir à la place de l'utilisateur."
+        },
+        {
+          "titre": "La vitrine : htmlspecialchars",
+          "texte": "Échappée, la saisie s'affiche comme du texte : on la voit, elle ne s'exécute pas.",
+          "code": [
+            "<?php $email = '<script>alert(\"Vous avez été piraté !\");</script>'; ?>",
+            "<ul>",
+            "    <li><?= htmlspecialchars($email) ?></li>",
+            "</ul>",
+            ""
+          ],
+          "analogie": "Sous verre, dans la vitrine : on voit l'objet, on ne peut pas s'en servir."
+        },
+        {
+          "titre": "Partout où une donnée entre dans le HTML",
+          "texte": "Texte d'un paragraphe, attribut `value`, titre, liste… Et même une donnée lue dans ta propre base : quelqu'un a pu l'y enregistrer.",
+          "piege": "On échappe à l'**affichage**. Pas besoin de « nettoyer » la donnée avant de l'enregistrer : la requête préparée s'en charge."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u06-l3-e1",
+          "type": "qcm",
+          "notions": [
+            "xss"
+          ],
+          "question": "Que signifie XSS ?",
+          "choix": [
+            "Cross-Site Scripting",
+            "eXtra Secure Server",
+            "XML Style Sheet",
+            "Cross-Server SQL"
+          ],
+          "bonne": 0,
+          "explication": "Injection de script dans une page vue par d'autres."
+        },
+        {
+          "id": "u06-l3-e2",
+          "type": "corriger",
+          "notions": [
+            "xss"
+          ],
+          "question": "Ce livre d'or affiche les commentaires tels quels. Corrige l'affichage (rien d'autre).",
+          "donnees": {
+            "comments": [
+              "Super site !",
+              "<script>alert('XSS')</script>",
+              "Tom & Jerry"
+            ]
+          },
+          "depart": [
+            "<ul>",
+            "    <?php foreach ($comments as $comment) { ?>",
+            "        <li><?= $comment ?></li>",
+            "    <?php } ?>",
+            "</ul>",
+            ""
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "Commentaires du livre d'or",
+                "contient": [
+                  "<li>Super site !</li>",
+                  "&lt;script&gt;",
+                  "Tom &amp; Jerry"
+                ],
+                "neContientPas": [
+                  "<script>"
+                ]
+              },
+              {
+                "titre": "Autres commentaires",
+                "donnees": {
+                  "comments": [
+                    "<b>gras</b>"
+                  ]
+                },
+                "contient": [
+                  "&lt;b&gt;gras&lt;/b&gt;"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Quelle fonction met une saisie « en vitrine » ?",
+            "Entoure `$comment` de cette fonction, dans le `<?= … ?>`."
+          ],
+          "solution": [
+            "<ul>",
+            "    <?php foreach ($comments as $comment) { ?>",
+            "        <li><?= htmlspecialchars($comment) ?></li>",
+            "    <?php } ?>",
+            "</ul>",
+            ""
+          ],
+          "erreursTypiques": [
+            {
+              "code": "<ul>\n    <?php foreach ($comments as $comment) { ?>\n        <li><?= $comment ?></li>\n    <?php } ?>\n</ul>",
+              "attendu": "echec"
+            },
+            {
+              "code": "<ul>\n    <?php foreach ($comments as $comment) { ?>\n        <li><?= strip_tags($comment) ?></li>\n    <?php } ?>\n</ul>",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`htmlspecialchars` transforme `<` en `&lt;` et `&` en `&amp;` : tout s'affiche, rien ne s'exécute."
+        },
+        {
+          "id": "u06-l3-e3",
+          "type": "vf",
+          "notions": [
+            "xss"
+          ],
+          "question": "Une donnée lue dans notre propre base de données peut être affichée sans `htmlspecialchars`.",
+          "bonne": false,
+          "explication": "Elle a pu être saisie par un attaquant : on échappe tout ce qu'on affiche."
+        },
+        {
+          "id": "u06-l3-e4",
+          "type": "pointer-code",
+          "notions": [
+            "xss"
+          ],
+          "question": "Touche l'endroit où une saisie est affichée sans être échappée.",
+          "code": [
+            "<h1><?= htmlspecialchars($title) ?></h1>",
+            "<input type=\"text\" name=\"city\" value=\"⟦<?= $city ?>⟧\">",
+            "<p><?= htmlspecialchars($message) ?></p>",
+            ""
+          ],
+          "explication": "Dans un attribut aussi : un `\"` dans `$city` fermerait l'attribut et permettrait d'ajouter du code."
+        },
+        {
+          "id": "u06-l3-e5",
+          "type": "qcm",
+          "notions": [
+            "xss"
+          ],
+          "question": "Qu'est-ce qu'un attaquant peut faire avec une faille XSS, selon le cours ?",
+          "choix": [
+            "Voler des cookies de session ou rediriger vers un site malveillant",
+            "Supprimer une table SQL directement",
+            "Lire les fichiers PHP du serveur",
+            "Éteindre le serveur"
+          ],
+          "bonne": 0,
+          "explication": "Le script s'exécute dans le navigateur des visiteurs."
+        }
+      ]
+    },
+    {
+      "id": "u06-l4",
+      "titre": "Se protéger : préparer et échapper",
+      "duree": 7,
+      "notions": [
+        "injection-sql",
+        "xss",
+        "ethique-securite"
+      ],
+      "cartes": [
+        {
+          "titre": "Deux attaques, deux remèdes",
+          "texte": "Pour la **base** : la requête préparée (la donnée dans sa case). Pour l'**affichage** : `htmlspecialchars` (la donnée en vitrine). Les deux, toujours.",
+          "fiche": "injection-sql"
+        },
+        {
+          "titre": "Le diff du cours",
+          "texte": "Remplacer `'$email'` par `:email`, `prepare`, `bindValue`, `execute` ; et `<?= $user[\"email\"] ?>` par `<?= htmlspecialchars($user[\"email\"]) ?>`.",
+          "code": [
+            "// Avant (vulnérable)",
+            "$sql = \"INSERT INTO users (email, password) VALUES ('$email', '$password')\";",
+            "$pdo->exec($sql);",
+            "",
+            "// Après (sûr)",
+            "$sql = \"INSERT INTO users (email, password) VALUES (:email, :password)\";",
+            "$stmt = $pdo->prepare($sql);",
+            "$stmt->bindValue(':email', $email);",
+            "$stmt->bindValue(':password', $password);",
+            "$stmt->execute();",
+            ""
+          ],
+          "executable": false
+        },
+        {
+          "titre": "La responsabilité",
+          "texte": "Une faille peut coûter des données… et engager ta responsabilité. On s'entraîne sur des applications de test, jamais sur un vrai site sans autorisation explicite. Une faille trouvée se signale à la personne responsable.",
+          "fiche": "ethique-securite"
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u06-l4-e1",
+          "type": "ecrire",
+          "notions": [
+            "injection-sql",
+            "xss"
+          ],
+          "question": "Écris la page d'un livre d'or : une table `comments (author, message)` en mémoire ; à l'envoi (POST), enregistre `author` et `message` avec une requête préparée si l'auteur a au moins 2 caractères et que le message n'est pas vide ; puis affiche une liste `<li>auteur : message</li>`, échappée.",
+          "depart": [
+            "<?php",
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->exec(\"CREATE TABLE comments (author TEXT NOT NULL, message TEXT NOT NULL)\");",
+            ""
+          ],
+          "requete": {
+            "methode": "POST",
+            "post": {
+              "author": "Ana",
+              "message": "Bravo !"
+            }
+          },
+          "tests": {
+            "cas": [
+              {
+                "titre": "Un commentaire",
+                "requete": {
+                  "methode": "POST",
+                  "post": {
+                    "author": "Ana",
+                    "message": "Bravo !"
+                  }
+                },
+                "contient": [
+                  "<li>Ana : Bravo !</li>"
+                ]
+              },
+              {
+                "titre": "Script dans le message",
+                "requete": {
+                  "methode": "POST",
+                  "post": {
+                    "author": "Eve",
+                    "message": "<script>alert(1)</script>"
+                  }
+                },
+                "contient": [
+                  "&lt;script&gt;alert(1)&lt;/script&gt;"
+                ],
+                "neContientPas": [
+                  "<script>"
+                ]
+              },
+              {
+                "titre": "Apostrophes",
+                "requete": {
+                  "methode": "POST",
+                  "post": {
+                    "author": "O'Neil",
+                    "message": "C'est top"
+                  }
+                },
+                "contient": [
+                  "O&#039;Neil : C&#039;est top"
+                ]
+              },
+              {
+                "titre": "Injection",
+                "requete": {
+                  "methode": "POST",
+                  "post": {
+                    "author": "Mallory",
+                    "message": "'); DROP TABLE comments; --"
+                  }
+                },
+                "code": "return $pdo->query(\"SELECT COUNT(*) FROM comments\")->fetchColumn();",
+                "attendu": 1
+              },
+              {
+                "titre": "Auteur trop court : refusé",
+                "requete": {
+                  "methode": "POST",
+                  "post": {
+                    "author": "A",
+                    "message": "Coucou"
+                  }
+                },
+                "code": "return $pdo->query(\"SELECT COUNT(*) FROM comments\")->fetchColumn();",
+                "attendu": 0
+              },
+              {
+                "titre": "Première visite",
+                "requete": {
+                  "methode": "GET"
+                },
+                "contient": [
+                  "<ul>"
+                ]
+              }
+            ],
+            "obligatoire": [
+              "->prepare",
+              "htmlspecialchars"
+            ]
+          },
+          "indices": [
+            "En haut : si POST, lis les deux champs (avec `?? \"\"`), valide, puis `prepare` / `bindValue` / `execute`.",
+            "Ensuite, lis tous les commentaires et affiche-les dans une boucle, chaque valeur passée à `htmlspecialchars`.",
+            {
+              "texte": "L'affichage :",
+              "code": "<?php foreach ($comments as $comment) { ?>\n    <li><?= ___ ?> : <?= ___ ?></li>\n<?php } ?>"
+            }
+          ],
+          "solution": [
+            "<?php",
+            "$pdo = new PDO(\"sqlite::memory:\");",
+            "$pdo->exec(\"CREATE TABLE comments (author TEXT NOT NULL, message TEXT NOT NULL)\");",
+            "",
+            "if ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {",
+            "    $author = $_POST[\"author\"] ?? \"\";",
+            "    $message = $_POST[\"message\"] ?? \"\";",
+            "    if (strlen($author) >= 2 && $message !== \"\") {",
+            "        $stmt = $pdo->prepare(\"INSERT INTO comments (author, message) VALUES (:author, :message)\");",
+            "        $stmt->bindValue(':author', $author);",
+            "        $stmt->bindValue(':message', $message);",
+            "        $stmt->execute();",
+            "    }",
+            "}",
+            "",
+            "$comments = $pdo->query(\"SELECT author, message FROM comments\")->fetchAll();",
+            "?>",
+            "<ul>",
+            "    <?php foreach ($comments as $comment) { ?>",
+            "        <li><?= htmlspecialchars($comment[\"author\"]) ?> : <?= htmlspecialchars($comment[\"message\"]) ?></li>",
+            "    <?php } ?>",
+            "</ul>"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "<?php\n$pdo = new PDO(\"sqlite::memory:\");\n$pdo->exec(\"CREATE TABLE comments (author TEXT NOT NULL, message TEXT NOT NULL)\");\n\nif ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {\n    $author = $_POST[\"author\"] ?? \"\";\n    $message = $_POST[\"message\"] ?? \"\";\n    if (strlen($author) >= 2 && $message !== \"\") {\n        $pdo->exec(\"INSERT INTO comments (author, message) VALUES ('$author', '$message')\");\n    }\n}\n\n$comments = $pdo->query(\"SELECT author, message FROM comments\")->fetchAll();\n?>\n<ul>\n    <?php foreach ($comments as $comment) { ?>\n        <li><?= htmlspecialchars($comment[\"author\"]) ?> : <?= htmlspecialchars($comment[\"message\"]) ?></li>\n    <?php } ?>\n</ul>",
+              "attendu": "echec"
+            },
+            {
+              "code": "<?php\n$pdo = new PDO(\"sqlite::memory:\");\n$pdo->exec(\"CREATE TABLE comments (author TEXT NOT NULL, message TEXT NOT NULL)\");\n\nif ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {\n    $author = $_POST[\"author\"] ?? \"\";\n    $message = $_POST[\"message\"] ?? \"\";\n    if (strlen($author) >= 2 && $message !== \"\") {\n        $stmt = $pdo->prepare(\"INSERT INTO comments (author, message) VALUES (:author, :message)\");\n        $stmt->bindValue(':author', $author);\n        $stmt->bindValue(':message', $message);\n        $stmt->execute();\n    }\n}\n\n$comments = $pdo->query(\"SELECT author, message FROM comments\")->fetchAll();\n?>\n<ul>\n    <?php foreach ($comments as $comment) { ?>\n        <li><?= htmlspecialchars($comment[\"author\"]) ?> : <?= $comment[\"message\"] ?></li>\n    <?php } ?>\n</ul>",
+              "attendu": "echec"
+            }
+          ],
+          "explication": "Les deux protections ensemble : préparée pour entrer dans la base, échappée pour en sortir vers la page."
+        },
+        {
+          "id": "u06-l4-e2",
+          "type": "tri",
+          "notions": [
+            "injection-sql",
+            "xss"
+          ],
+          "question": "Contre quelle attaque protège chaque pratique ?",
+          "categories": [
+            "Injection SQL",
+            "XSS"
+          ],
+          "items": [
+            [
+              "$pdo->prepare(\"… :email …\")",
+              0
+            ],
+            [
+              "htmlspecialchars($comment)",
+              1
+            ],
+            [
+              "$stmt->bindValue(':email', $email)",
+              0
+            ],
+            [
+              "value=\"<?= htmlspecialchars($name) ?>\"",
+              1
+            ]
+          ],
+          "mono": true,
+          "explication": "Préparer pour la base ; échapper pour la page."
+        },
+        {
+          "id": "u06-l4-e3",
+          "type": "qcm",
+          "notions": [
+            "ethique-securite"
+          ],
+          "question": "Tu découvres une faille XSS sur le site d'une association. Que recommande le cours ?",
+          "choix": [
+            "La signaler à la personne responsable, sans l'exploiter",
+            "La tester à fond pour voir jusqu'où elle va",
+            "La publier sur les réseaux sociaux",
+            "Ne rien dire"
+          ],
+          "bonne": 0,
+          "explication": "On ne teste pas une application réelle sans autorisation, et on signale la faille pour qu'elle soit corrigée."
+        },
+        {
+          "id": "u06-l4-e4",
+          "type": "vf",
+          "notions": [
+            "ethique-securite"
+          ],
+          "question": "On peut tester l'injection SQL sur n'importe quel site, tant qu'on ne casse rien.",
+          "bonne": false,
+          "explication": "Jamais sans l'autorisation explicite de l'entreprise ou de la personne responsable : tu pourrais en être tenu·e responsable."
+        },
+        {
+          "id": "u06-l4-e5",
+          "type": "parsons",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Reconstitue l'insertion sûre.",
+          "lignes": [
+            "$sql = \"INSERT INTO users (email, password) VALUES (:email, :password)\";",
+            "$stmt = $pdo->prepare($sql);",
+            "$stmt->bindValue(':email', $email);",
+            "$stmt->bindValue(':password', $password);",
+            "$stmt->execute();"
+          ],
+          "distracteurs": [
+            "$sql = \"INSERT INTO users (email, password) VALUES ('$email', '$password')\";",
+            "$pdo->exec($sql);"
+          ],
+          "explication": "Paramètres, préparation, liaison, exécution."
+        }
+      ]
+    }
+  ],
+  "jeux": [
+    {
+      "id": "u06-sur-ou-pas",
+      "titre": "Sûr ou dangereux ?",
+      "description": "Dix lignes de code : protégées ou vulnérables ?",
+      "tours": 10,
+      "questions": [
+        {
+          "id": "u06-j1",
+          "type": "vf",
+          "notions": [
+            "xss"
+          ],
+          "question": "Sûr ? `<p><?= htmlspecialchars($_POST[\"bio\"]) ?></p>`",
+          "bonne": true,
+          "explication": "La saisie est échappée à l'affichage."
+        },
+        {
+          "id": "u06-j2",
+          "type": "vf",
+          "notions": [
+            "xss"
+          ],
+          "question": "Sûr ? `<p><?= $_POST[\"bio\"] ?></p>`",
+          "bonne": false,
+          "explication": "Affichée telle quelle : XSS."
+        },
+        {
+          "id": "u06-j3",
+          "type": "vf",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Sûr ? `$pdo->query(\"SELECT * FROM users WHERE id = $id\")`",
+          "bonne": false,
+          "explication": "La variable est collée dans le SQL."
+        },
+        {
+          "id": "u06-j4",
+          "type": "vf",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Sûr ? `$stmt = $pdo->prepare(\"DELETE FROM users WHERE id = :id\"); $stmt->bindValue(':id', $id);`",
+          "bonne": true,
+          "explication": "Paramètre lié : la donnée reste dans sa case."
+        },
+        {
+          "id": "u06-j5",
+          "type": "vf",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Sûr ? `$pdo->prepare(\"SELECT * FROM users WHERE email = '$email'\")`",
+          "bonne": false,
+          "explication": "`prepare` sans paramètre ne protège rien."
+        },
+        {
+          "id": "u06-j6",
+          "type": "vf",
+          "notions": [
+            "xss"
+          ],
+          "question": "Sûr ? `<input value=\"<?= $name ?>\">`",
+          "bonne": false,
+          "explication": "Un `\"` dans `$name` ferme l'attribut : il faut `htmlspecialchars`."
+        },
+        {
+          "id": "u06-j7",
+          "type": "vf",
+          "notions": [
+            "xss"
+          ],
+          "question": "Sûr ? `<title><?= htmlspecialchars($title ?? 'Accueil') ?></title>`",
+          "bonne": true,
+          "explication": "Valeur par défaut et échappement."
+        },
+        {
+          "id": "u06-j8",
+          "type": "vf",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Sûr ? `$stmt->execute([':name' => $_POST['name']])` avec `… VALUES (:name)`",
+          "bonne": true,
+          "explication": "`execute([...])` lie aussi les valeurs."
+        },
+        {
+          "id": "u06-j9",
+          "type": "vf",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Sûr ? `$pdo->exec(\"INSERT INTO logs (msg) VALUES ('\" . $msg . \"')\")`",
+          "bonne": false,
+          "explication": "Concaténation dans le SQL : vulnérable."
+        },
+        {
+          "id": "u06-j10",
+          "type": "vf",
+          "notions": [
+            "xss"
+          ],
+          "question": "Sûr ? `<li><?= htmlspecialchars($row[\"band_name\"]) ?></li>` (donnée lue dans la base)",
+          "bonne": true,
+          "explication": "Même lue dans la base, la donnée est échappée."
+        },
+        {
+          "id": "u06-j11",
+          "type": "vf",
+          "notions": [
+            "validation-nettoyage"
+          ],
+          "question": "Vrai ? `htmlspecialchars` transforme `&` en `&amp;`.",
+          "bonne": true,
+          "explication": "Comme `<` en `&lt;` et `>` en `&gt;`."
+        },
+        {
+          "id": "u06-j12",
+          "type": "vf",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Vrai ? Dans une injection SQL, `;` sépare deux instructions.",
+          "bonne": true,
+          "explication": "Et `--` met la suite en commentaire."
+        }
+      ]
+    }
+  ],
+  "quiz": {
+    "titre": "Quiz : sécurité et nettoyage des saisies",
+    "questions": [
+      {
+        "id": "u06-q1",
+        "type": "qcm",
+        "notions": [
+          "validation-nettoyage"
+        ],
+        "question": "Quelle est la différence entre valider et nettoyer ?",
+        "choix": [
+          "Valider vérifie des règles (et refuse) ; nettoyer supprime ou échappe les caractères spéciaux",
+          "C'est la même chose",
+          "Valider se fait côté client, nettoyer côté serveur",
+          "Nettoyer supprime la saisie entière"
+        ],
+        "bonne": 0,
+        "explication": "Deux étapes complémentaires."
+      },
+      {
+        "id": "u06-q2",
+        "type": "predire",
+        "notions": [
+          "validation-nettoyage"
+        ],
+        "question": "Qu'envoie ce code au navigateur ?",
+        "code": [
+          "echo htmlspecialchars(\"<i>Tom & Lou</i>\");"
+        ],
+        "explication": "`<` → `&lt;`, `>` → `&gt;`, `&` → `&amp;`."
+      },
+      {
+        "id": "u06-q3",
+        "type": "qcm",
+        "notions": [
+          "injection-sql"
+        ],
+        "question": "Le mot de passe `'); DROP TABLE users; --` est collé dans un INSERT exécuté avec `exec`. Résultat ?",
+        "choix": [
+          "Un utilisateur est inséré, puis la table users est supprimée",
+          "Le mot de passe est enregistré tel quel",
+          "PHP refuse la requête",
+          "Seule la table est supprimée, sans insertion"
+        ],
+        "bonne": 0,
+        "explication": "Deux instructions : l'insertion, puis `DROP TABLE users`."
+      },
+      {
+        "id": "u06-q4",
+        "type": "bug",
+        "notions": [
+          "injection-sql"
+        ],
+        "question": "Touche la ligne vulnérable.",
+        "code": [
+          "$bandName = $_POST[\"band-name\"];",
+          "$sql = \"INSERT INTO favorite_artists (band_name) VALUES ('$bandName')\";",
+          "$pdo->exec($sql);",
+          ""
+        ],
+        "ligne": 2,
+        "choix": [
+          "La saisie est collée dans la requête SQL",
+          "`$_POST` doit s'écrire `$_GET`",
+          "La table n'existe pas",
+          "Il manque htmlspecialchars"
+        ],
+        "bonne": 0,
+        "explication": "Il faut un paramètre `:bandName`, puis `prepare`, `bindValue`, `execute`."
+      },
+      {
+        "id": "u06-q5",
+        "type": "trous",
+        "notions": [
+          "injection-sql"
+        ],
+        "question": "Complète la version sûre.",
+        "prelude": [
+          "$pdo = new PDO(\"sqlite::memory:\");",
+          "$pdo->exec(\"CREATE TABLE favorite_artists (band_name TEXT)\");",
+          "$bandName = \"'); DROP TABLE favorite_artists; --\";"
+        ],
+        "code": [
+          "$stmt = $pdo->___(\"INSERT INTO favorite_artists (band_name) VALUES (:bandName)\");",
+          "$stmt->bindValue(___, $bandName);",
+          "$stmt->execute();",
+          "echo $pdo->query(\"SELECT band_name FROM favorite_artists\")->fetchColumn();",
+          ""
+        ],
+        "solution": [
+          "prepare",
+          "':bandName'"
+        ],
+        "tests": {
+          "cas": [
+            {
+              "sortie": [
+                "'); DROP TABLE favorite_artists; --"
+              ]
+            }
+          ]
+        },
+        "indices": [
+          "La méthode qui prépare.",
+          "Le nom du paramètre, avec ses deux-points, entre guillemets."
+        ],
+        "erreursTypiques": [
+          {
+            "trous": [
+              "prepare",
+              "':band_name'"
+            ],
+            "attendu": "erreur",
+            "diagnostic": "sql-parametres"
+          },
+          {
+            "trous": [
+              "query",
+              "':bandName'"
+            ],
+            "attendu": "echec"
+          }
+        ],
+        "explication": "Le texte piégé est enregistré tel quel : la table reste intacte."
+      },
+      {
+        "id": "u06-q6",
+        "type": "qcm",
+        "notions": [
+          "xss"
+        ],
+        "question": "Que fait une attaque XSS ?",
+        "choix": [
+          "Elle injecte du code JavaScript exécuté dans le navigateur des visiteurs",
+          "Elle supprime la base de données",
+          "Elle remplace le serveur",
+          "Elle bloque l'envoi des formulaires"
+        ],
+        "bonne": 0,
+        "explication": "Le script s'exécute côté client, chez chaque visiteur de la page."
+      },
+      {
+        "id": "u06-q7",
+        "type": "vf",
+        "notions": [
+          "xss"
+        ],
+        "question": "Pour se protéger du XSS, on échappe les données au moment de les afficher.",
+        "bonne": true,
+        "explication": "Avec `htmlspecialchars()`."
+      },
+      {
+        "id": "u06-q8",
+        "type": "tri",
+        "notions": [
+          "injection-sql",
+          "xss"
+        ],
+        "question": "Quelle faille ?",
+        "categories": [
+          "Injection SQL",
+          "XSS"
+        ],
+        "items": [
+          [
+            "<li><?= $row[\"name\"] ?></li>",
+            1
+          ],
+          [
+            "\"WHERE email = '$email'\"",
+            0
+          ],
+          [
+            "echo $_GET[\"q\"];",
+            1
+          ],
+          [
+            "$pdo->exec(\"DELETE FROM t WHERE id = $id\")",
+            0
+          ]
+        ],
+        "mono": true,
+        "explication": "Collé dans le SQL : injection. Affiché tel quel : XSS."
+      },
+      {
+        "id": "u06-q9",
+        "type": "qcm",
+        "notions": [
+          "injection-sql"
+        ],
+        "question": "Pourquoi utiliser une requête préparée même pour `CREATE TABLE` ?",
+        "choix": [
+          "Par bonne pratique : toutes les requêtes passent par prepare",
+          "Parce que CREATE TABLE contient des saisies",
+          "Parce que exec n'existe pas",
+          "Pour créer la table plus vite"
+        ],
+        "bonne": 0,
+        "explication": "Le cours le recommande pour garantir qu'aucune injection ne puisse se produire."
+      },
+      {
+        "id": "u06-q10",
+        "type": "corriger",
+        "notions": [
+          "xss"
+        ],
+        "question": "Corrige l'affichage de la recherche.",
+        "requete": {
+          "methode": "GET"
+        },
+        "donnees": {
+          "q": "<img src=x onerror=alert(1)>"
+        },
+        "depart": [
+          "echo \"Résultats pour : \" . $q;"
+        ],
+        "tests": {
+          "cas": [
+            {
+              "titre": "Recherche piégée",
+              "contient": [
+                "&lt;img src=x onerror=alert(1)&gt;"
+              ],
+              "neContientPas": [
+                "<img"
+              ]
+            },
+            {
+              "titre": "Recherche normale",
+              "donnees": {
+                "q": "raclette"
+              },
+              "sortie": [
+                "Résultats pour : raclette"
+              ]
+            }
+          ]
+        },
+        "indices": [
+          "La saisie doit passer en vitrine."
+        ],
+        "solution": [
+          "echo \"Résultats pour : \" . htmlspecialchars($q);"
+        ],
+        "erreursTypiques": [
+          {
+            "code": "echo \"Résultats pour : \" . $q;",
+            "attendu": "echec"
+          }
+        ],
+        "explication": "Pas besoin de `<script>` : une image avec `onerror` suffit. `htmlspecialchars` neutralise tout."
+      },
+      {
+        "id": "u06-q11",
+        "type": "qcm",
+        "notions": [
+          "ethique-securite"
+        ],
+        "question": "Que dit le cours sur les tests de sécurité ?",
+        "choix": [
+          "S'entraîner sur des applications de test, jamais sur une vraie application sans autorisation",
+          "Tester tous les sites qu'on visite",
+          "Tester seulement le week-end",
+          "Ne jamais tester la sécurité"
+        ],
+        "bonne": 0,
+        "explication": "Et signaler toute faille trouvée à la personne responsable."
+      },
+      {
+        "id": "u06-q12",
+        "type": "erreurs",
+        "notions": [
+          "injection-sql"
+        ],
+        "question": "Que révèle chaque message ?",
+        "paires": [
+          [
+            "SQLSTATE[HY000]: General error: 1 no such table: users",
+            "La table a disparu… peut-être une injection"
+          ],
+          [
+            "SQLSTATE[HY000]: General error: 1 near \"Neil\": syntax error",
+            "Une apostrophe a cassé une requête collée"
+          ],
+          [
+            "SQLSTATE[HY093]: Invalid parameter number",
+            "Un paramètre :nom n'a pas reçu de valeur"
+          ]
+        ],
+        "explication": "Ces erreurs trahissent souvent une requête fabriquée à la main."
+      },
+      {
+        "id": "u06-q13",
+        "type": "qcm",
+        "notions": [
+          "validation-nettoyage"
+        ],
+        "mono": true,
+        "question": "Quelle fonction PHP échappe les caractères spéciaux du HTML ?",
+        "choix": [
+          "htmlspecialchars",
+          "addslashes",
+          "strip_tags",
+          "trim"
+        ],
+        "bonne": 0,
+        "explication": "C'est celle du cours."
+      },
+      {
+        "id": "u06-q14",
+        "type": "vf",
+        "notions": [
+          "injection-sql"
+        ],
+        "question": "Avec une requête préparée, `'); DROP TABLE users; --` est enregistré comme du texte.",
+        "bonne": true,
+        "explication": "La donnée reste dans sa case."
+      },
+      {
+        "id": "u06-q15",
+        "type": "ecrire",
+        "notions": [
+          "xss"
+        ],
+        "question": "Écris `safeLink(string $url, string $label): string` qui retourne `<a href=\"…\">…</a>` avec l'URL et le libellé échappés.",
+        "depart": [
+          ""
+        ],
+        "tests": {
+          "fonction": "safeLink",
+          "cas": [
+            {
+              "args": [
+                "index.php",
+                "Accueil"
+              ],
+              "attendu": "<a href=\"index.php\">Accueil</a>"
+            },
+            {
+              "titre": "Libellé piégé",
+              "args": [
+                "page.php?a=1&b=2",
+                "<b>Gras</b>"
+              ],
+              "attendu": "<a href=\"page.php?a=1&amp;b=2\">&lt;b&gt;Gras&lt;/b&gt;</a>"
+            },
+            {
+              "titre": "Guillemet dans l'URL",
+              "args": [
+                "x\" onclick=\"alert(1)",
+                "Clic"
+              ],
+              "attendu": "<a href=\"x&quot; onclick=&quot;alert(1)\">Clic</a>"
+            }
+          ]
+        },
+        "indices": [
+          "Deux valeurs à échapper.",
+          "Colle `<a href=\"`, l'URL échappée, `\">`, le libellé échappé, `</a>`.",
+          {
+            "texte": "Presque :",
+            "code": "return '<a href=\"' . ___ . '\">' . ___ . '</a>';"
+          }
+        ],
+        "solution": [
+          "function safeLink(string $url, string $label): string {",
+          "    return '<a href=\"' . htmlspecialchars($url) . '\">' . htmlspecialchars($label) . '</a>';",
+          "}"
+        ],
+        "erreursTypiques": [
+          {
+            "code": "function safeLink(string $url, string $label): string {\n    return '<a href=\"' . $url . '\">' . htmlspecialchars($label) . '</a>';\n}",
+            "attendu": "echec"
+          }
+        ],
+        "explication": "Dans un attribut, le `\"` doit aussi être échappé : sinon il ferme l'attribut et ouvre la porte à `onclick`."
+      },
+      {
+        "id": "u06-q16",
+        "type": "assoc",
+        "notions": [
+          "injection-sql",
+          "xss",
+          "validation-nettoyage"
+        ],
+        "question": "Associe chaque règle d'or à son moment.",
+        "paires": [
+          [
+            "Ne jamais faire confiance",
+            "Toujours"
+          ],
+          [
+            "Valider et filtrer",
+            "À la réception de la saisie"
+          ],
+          [
+            "Requête préparée",
+            "En parlant à la base de données"
+          ],
+          [
+            "Échapper",
+            "En affichant dans la page"
+          ]
+        ],
+        "explication": "Les bonnes pratiques du cours, dans l'ordre du trajet d'une donnée."
+      }
+    ]
+  },
+  "boss": [
+    {
+      "id": "u06-b1",
+      "titre": "Les questions de sécurité",
+      "source": "Séance 5, exercices 1, 2 et 3",
+      "notions": [
+        "injection-sql",
+        "xss",
+        "validation-nettoyage"
+      ],
+      "enonce": "Les trois premiers exercices de la séance sont des questions :\n\n- **Exercice 1** : quels sont les principaux problèmes de sécurité que l'on peut rencontrer lorsque l'on utilise des formulaires HTML ? Quelles sont les solutions pour les éviter ?\n- **Exercice 2** : en quoi consiste le fait d'utiliser des requêtes préparées ? Pourquoi est-ce important ? (Exemple de code : requête préparée et non préparée.)\n- **Exercice 3** : en quoi consiste le fait d'échapper les données affichées à l'écran ? Pourquoi est-ce important ? (Exemple : affichage échappé et non échappé.)\n\nRéponds aux questions qui suivent comme à l'évaluation.",
+      "questions": [
+        {
+          "id": "u06-b1-q1",
+          "type": "assoc",
+          "notions": [
+            "injection-sql",
+            "xss"
+          ],
+          "question": "Exercice 1 : associe chaque problème à sa solution.",
+          "paires": [
+            [
+              "Injection SQL : des données non filtrées insérées dans une requête",
+              "Utiliser des requêtes préparées"
+            ],
+            [
+              "XSS : des données non filtrées affichées dans une page",
+              "Échapper les données avant de les afficher"
+            ]
+          ],
+          "explication": "Les deux problèmes principaux et leurs remèdes, selon le corrigé du cours."
+        },
+        {
+          "id": "u06-b1-q2",
+          "type": "qcm",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Exercice 2 : en quoi consistent les requêtes préparées ?",
+          "choix": [
+            "Elles séparent la logique SQL de la donnée : les valeurs sont liées à des paramètres",
+            "Elles vérifient que les données sont valides",
+            "Elles chiffrent la base de données",
+            "Elles exécutent la requête deux fois"
+          ],
+          "bonne": 0,
+          "explication": "« Elles permettent de séparer la logique SQL de la donnée. »"
+        },
+        {
+          "id": "u06-b1-q3",
+          "type": "pointer-code",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Exercice 2 : dans la version préparée, touche le paramètre nommé qui remplace la variable.",
+          "code": [
+            "$sql = \"SELECT * FROM users WHERE username = ⟦:username⟧ AND password = :password\";",
+            "$stmt = $pdo->prepare($sql);",
+            "$stmt->bindValue(':username', $username);",
+            "$stmt->bindValue(':password', $password);",
+            "$stmt->execute();",
+            ""
+          ],
+          "explication": "Le paramètre `:username` reçoit la valeur avec `bindValue` : la saisie est traitée comme une valeur, pas comme du SQL."
+        },
+        {
+          "id": "u06-b1-q4",
+          "type": "qcm",
+          "notions": [
+            "injection-sql"
+          ],
+          "question": "Exercice 2 : pourquoi la version non préparée `\"… WHERE username = '$username' …\"` est-elle dangereuse ?",
+          "choix": [
+            "Les variables sont concaténées dans la requête : un attaquant peut injecter du SQL",
+            "Elle est plus lente",
+            "Elle ne trouve jamais l'utilisateur",
+            "Elle affiche le mot de passe"
+          ],
+          "bonne": 0,
+          "explication": "La saisie devient une partie du code SQL."
+        },
+        {
+          "id": "u06-b1-q5",
+          "type": "predire",
+          "notions": [
+            "xss",
+            "validation-nettoyage"
+          ],
+          "question": "Exercice 3 : qu'envoie la version échappée au navigateur ?",
+          "code": [
+            "$userInput = \"<script>alert('I can execute JavaScript code')</script>\";",
+            "echo htmlspecialchars($userInput);",
+            ""
+          ],
+          "explication": "`<` → `&lt;`, `>` → `&gt;`, `'` → `&#039;` : le navigateur affiche le texte, sans l'exécuter."
+        },
+        {
+          "id": "u06-b1-q6",
+          "type": "qcm",
+          "notions": [
+            "xss"
+          ],
+          "question": "Exercice 3 : pourquoi échapper les données affichées ?",
+          "choix": [
+            "Pour empêcher l'exécution de code JavaScript malveillant (XSS)",
+            "Pour accélérer l'affichage",
+            "Pour valider l'adresse e-mail",
+            "Pour empêcher les injections SQL"
+          ],
+          "bonne": 0,
+          "explication": "Le code injecté est affiché comme du texte brut et n'est pas exécuté."
+        },
+        {
+          "id": "u06-b1-q7",
+          "type": "tri",
+          "notions": [
+            "injection-sql",
+            "xss"
+          ],
+          "question": "Range ces lignes du corrigé : version dangereuse ou version sûre ?",
+          "categories": [
+            "Dangereuse",
+            "Sûre"
+          ],
+          "items": [
+            [
+              "$result = $pdo->query($sql); (avec '$username' dans $sql)",
+              0
+            ],
+            [
+              "$stmt->bindValue(':username', $username);",
+              1
+            ],
+            [
+              "echo $userInput;",
+              0
+            ],
+            [
+              "echo htmlspecialchars($userInput);",
+              1
+            ]
+          ],
+          "mono": true,
+          "explication": "Les paires « non préparé / préparé » et « non échappé / échappé » du corrigé."
+        }
+      ]
+    },
+    {
+      "id": "u06-b2",
+      "titre": "Les artistes favori·tes",
+      "source": "Séance 5, exercice 4",
+      "notions": [
+        "injection-sql",
+        "xss",
+        "validation-nettoyage"
+      ],
+      "enonce": "Une connaissance passionnée de musique a écrit une petite application PHP qui lui permet de sauver ses artistes favori·tes. L'application fonctionne très bien, mais a un comportement inattendu pour certain·es artistes. Voici la liste qu'elle a essayé d'ajouter :\n\n- `2Pac`\n- `The Notorious B.I.G.`\n- `Eminem`\n- `Missy Elliott`\n- `<script>alert(\"I <3 JavaScript\")</script>`\n- `'); DROP TABLE favorite_artists; --`\n\nElle vous a demandé de l'aide pour corriger le problème. Que pouvez-vous dire de son code ? Proposez une version corrigée du code PHP qu'elle vous a partagé (ci-dessous).\n\n*Pour l'appli : un nom vide ne doit pas être enregistré.*",
+      "depart": [
+        "<?php",
+        "// Fichier favorite-artists.php",
+        "",
+        "// Constante pour le fichier de base de données SQLite",
+        "const DATABASE_FILE = __DIR__ . \"/favorite-artists.db\";",
+        "",
+        "// Connexion à la base de données",
+        "$pdo = new PDO(\"sqlite:\" . DATABASE_FILE);",
+        "",
+        "// Création d'une table `favorite_artists`",
+        "$sql = \"CREATE TABLE IF NOT EXISTS favorite_artists (",
+        "    id INTEGER PRIMARY KEY AUTOINCREMENT,",
+        "    band_name TEXT NOT NULL",
+        ")\";",
+        "",
+        "// On exécute la requête SQL pour créer la table",
+        "$pdo->exec($sql);",
+        "",
+        "// Gère la soumission du formulaire",
+        "if ($_SERVER[\"REQUEST_METHOD\"] == \"POST\") {",
+        "    // On récupère les données du formulaire",
+        "    $bandName = $_POST[\"band-name\"];",
+        "",
+        "    // On prépare la requête SQL pour ajouter un.e artiste favori.te",
+        "    $sql = \"INSERT INTO favorite_artists (band_name) VALUES ('$bandName')\";",
+        "",
+        "    // On exécute la requête SQL pour ajouter l'artiste favori.te",
+        "    $pdo->exec($sql);",
+        "}",
+        "",
+        "// On prépare la requête SQL pour récupérer tous les artistes favori.tes",
+        "$sql = \"SELECT * FROM favorite_artists\";",
+        "",
+        "// On exécute la requête SQL pour récupérer les artistes favori.tes",
+        "$favoriteArtists = $pdo->query($sql);",
+        "",
+        "// On transforme le résultat en tableau",
+        "$favoriteArtists = $favoriteArtists->fetchAll();",
+        "?>",
+        "",
+        "<!-- Gère l'affichage du formulaire -->",
+        "<!DOCTYPE html>",
+        "<html>",
+        "",
+        "<head>",
+        "    <title>Mes artistes favori.tes</title>",
+        "</head>",
+        "",
+        "<body>",
+        "    <h1>Mes artistes favori.tes</h1>",
+        "",
+        "    <?php if ($_SERVER[\"REQUEST_METHOD\"] == \"POST\") { ?>",
+        "        <p>L'artiste favori.te a été rajouté.</p>",
+        "    <?php } ?>",
+        "",
+        "    <ul>",
+        "        <?php foreach ($favoriteArtists as $favoriteArtist) { ?>",
+        "            <li><?= $favoriteArtist[\"band_name\"] ?></li>",
+        "        <?php } ?>",
+        "    </ul>",
+        "",
+        "    <h2>Ajouter un.e artiste favori.te</h2>",
+        "",
+        "    <form action=\"./index.php\" method=\"POST\">",
+        "        <label for=\"band-name\">Artiste</label><br>",
+        "        <input",
+        "            type=\"text\"",
+        "            id=\"band-name\"",
+        "            name=\"band-name\" />",
+        "",
+        "        <br>",
+        "",
+        "        <button type=\"submit\">Envoyer</button>",
+        "    </form>",
+        "</body>",
+        "",
+        "</html>"
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "2Pac",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "band-name": "2Pac"
+              }
+            },
+            "contient": [
+              "<li>2Pac</li>"
+            ]
+          },
+          {
+            "titre": "The Notorious B.I.G.",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "band-name": "The Notorious B.I.G."
+              }
+            },
+            "contient": [
+              "<li>The Notorious B.I.G.</li>"
+            ]
+          },
+          {
+            "titre": "Missy Elliott",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "band-name": "Missy Elliott"
+              }
+            },
+            "contient": [
+              "<li>Missy Elliott</li>"
+            ]
+          },
+          {
+            "titre": "Le script (XSS)",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "band-name": "<script>alert(\"I <3 JavaScript\")</script>"
+              }
+            },
+            "contient": [
+              "&lt;script&gt;alert(&quot;I &lt;3 JavaScript&quot;)&lt;/script&gt;"
+            ],
+            "neContientPas": [
+              "<script>alert"
+            ],
+            "siEchec": "Le nom est affiché tel quel : le navigateur exécuterait le script. Échappe l'affichage avec `htmlspecialchars(…)`."
+          },
+          {
+            "titre": "L'injection SQL",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "band-name": "'); DROP TABLE favorite_artists; --"
+              }
+            },
+            "code": "return $pdo->query(\"SELECT COUNT(*) FROM favorite_artists\")->fetchColumn();",
+            "attendu": 1,
+            "siEchec": "La table a été supprimée (ou la ligne n'a pas été enregistrée) : la saisie est collée dans le SQL. Utilise une requête préparée avec un paramètre `:bandName`."
+          },
+          {
+            "titre": "L'injection, affichée",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "band-name": "'); DROP TABLE favorite_artists; --"
+              }
+            },
+            "contient": [
+              "&#039;); DROP TABLE favorite_artists; --"
+            ]
+          },
+          {
+            "titre": "Autre artiste avec apostrophe",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "band-name": "Guns N' Roses"
+              }
+            },
+            "contient": [
+              "<li>Guns N&#039; Roses</li>"
+            ]
+          },
+          {
+            "titre": "Nom vide refusé",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "band-name": ""
+              }
+            },
+            "code": "return $pdo->query(\"SELECT COUNT(*) FROM favorite_artists\")->fetchColumn();",
+            "attendu": 0,
+            "siEchec": "Aucune validation : un nom vide est enregistré. Vérifie la saisie avant de l'insérer."
+          }
+        ],
+        "obligatoire": [
+          "->prepare",
+          "htmlspecialchars"
+        ]
+      },
+      "indices": [
+        "Le corrigé du cours relève trois problèmes : injection SQL (la variable `$bandName` est collée dans la requête), XSS (l'affichage n'est pas échappé), et aucune validation des données.",
+        "Remplace `'$bandName'` par un paramètre `:bandName`, puis `prepare` / `bindValue` / `execute`. Dans la liste, passe le nom à `htmlspecialchars`. Avant d'insérer, vérifie que le nom n'est pas vide.",
+        {
+          "texte": "L'insertion corrigée :",
+          "code": "$sql = \"INSERT INTO favorite_artists (band_name) VALUES (:bandName)\";\n$stmt = $pdo->prepare($sql);\n$stmt->bindValue(___, $bandName);\n$stmt->execute();"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "// Fichier favorite-artists.php",
+        "",
+        "// Constante pour le fichier de base de données SQLite",
+        "const DATABASE_FILE = __DIR__ . \"/favorite-artists.db\";",
+        "",
+        "// Connexion à la base de données",
+        "$pdo = new PDO(\"sqlite:\" . DATABASE_FILE);",
+        "",
+        "// Création d'une table `favorite_artists`",
+        "$sql = \"CREATE TABLE IF NOT EXISTS favorite_artists (",
+        "    id INTEGER PRIMARY KEY AUTOINCREMENT,",
+        "    band_name TEXT NOT NULL",
+        ")\";",
+        "",
+        "// On exécute la requête SQL pour créer la table",
+        "$pdo->exec($sql);",
+        "",
+        "// Gère la soumission du formulaire",
+        "if ($_SERVER[\"REQUEST_METHOD\"] == \"POST\") {",
+        "    // On récupère et on valide les données du formulaire",
+        "    $bandName = trim($_POST[\"band-name\"] ?? \"\");",
+        "",
+        "    if ($bandName !== \"\") {",
+        "        // Requête préparée : la donnée reste une donnée",
+        "        $sql = \"INSERT INTO favorite_artists (band_name) VALUES (:bandName)\";",
+        "        $stmt = $pdo->prepare($sql);",
+        "        $stmt->bindValue(':bandName', $bandName);",
+        "        $stmt->execute();",
+        "    }",
+        "}",
+        "",
+        "// On prépare la requête SQL pour récupérer tous les artistes favori.tes",
+        "$sql = \"SELECT * FROM favorite_artists\";",
+        "",
+        "// On exécute la requête SQL pour récupérer les artistes favori.tes",
+        "$favoriteArtists = $pdo->query($sql);",
+        "",
+        "// On transforme le résultat en tableau",
+        "$favoriteArtists = $favoriteArtists->fetchAll();",
+        "?>",
+        "",
+        "<!-- Gère l'affichage du formulaire -->",
+        "<!DOCTYPE html>",
+        "<html>",
+        "",
+        "<head>",
+        "    <title>Mes artistes favori.tes</title>",
+        "</head>",
+        "",
+        "<body>",
+        "    <h1>Mes artistes favori.tes</h1>",
+        "",
+        "    <?php if ($_SERVER[\"REQUEST_METHOD\"] == \"POST\") { ?>",
+        "        <p>L'artiste favori.te a été rajouté.</p>",
+        "    <?php } ?>",
+        "",
+        "    <ul>",
+        "        <?php foreach ($favoriteArtists as $favoriteArtist) { ?>",
+        "            <li><?= htmlspecialchars($favoriteArtist[\"band_name\"]) ?></li>",
+        "        <?php } ?>",
+        "    </ul>",
+        "",
+        "    <h2>Ajouter un.e artiste favori.te</h2>",
+        "",
+        "    <form action=\"./index.php\" method=\"POST\">",
+        "        <label for=\"band-name\">Artiste</label><br>",
+        "        <input",
+        "            type=\"text\"",
+        "            id=\"band-name\"",
+        "            name=\"band-name\" />",
+        "",
+        "        <br>",
+        "",
+        "        <button type=\"submit\">Envoyer</button>",
+        "    </form>",
+        "</body>",
+        "",
+        "</html>"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\n// Fichier favorite-artists.php\n\n// Constante pour le fichier de base de données SQLite\nconst DATABASE_FILE = __DIR__ . \"/favorite-artists.db\";\n\n// Connexion à la base de données\n$pdo = new PDO(\"sqlite:\" . DATABASE_FILE);\n\n// Création d'une table `favorite_artists`\n$sql = \"CREATE TABLE IF NOT EXISTS favorite_artists (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    band_name TEXT NOT NULL\n)\";\n\n// On exécute la requête SQL pour créer la table\n$pdo->exec($sql);\n\n// Gère la soumission du formulaire\nif ($_SERVER[\"REQUEST_METHOD\"] == \"POST\") {\n    // On récupère les données du formulaire\n    $bandName = $_POST[\"band-name\"];\n\n    // On prépare la requête SQL pour ajouter un.e artiste favori.te\n    $sql = \"INSERT INTO favorite_artists (band_name) VALUES ('$bandName')\";\n\n    // On exécute la requête SQL pour ajouter l'artiste favori.te\n    $pdo->exec($sql);\n}\n\n// On prépare la requête SQL pour récupérer tous les artistes favori.tes\n$sql = \"SELECT * FROM favorite_artists\";\n\n// On exécute la requête SQL pour récupérer les artistes favori.tes\n$favoriteArtists = $pdo->query($sql);\n\n// On transforme le résultat en tableau\n$favoriteArtists = $favoriteArtists->fetchAll();\n?>\n\n<!-- Gère l'affichage du formulaire -->\n<!DOCTYPE html>\n<html>\n\n<head>\n    <title>Mes artistes favori.tes</title>\n</head>\n\n<body>\n    <h1>Mes artistes favori.tes</h1>\n\n    <?php if ($_SERVER[\"REQUEST_METHOD\"] == \"POST\") { ?>\n        <p>L'artiste favori.te a été rajouté.</p>\n    <?php } ?>\n\n    <ul>\n        <?php foreach ($favoriteArtists as $favoriteArtist) { ?>\n            <li><?= $favoriteArtist[\"band_name\"] ?></li>\n        <?php } ?>\n    </ul>\n\n    <h2>Ajouter un.e artiste favori.te</h2>\n\n    <form action=\"./index.php\" method=\"POST\">\n        <label for=\"band-name\">Artiste</label><br>\n        <input\n            type=\"text\"\n            id=\"band-name\"\n            name=\"band-name\" />\n\n        <br>\n\n        <button type=\"submit\">Envoyer</button>\n    </form>\n</body>\n\n</html>",
+          "attendu": "erreur"
+        },
+        {
+          "code": "<?php\n// Fichier favorite-artists.php\n\n// Constante pour le fichier de base de données SQLite\nconst DATABASE_FILE = __DIR__ . \"/favorite-artists.db\";\n\n// Connexion à la base de données\n$pdo = new PDO(\"sqlite:\" . DATABASE_FILE);\n\n// Création d'une table `favorite_artists`\n$sql = \"CREATE TABLE IF NOT EXISTS favorite_artists (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    band_name TEXT NOT NULL\n)\";\n\n// On exécute la requête SQL pour créer la table\n$pdo->exec($sql);\n\n// Gère la soumission du formulaire\nif ($_SERVER[\"REQUEST_METHOD\"] == \"POST\") {\n    // On récupère et on valide les données du formulaire\n    $bandName = trim($_POST[\"band-name\"] ?? \"\");\n\n    if ($bandName !== \"\") {\n        // Requête préparée : la donnée reste une donnée\n        $sql = \"INSERT INTO favorite_artists (band_name) VALUES (:bandName)\";\n        $stmt = $pdo->prepare($sql);\n        $stmt->bindValue(':bandName', $bandName);\n        $stmt->execute();\n    }\n}\n\n// On prépare la requête SQL pour récupérer tous les artistes favori.tes\n$sql = \"SELECT * FROM favorite_artists\";\n\n// On exécute la requête SQL pour récupérer les artistes favori.tes\n$favoriteArtists = $pdo->query($sql);\n\n// On transforme le résultat en tableau\n$favoriteArtists = $favoriteArtists->fetchAll();\n?>\n\n<!-- Gère l'affichage du formulaire -->\n<!DOCTYPE html>\n<html>\n\n<head>\n    <title>Mes artistes favori.tes</title>\n</head>\n\n<body>\n    <h1>Mes artistes favori.tes</h1>\n\n    <?php if ($_SERVER[\"REQUEST_METHOD\"] == \"POST\") { ?>\n        <p>L'artiste favori.te a été rajouté.</p>\n    <?php } ?>\n\n    <ul>\n        <?php foreach ($favoriteArtists as $favoriteArtist) { ?>\n            <li><?= $favoriteArtist[\"band_name\"] ?></li>\n        <?php } ?>\n    </ul>\n\n    <h2>Ajouter un.e artiste favori.te</h2>\n\n    <form action=\"./index.php\" method=\"POST\">\n        <label for=\"band-name\">Artiste</label><br>\n        <input\n            type=\"text\"\n            id=\"band-name\"\n            name=\"band-name\" />\n\n        <br>\n\n        <button type=\"submit\">Envoyer</button>\n    </form>\n</body>\n\n</html>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\n// Fichier favorite-artists.php\n\n// Constante pour le fichier de base de données SQLite\nconst DATABASE_FILE = __DIR__ . \"/favorite-artists.db\";\n\n// Connexion à la base de données\n$pdo = new PDO(\"sqlite:\" . DATABASE_FILE);\n\n// Création d'une table `favorite_artists`\n$sql = \"CREATE TABLE IF NOT EXISTS favorite_artists (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    band_name TEXT NOT NULL\n)\";\n\n// On exécute la requête SQL pour créer la table\n$pdo->exec($sql);\n\n// Gère la soumission du formulaire\nif ($_SERVER[\"REQUEST_METHOD\"] == \"POST\") {\n    // On récupère les données du formulaire\n    $bandName = $_POST[\"band-name\"];\n\n    // On prépare la requête SQL pour ajouter un.e artiste favori.te\n    $sql = \"INSERT INTO favorite_artists (band_name) VALUES ('$bandName')\";\n\n    // On exécute la requête SQL pour ajouter l'artiste favori.te\n    $pdo->exec($sql);\n}\n\n// On prépare la requête SQL pour récupérer tous les artistes favori.tes\n$sql = \"SELECT * FROM favorite_artists\";\n\n// On exécute la requête SQL pour récupérer les artistes favori.tes\n$favoriteArtists = $pdo->query($sql);\n\n// On transforme le résultat en tableau\n$favoriteArtists = $favoriteArtists->fetchAll();\n?>\n\n<!-- Gère l'affichage du formulaire -->\n<!DOCTYPE html>\n<html>\n\n<head>\n    <title>Mes artistes favori.tes</title>\n</head>\n\n<body>\n    <h1>Mes artistes favori.tes</h1>\n\n    <?php if ($_SERVER[\"REQUEST_METHOD\"] == \"POST\") { ?>\n        <p>L'artiste favori.te a été rajouté.</p>\n    <?php } ?>\n\n    <ul>\n        <?php foreach ($favoriteArtists as $favoriteArtist) { ?>\n            <li><?= htmlspecialchars($favoriteArtist[\"band_name\"]) ?></li>\n        <?php } ?>\n    </ul>\n\n    <h2>Ajouter un.e artiste favori.te</h2>\n\n    <form action=\"./index.php\" method=\"POST\">\n        <label for=\"band-name\">Artiste</label><br>\n        <input\n            type=\"text\"\n            id=\"band-name\"\n            name=\"band-name\" />\n\n        <br>\n\n        <button type=\"submit\">Envoyer</button>\n    </form>\n</body>\n\n</html>",
+          "attendu": "erreur"
+        },
+        {
+          "code": "<?php\n// Fichier favorite-artists.php\n\n// Constante pour le fichier de base de données SQLite\nconst DATABASE_FILE = __DIR__ . \"/favorite-artists.db\";\n\n// Connexion à la base de données\n$pdo = new PDO(\"sqlite:\" . DATABASE_FILE);\n\n// Création d'une table `favorite_artists`\n$sql = \"CREATE TABLE IF NOT EXISTS favorite_artists (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    band_name TEXT NOT NULL\n)\";\n\n// On exécute la requête SQL pour créer la table\n$pdo->exec($sql);\n\n// Gère la soumission du formulaire\nif ($_SERVER[\"REQUEST_METHOD\"] == \"POST\") {\n    // On récupère et on valide les données du formulaire\n    $bandName = trim($_POST[\"band-name\"] ?? \"\");\n\n    if (true) {\n        // Requête préparée : la donnée reste une donnée\n        $sql = \"INSERT INTO favorite_artists (band_name) VALUES (:bandName)\";\n        $stmt = $pdo->prepare($sql);\n        $stmt->bindValue(':bandName', $bandName);\n        $stmt->execute();\n    }\n}\n\n// On prépare la requête SQL pour récupérer tous les artistes favori.tes\n$sql = \"SELECT * FROM favorite_artists\";\n\n// On exécute la requête SQL pour récupérer les artistes favori.tes\n$favoriteArtists = $pdo->query($sql);\n\n// On transforme le résultat en tableau\n$favoriteArtists = $favoriteArtists->fetchAll();\n?>\n\n<!-- Gère l'affichage du formulaire -->\n<!DOCTYPE html>\n<html>\n\n<head>\n    <title>Mes artistes favori.tes</title>\n</head>\n\n<body>\n    <h1>Mes artistes favori.tes</h1>\n\n    <?php if ($_SERVER[\"REQUEST_METHOD\"] == \"POST\") { ?>\n        <p>L'artiste favori.te a été rajouté.</p>\n    <?php } ?>\n\n    <ul>\n        <?php foreach ($favoriteArtists as $favoriteArtist) { ?>\n            <li><?= htmlspecialchars($favoriteArtist[\"band_name\"]) ?></li>\n        <?php } ?>\n    </ul>\n\n    <h2>Ajouter un.e artiste favori.te</h2>\n\n    <form action=\"./index.php\" method=\"POST\">\n        <label for=\"band-name\">Artiste</label><br>\n        <input\n            type=\"text\"\n            id=\"band-name\"\n            name=\"band-name\" />\n\n        <br>\n\n        <button type=\"submit\">Envoyer</button>\n    </form>\n</body>\n\n</html>",
+          "attendu": "echec"
+        }
+      ],
+      "explication": "Injection SQL, XSS, absence de validation : les trois problèmes du code, et leurs trois remèdes."
+    }
+  ],
+  "parcours": [
+    "u06-l1",
+    "u06-l2",
+    "u06-l3",
+    "jeu:u06-sur-ou-pas",
+    "u06-l4",
+    "quiz",
+    "boss:u06-b1",
+    "boss:u06-b2"
+  ]
+}
