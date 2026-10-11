@@ -1,0 +1,2503 @@
+{
+  "id": "u11",
+  "titre": "Les e-mails",
+  "sousTitre": "Séance 10 · SMTP, POP3, IMAP, PHPMailer, Mailpit, Infomaniak",
+  "objectif": "Comprendre comment circulent les e-mails, choisir PHPMailer plutôt que mail(), configurer l'envoi en développement (Mailpit) et en production (Infomaniak), et envoyer un formulaire de contact.",
+  "icone": "✉",
+  "fiches": [
+    {
+      "id": "protocoles-mail",
+      "titre": "SMTP, POP3 et IMAP",
+      "icone": "✉",
+      "resume": "**SMTP** envoie les e-mails (du client au serveur sortant, puis de serveur à serveur). **POP3** récupère les e-mails en les téléchargeant sur l'appareil (et en général les supprime du serveur). **IMAP** les laisse sur le serveur et synchronise leur état sur tous les appareils.",
+      "texte": "- **SMTP** (Simple Mail Transfer Protocol) : le protocole standard pour **envoyer**. C'est un des premiers protocoles d'Internet, conçu quand la sécurité n'était pas une priorité : de base, il n'a ni authentification ni chiffrement ; il faut des extensions ou des configurations en plus.\n- **POP3** (Post Office Protocol version 3) : pour **récupérer** ; télécharge sur l'appareil local et supprime généralement du serveur, donc pas de synchronisation entre appareils.\n- **IMAP** (Internet Message Access Protocol) : pour **accéder** aux e-mails restés sur le serveur ; l'état (lu, non lu, supprimé…) est le même sur tous les appareils.",
+      "pieges": [
+        "Pour une application PHP qui **envoie** des e-mails, c'est SMTP qui compte ; POP3 et IMAP servent à les lire."
+      ]
+    },
+    {
+      "id": "mail-phpmailer",
+      "titre": "mail() ou PHPMailer ?",
+      "icone": "📮",
+      "resume": "La fonction `mail()` de PHP dépend d'un serveur de messagerie installé et configuré sur le serveur web, et ne gère pas l'authentification SMTP. **PHPMailer**, une bibliothèque, envoie par SMTP avec authentification, chiffrement TLS/SSL, pièces jointes, e-mails HTML et texte brut.",
+      "texte": "`mail($to, $subject, $body, $headers);` : simple, mais limitée (pas de SMTP directement, pas d'authentification).\n\nUne **bibliothèque** est un ensemble de fonctions et de classes pré-écrites qu'on utilise dans son code sans avoir à les coder soi-même.\n\nInstaller PHPMailer à la main (le cours n'étudie pas Composer, la méthode recommandée) : télécharger la version 7.0.0 (ou ultérieure) depuis les releases GitHub, puis copier le **contenu** du dossier `src` dans `src/PHPMailer/PHPMailer` (le double `PHPMailer` n'est pas une faute de frappe). L'autoloader de la séance 9 charge ensuite `PHPMailer\\PHPMailer\\PHPMailer`."
+    },
+    {
+      "id": "environnements-mail",
+      "titre": "Mailpit et Infomaniak",
+      "icone": "🧪",
+      "resume": "En **développement** : **Mailpit**, un serveur SMTP local qui capture les e-mails sans les envoyer (SMTP sur le port 1025, interface web sur http://localhost:8025, sans authentification). En **production** : le service de messagerie d'**Infomaniak** (`mail.infomaniak.com`, port 465, avec authentification). Les paramètres vont dans `config/mail.ini`.",
+      "texte": "L'ordre conseillé par le cours : configurer le développement, tester l'envoi avec PHPMailer, puis configurer la production.\n\n`mail.ini` pour Mailpit :\n\n``` host = \"mailpit\" port = 1025 authentication = false username = \"\" password = \"\" ```\n\nPour Infomaniak : `host = \"mail.infomaniak.com\"`, `port = 465`, `authentication = true`, avec le nom d'utilisateur et le mot de passe de l'adresse e-mail créée chez Infomaniak.\n\nComme `database.ini` (séance 3) : lu avec `parse_ini_file`, et jamais sur GitHub (mot de passe).",
+      "pieges": [
+        "`parse_ini_file` rend des textes : le cours convertit avec `filter_var($config['port'], FILTER_VALIDATE_INT)` et `filter_var($config['authentication'], FILTER_VALIDATE_BOOLEAN)`."
+      ]
+    },
+    {
+      "id": "phpmailer",
+      "titre": "Envoyer avec PHPMailer",
+      "icone": "📤",
+      "resume": "`$mail = new PHPMailer(true);` (avec exceptions), la configuration SMTP (`isSMTP()`, `Host`, `Port`, `SMTPAuth`…), l'expéditeur (`setFrom`) et le destinataire (`addAddress`), le contenu (`isHTML`, `Subject`, `Body`, `AltBody`), puis `send()`, le tout dans un `try`/`catch`.",
+      "texte": "``` $mail = new PHPMailer(true);\n\ntry { $mail->isSMTP(); $mail->Host = $host; $mail->Port = $port; $mail->SMTPAuth = $authentication; $mail->CharSet = \"UTF-8\"; $mail->Encoding = \"base64\";\n\n$mail->setFrom($from_email, $from_name); $mail->addAddress('example@example.com', 'Nom');\n\n$mail->isHTML(true); $mail->Subject = 'Le sujet'; $mail->Body    = 'Le corps <b>en HTML</b>'; $mail->AltBody = 'Le corps en texte brut';\n\n$mail->send(); echo 'Message has been sent'; } catch (Exception $e) { echo \"Message could not be sent. Mailer Error: {$mail->ErrorInfo}\"; } ```\n\nAvec l'authentification (production) : `SMTPSecure = PHPMailer::ENCRYPTION_SMTPS`, `Username`, `Password`.\n\nDans l'appli, PHPMailer est **simulé** : `send()` n'envoie rien, il garde l'e-mail pour que les tests vérifient le sujet et le corps.",
+      "pieges": [
+        "`new PHPMailer(true)` : le `true` active les exceptions, d'où le `try`/`catch` (le signal d'alarme de la séance 3).",
+        "Corps en HTML (`isHTML(true)`) : échappe les saisies avec `htmlspecialchars`, et `nl2br` transforme les retours à la ligne en `<br>`."
+      ]
+    }
+  ],
+  "lecons": [
+    {
+      "id": "u11-l1",
+      "titre": "Derrière les e-mails",
+      "duree": 5,
+      "notions": [
+        "protocoles-mail"
+      ],
+      "cartes": [
+        {
+          "titre": "Trois protocoles",
+          "texte": "Les clients (Outlook, Thunderbird…) et les services en ligne (Gmail…) utilisent trois protocoles : **SMTP** pour envoyer, **POP3** et **IMAP** pour récupérer.",
+          "fiche": "protocoles-mail"
+        },
+        {
+          "titre": "SMTP, pour envoyer",
+          "texte": "Ton client transmet l'e-mail au serveur sortant par SMTP, qui le relaie au serveur du destinataire. SMTP date d'une époque où la sécurité n'était pas une priorité : de base, ni authentification ni chiffrement."
+        },
+        {
+          "titre": "POP3, tout télécharger",
+          "texte": "POP3 télécharge les e-mails sur l'appareil et les supprime généralement du serveur : ils ne sont pas synchronisés entre ton téléphone et ton ordinateur."
+        },
+        {
+          "titre": "IMAP, tout synchroniser",
+          "texte": "IMAP laisse les e-mails sur le serveur : lu sur le téléphone, il apparaît lu sur l'ordinateur aussi."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u11-l1-e1",
+          "type": "assoc",
+          "notions": [
+            "protocoles-mail"
+          ],
+          "question": "Associe chaque protocole à son rôle.",
+          "paires": [
+            [
+              "SMTP",
+              "Envoyer des e-mails"
+            ],
+            [
+              "POP3",
+              "Télécharger les e-mails sur l'appareil"
+            ],
+            [
+              "IMAP",
+              "Consulter les e-mails restés sur le serveur"
+            ]
+          ],
+          "explication": "Un pour envoyer, deux pour récupérer."
+        },
+        {
+          "id": "u11-l1-e2",
+          "type": "qcm",
+          "notions": [
+            "protocoles-mail"
+          ],
+          "question": "Noa lit ses e-mails sur son téléphone et sur son ordinateur, et veut voir partout lesquels sont lus. Quel protocole ?",
+          "choix": [
+            "IMAP",
+            "POP3",
+            "SMTP",
+            "HTTP"
+          ],
+          "bonne": 0,
+          "explication": "IMAP garde les e-mails et leur état sur le serveur."
+        },
+        {
+          "id": "u11-l1-e3",
+          "type": "vf",
+          "notions": [
+            "protocoles-mail"
+          ],
+          "question": "Le protocole SMTP de base offre l'authentification et le chiffrement.",
+          "bonne": false,
+          "explication": "Il faut des extensions ou des configurations supplémentaires : c'est pour ça que l'envoi sécurisé est un peu plus complexe à configurer."
+        },
+        {
+          "id": "u11-l1-e4",
+          "type": "ordre",
+          "notions": [
+            "protocoles-mail"
+          ],
+          "question": "Remets dans l'ordre le trajet d'un e-mail.",
+          "items": [
+            "Le client de messagerie de l'expéditeur envoie l'e-mail (SMTP)",
+            "Le serveur sortant le relaie au serveur du destinataire (SMTP)",
+            "Le serveur du destinataire le stocke",
+            "Le client du destinataire le récupère (IMAP ou POP3)"
+          ],
+          "explication": "SMTP pour le trajet aller, IMAP ou POP3 pour la lecture."
+        },
+        {
+          "id": "u11-l1-e5",
+          "type": "tri",
+          "notions": [
+            "protocoles-mail"
+          ],
+          "question": "Envoyer ou récupérer ?",
+          "categories": [
+            "Envoyer",
+            "Récupérer"
+          ],
+          "items": [
+            [
+              "SMTP",
+              0
+            ],
+            [
+              "POP3",
+              1
+            ],
+            [
+              "IMAP",
+              1
+            ],
+            [
+              "Ton application PHP qui envoie un formulaire de contact",
+              0
+            ]
+          ],
+          "explication": "Une application PHP qui envoie des e-mails parle SMTP."
+        },
+        {
+          "id": "u11-l1-e6",
+          "type": "qcm",
+          "notions": [
+            "protocoles-mail"
+          ],
+          "question": "Avec POP3, que deviennent généralement les e-mails sur le serveur ?",
+          "choix": [
+            "Ils sont supprimés après le téléchargement",
+            "Ils restent et se synchronisent",
+            "Ils sont renvoyés à l'expéditeur",
+            "Ils sont chiffrés"
+          ],
+          "bonne": 0,
+          "explication": "D'où l'absence de synchronisation entre appareils."
+        }
+      ]
+    },
+    {
+      "id": "u11-l2",
+      "titre": "mail() ou PHPMailer ?",
+      "duree": 5,
+      "notions": [
+        "mail-phpmailer"
+      ],
+      "cartes": [
+        {
+          "titre": "Il faut un serveur SMTP",
+          "texte": "Pour envoyer des e-mails en PHP, il faut d'abord un serveur SMTP : celui d'un fournisseur (Infomaniak, Gmail, Outlook…) ou un serveur dédié.",
+          "fiche": "mail-phpmailer"
+        },
+        {
+          "titre": "La fonction mail()",
+          "texte": "`mail($to, $subject, $body, $headers)` existe, mais elle ne gère pas SMTP directement : elle dépend d'un serveur de messagerie installé sur le serveur web, et ne supporte pas l'authentification SMTP.",
+          "code": [
+            "$from = \"no-reply@example.com\";",
+            "$to = \"noa@example.com\";",
+            "$subject = \"Bienvenue\";",
+            "$body = \"Merci pour ton inscription.\";",
+            "$headers = \"From: $from\";",
+            "mail($to, $subject, $body, $headers);",
+            ""
+          ],
+          "executable": false
+        },
+        {
+          "titre": "PHPMailer, une bibliothèque",
+          "texte": "Une **bibliothèque** : des fonctions et des classes pré-écrites. PHPMailer apporte l'authentification SMTP, le chiffrement TLS/SSL, les pièces jointes, les e-mails HTML et texte brut."
+        },
+        {
+          "titre": "L'installer à la main",
+          "texte": "Le cours n'étudie pas Composer (la méthode recommandée) : on télécharge la release 7.0.0 (ou ultérieure) sur GitHub et on copie le **contenu** de son dossier `src` dans `src/PHPMailer/PHPMailer`. L'autoloader de la séance 9 fait le reste.",
+          "astuce": "Le double `PHPMailer` vient du namespace : `PHPMailer\\PHPMailer\\PHPMailer`."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u11-l2-e1",
+          "type": "qcm",
+          "notions": [
+            "mail-phpmailer"
+          ],
+          "question": "Pourquoi le cours préfère-t-il PHPMailer à `mail()` ?",
+          "choix": [
+            "Il gère l'authentification SMTP et le chiffrement, sans serveur de messagerie à installer sur le serveur web",
+            "`mail()` n'existe plus en PHP 8",
+            "PHPMailer envoie sans serveur SMTP",
+            "`mail()` ne peut pas envoyer de texte"
+          ],
+          "bonne": 0,
+          "explication": "`mail()` dépend de la configuration du serveur et ne supporte pas l'authentification SMTP."
+        },
+        {
+          "id": "u11-l2-e2",
+          "type": "tri",
+          "notions": [
+            "mail-phpmailer"
+          ],
+          "question": "Qui offre quoi ?",
+          "categories": [
+            "Fonction mail()",
+            "PHPMailer"
+          ],
+          "items": [
+            [
+              "Intégrée à PHP, rien à télécharger",
+              0
+            ],
+            [
+              "Authentification SMTP",
+              1
+            ],
+            [
+              "Pièces jointes faciles",
+              1
+            ],
+            [
+              "Dépend d'un serveur de messagerie installé sur le serveur web",
+              0
+            ],
+            [
+              "Chiffrement TLS/SSL",
+              1
+            ]
+          ],
+          "explication": "La simplicité d'un côté, les fonctionnalités de l'autre."
+        },
+        {
+          "id": "u11-l2-e3",
+          "type": "qcm",
+          "notions": [
+            "mail-phpmailer",
+            "autoloader"
+          ],
+          "question": "Avec l'autoloader du cours, `use PHPMailer\\PHPMailer\\PHPMailer;` charge quel fichier ?",
+          "choix": [
+            "src/PHPMailer/PHPMailer/PHPMailer.php",
+            "src/PHPMailer.php",
+            "src/PHPMailer/PHPMailer.php",
+            "vendor/PHPMailer.php"
+          ],
+          "bonne": 0,
+          "explication": "Namespace `PHPMailer\\PHPMailer` = dossiers `PHPMailer/PHPMailer`, classe `PHPMailer` = fichier `PHPMailer.php`."
+        },
+        {
+          "id": "u11-l2-e4",
+          "type": "parsons",
+          "notions": [
+            "mail-phpmailer"
+          ],
+          "question": "Remets dans l'ordre un envoi avec `mail()`.",
+          "lignes": [
+            "$to = \"noa@example.com\";",
+            "$subject = \"Rappel\";",
+            "$body = \"Ton rendez-vous est demain.\";",
+            "$headers = \"From: no-reply@example.com\";",
+            "mail($to, $subject, $body, $headers);"
+          ],
+          "distracteurs": [
+            "mail($subject, $to, $headers, $body);"
+          ],
+          "explication": "Destinataire, sujet, corps, en-têtes : dans cet ordre."
+        },
+        {
+          "id": "u11-l2-e5",
+          "type": "vf",
+          "notions": [
+            "mail-phpmailer"
+          ],
+          "question": "Une bibliothèque est un ensemble de fonctions et de classes pré-écrites qu'on utilise dans son propre code.",
+          "bonne": true,
+          "explication": "On profite du travail d'autres personnes sans tout recoder."
+        },
+        {
+          "id": "u11-l2-e6",
+          "type": "qcm",
+          "notions": [
+            "mail-phpmailer"
+          ],
+          "question": "Que copie-t-on dans `src/PHPMailer/PHPMailer` ?",
+          "choix": [
+            "Le contenu du dossier src de l'archive de PHPMailer",
+            "Toute l'archive ZIP",
+            "Seulement le README",
+            "Le dossier vendor de Composer"
+          ],
+          "bonne": 0,
+          "explication": "Les fichiers `PHPMailer.php`, `SMTP.php`, `Exception.php`…"
+        }
+      ]
+    },
+    {
+      "id": "u11-l3",
+      "titre": "Développement et production",
+      "duree": 5,
+      "notions": [
+        "environnements-mail",
+        "configuration"
+      ],
+      "cartes": [
+        {
+          "titre": "Mailpit, le faux bureau de poste",
+          "texte": "En développement, **Mailpit** est un serveur SMTP local qui **capture** les e-mails sans les envoyer : pas de risque d'écrire à de vraies personnes pendant les tests. SMTP sur le port **1025**, interface web sur **http://localhost:8025**, sans authentification.",
+          "fiche": "environnements-mail"
+        },
+        {
+          "titre": "Infomaniak, pour de vrai",
+          "texte": "En production, on acquiert un service de messagerie chez Infomaniak, avec une adresse liée à son nom de domaine : `mail.infomaniak.com`, port 465, avec authentification."
+        },
+        {
+          "titre": "Le fichier mail.ini",
+          "texte": "Comme `database.ini` : les paramètres SMTP dans `config/mail.ini`, lus avec `parse_ini_file`. On ne change que ce fichier entre le développement et la production, et il ne va pas sur GitHub.",
+          "code": [
+            "<?php",
+            "$config = parse_ini_file(__DIR__ . '/../config/mail.ini', true);",
+            "",
+            "$port = filter_var($config['port'], FILTER_VALIDATE_INT);",
+            "$authentication = filter_var($config['authentication'], FILTER_VALIDATE_BOOLEAN);",
+            "",
+            "echo \"Serveur : \" . $config['host'] . \":\" . $port . \"\\n\";",
+            "echo $authentication ? \"Avec authentification\" : \"Sans authentification\";"
+          ],
+          "fichier": "public/index.php",
+          "fichiers": {
+            "config/mail.ini": [
+              "host = \"mail.example.ch\"",
+              "port = 465",
+              "authentication = true",
+              "username = \"contact@example.ch\"",
+              "password = \"secret\""
+            ]
+          }
+        },
+        {
+          "titre": "Dans quel ordre ?",
+          "texte": "Le cours conseille : 1) configurer le développement (Mailpit), 2) envoyer avec PHPMailer et vérifier dans Mailpit, 3) seulement ensuite configurer la production."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u11-l3-e1",
+          "type": "tri",
+          "notions": [
+            "environnements-mail"
+          ],
+          "question": "Mailpit (développement) ou Infomaniak (production) ?",
+          "categories": [
+            "Mailpit",
+            "Infomaniak"
+          ],
+          "items": [
+            [
+              "port = 1025",
+              0
+            ],
+            [
+              "port = 465",
+              1
+            ],
+            [
+              "authentication = false",
+              0
+            ],
+            [
+              "host = \"mail.infomaniak.com\"",
+              1
+            ],
+            [
+              "Les e-mails sont capturés, jamais envoyés",
+              0
+            ],
+            [
+              "Une adresse liée à ton nom de domaine",
+              1
+            ]
+          ],
+          "explication": "Mailpit capture en local ; Infomaniak envoie pour de vrai, avec authentification."
+        },
+        {
+          "id": "u11-l3-e2",
+          "type": "qcm",
+          "notions": [
+            "environnements-mail"
+          ],
+          "question": "Où vois-tu les e-mails capturés par Mailpit ?",
+          "choix": [
+            "Dans son interface web, http://localhost:8025",
+            "Dans ta vraie boîte e-mail",
+            "Dans la console PHP",
+            "Nulle part : ils sont perdus"
+          ],
+          "bonne": 0,
+          "explication": "Le port 8025 pour l'interface web, 1025 pour SMTP."
+        },
+        {
+          "id": "u11-l3-e3",
+          "type": "qcm",
+          "notions": [
+            "environnements-mail"
+          ],
+          "question": "Pourquoi utiliser Mailpit pendant le développement ?",
+          "choix": [
+            "Pour tester l'envoi sans risquer d'envoyer des e-mails à de vrais destinataires",
+            "Parce que PHPMailer ne fonctionne qu'avec Mailpit",
+            "Pour que les e-mails partent plus vite",
+            "Pour chiffrer les e-mails"
+          ],
+          "bonne": 0,
+          "explication": "Mailpit capture tout : on vérifie le sujet et le corps tranquillement."
+        },
+        {
+          "id": "u11-l3-e4",
+          "type": "predire",
+          "notions": [
+            "environnements-mail",
+            "configuration"
+          ],
+          "question": "Avec ce `config/mail.ini` (production fictive), qu'affiche `public/index.php` ?",
+          "fichier": "public/index.php",
+          "fichiers": {
+            "config/mail.ini": [
+              "host = \"mail.example.ch\"",
+              "port = 465",
+              "authentication = true",
+              "username = \"contact@example.ch\"",
+              "password = \"secret\""
+            ]
+          },
+          "code": [
+            "<?php",
+            "$config = parse_ini_file(__DIR__ . '/../config/mail.ini', true);",
+            "",
+            "$port = filter_var($config['port'], FILTER_VALIDATE_INT);",
+            "$authentication = filter_var($config['authentication'], FILTER_VALIDATE_BOOLEAN);",
+            "",
+            "echo \"Serveur : \" . $config['host'] . \":\" . $port . \"\\n\";",
+            "echo $authentication ? \"Avec authentification\" : \"Sans authentification\";"
+          ],
+          "choix": [
+            "Serveur : mail.example.ch:465\nAvec authentification",
+            "Serveur : mail.example.ch:465\nSans authentification",
+            "Serveur : mailpit:1025\nSans authentification",
+            "Serveur : mail.example.ch:\"465\"\nAvec authentification"
+          ],
+          "bonne": 0,
+          "explication": "`filter_var` convertit le texte « 465 » en entier, et la valeur `true` du fichier en booléen vrai."
+        },
+        {
+          "id": "u11-l3-e5",
+          "type": "trous",
+          "notions": [
+            "environnements-mail",
+            "configuration"
+          ],
+          "question": "Complète la lecture du fichier de configuration de Mailpit.",
+          "fichier": "public/index.php",
+          "fichiers": {
+            "config/mail.ini": [
+              "host = \"mailpit\"",
+              "port = 1025",
+              "authentication = false",
+              "username = \"\"",
+              "password = \"\"",
+              "to_email = \"contact@mailpit.localhost\"",
+              "to_name = \"Mailpit Local SMTP\""
+            ]
+          },
+          "code": [
+            "<?php",
+            "$config = ___(__DIR__ . '/../config/mail.ini', true);",
+            "",
+            "$port = filter_var($config['port'], ___);",
+            "echo $config['host'] . \" écoute sur le port \" . ($port + 0);",
+            ""
+          ],
+          "solution": [
+            "parse_ini_file",
+            "FILTER_VALIDATE_INT"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "sortie": [
+                  "mailpit écoute sur le port 1025"
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "La fonction qui lit un fichier .ini (déjà vue pour database.ini).",
+            "Le filtre qui valide un nombre entier."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "file_get_contents",
+                "FILTER_VALIDATE_INT"
+              ],
+              "attendu": "erreur"
+            },
+            {
+              "trous": [
+                "parse_ini_file",
+                "FILTER_VALIDATE_EMAIL"
+              ],
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`parse_ini_file` rend un tableau de textes ; `filter_var(…, FILTER_VALIDATE_INT)` en tire un entier."
+        },
+        {
+          "id": "u11-l3-e6",
+          "type": "vf",
+          "notions": [
+            "environnements-mail",
+            "configuration"
+          ],
+          "question": "Le fichier `mail.ini` de production, avec le mot de passe de l'adresse e-mail, peut aller sur GitHub.",
+          "bonne": false,
+          "explication": "Comme `database.ini` : dans `.gitignore`, avec un `mail.ini.example` sans secret dans le dépôt."
+        },
+        {
+          "id": "u11-l3-e7",
+          "type": "ordre",
+          "notions": [
+            "environnements-mail"
+          ],
+          "question": "L'ordre conseillé par le cours.",
+          "items": [
+            "Configurer l'environnement de développement (Mailpit)",
+            "Envoyer des e-mails avec PHPMailer et les vérifier dans Mailpit",
+            "Configurer l'environnement de production (Infomaniak)"
+          ],
+          "explication": "On s'assure que tout marche avant de passer en production."
+        }
+      ]
+    },
+    {
+      "id": "u11-l4",
+      "titre": "Envoyer avec PHPMailer",
+      "duree": 5,
+      "notions": [
+        "phpmailer",
+        "exceptions"
+      ],
+      "cartes": [
+        {
+          "titre": "Les étapes",
+          "texte": "Inclure l'autoloader et importer `PHPMailer` et `Exception` ; lire `mail.ini` ; `new PHPMailer(true)` ; dans un `try` : configuration SMTP, expéditeur et destinataire, sujet et corps, `send()` ; dans le `catch` : `$mail->ErrorInfo`.",
+          "fiche": "phpmailer"
+        },
+        {
+          "titre": "Le signal d'alarme",
+          "texte": "`new PHPMailer(true)` active les exceptions : si l'envoi échoue (adresse invalide, serveur injoignable), PHPMailer déclenche l'alarme, et ton `catch` affiche un message au lieu de planter."
+        },
+        {
+          "titre": "Un e-mail de rappel",
+          "texte": "Dans l'appli, PHPMailer est **simulé** (fichier fourni) : `send()` n'envoie rien, il garde l'e-mail pour les tests. Le code, lui, est le même que pour de vrai.",
+          "code": [
+            "<?php",
+            "require_once __DIR__ . '/../utils/autoloader.php';",
+            "",
+            "use PHPMailer\\PHPMailer\\PHPMailer;",
+            "use PHPMailer\\PHPMailer\\Exception;",
+            "",
+            "$mail = new PHPMailer(true);",
+            "",
+            "try {",
+            "    $mail->isSMTP();",
+            "    $mail->Host = \"mailpit\";",
+            "    $mail->Port = 1025;",
+            "    $mail->CharSet = \"UTF-8\";",
+            "",
+            "    $mail->setFrom(\"no-reply@biblio.localhost\", \"Bibliothèque\");",
+            "    $mail->addAddress(\"noa@example.com\", \"Noa\");",
+            "",
+            "    $mail->Subject = \"Rappel : Le Petit Prince\";",
+            "    $mail->Body = \"Bonjour Noa,\\nLe Petit Prince est à rendre demain.\";",
+            "",
+            "    $mail->send();",
+            "    echo \"Rappel envoyé.\";",
+            "} catch (Exception $e) {",
+            "    echo \"Erreur : {$mail->ErrorInfo}\";",
+            "}"
+          ],
+          "fichier": "public/index.php",
+          "fichiers": {
+            "config/mail.ini": [
+              "host = \"mailpit\"",
+              "port = 1025",
+              "authentication = false",
+              "username = \"\"",
+              "password = \"\"",
+              "to_email = \"contact@mailpit.localhost\"",
+              "to_name = \"Mailpit Local SMTP\""
+            ],
+            "utils/autoloader.php": [
+              "<?php",
+              "// Charge les classes automatiquement",
+              "spl_autoload_register(function ($class) {",
+              "    // Convertit les séparateurs de namespace en séparateurs de répertoires",
+              "    $relativePath = str_replace('\\\\', '/', $class);",
+              "",
+              "    // Construit le chemin complet du fichier",
+              "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+              "",
+              "    // Vérifie si le fichier existe avant de l'inclure",
+              "    if (file_exists($file)) {",
+              "        // Inclut le fichier de classe",
+              "        require_once $file;",
+              "    }",
+              "});"
+            ],
+            "src/PHPMailer/PHPMailer/PHPMailer.php": [
+              "<?php",
+              "// VERSION SIMULÉE DE PHPMAILER, pour l'appli :",
+              "// mêmes noms que la vraie bibliothèque, mais send() n'envoie rien :",
+              "// il garde l'e-mail en mémoire (PHPMailer::$envoyes) pour que les tests le lisent.",
+              "namespace PHPMailer\\PHPMailer;",
+              "",
+              "class PHPMailer {",
+              "    const ENCRYPTION_SMTPS = 'ssl';",
+              "    const ENCRYPTION_STARTTLS = 'tls';",
+              "",
+              "    public static array $envoyes = [];",
+              "",
+              "    public $Host = 'localhost';",
+              "    public $Port = 25;",
+              "    public $SMTPAuth = false;",
+              "    public $SMTPSecure = '';",
+              "    public $Username = '';",
+              "    public $Password = '';",
+              "    public $CharSet = 'iso-8859-1';",
+              "    public $Encoding = '8bit';",
+              "    public $Subject = '';",
+              "    public $Body = '';",
+              "    public $AltBody = '';",
+              "    public $ErrorInfo = '';",
+              "",
+              "    private bool $exceptions;",
+              "    private bool $html = false;",
+              "    private array $from = [];",
+              "    private array $to = [];",
+              "",
+              "    public function __construct($exceptions = null) {",
+              "        $this->exceptions = (bool) $exceptions;",
+              "    }",
+              "",
+              "    public function isSMTP(): void {",
+              "    }",
+              "",
+              "    public function isHTML($isHtml = true): void {",
+              "        $this->html = (bool) $isHtml;",
+              "    }",
+              "",
+              "    public function setFrom($address, $name = ''): bool {",
+              "        if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {",
+              "            return $this->echec(\"Invalid address: (From): $address\");",
+              "        }",
+              "        $this->from = [$address, $name];",
+              "        return true;",
+              "    }",
+              "",
+              "    public function addAddress($address, $name = ''): bool {",
+              "        if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {",
+              "            return $this->echec(\"Invalid address: (to): $address\");",
+              "        }",
+              "        $this->to[] = [$address, $name];",
+              "        return true;",
+              "    }",
+              "",
+              "    public function addReplyTo($address, $name = ''): bool {",
+              "        return true;",
+              "    }",
+              "",
+              "    public function send(): bool {",
+              "        if (count($this->to) === 0) {",
+              "            return $this->echec('You must provide at least one recipient email address.');",
+              "        }",
+              "        $texte = $this->Body;",
+              "        if ($this->html) {",
+              "            $texte = html_entity_decode(strip_tags(preg_replace('/<br\\s*\\/?>/i', '', $texte)), ENT_QUOTES, 'UTF-8');",
+              "        }",
+              "        $lignes = array_map('trim', explode(\"\\n\", str_replace(\"\\r\\n\", \"\\n\", trim($texte))));",
+              "        self::$envoyes[] = [",
+              "            'de' => $this->from[0] ?? '', 'nom' => $this->from[1] ?? '',",
+              "            'a' => $this->to[0][0], 'sujet' => $this->Subject, 'lignes' => $lignes,",
+              "        ];",
+              "        return true;",
+              "    }",
+              "",
+              "    private function echec(string $message): bool {",
+              "        $this->ErrorInfo = $message;",
+              "        if ($this->exceptions) {",
+              "            throw new Exception($message);",
+              "        }",
+              "        return false;",
+              "    }",
+              "}"
+            ],
+            "src/PHPMailer/PHPMailer/Exception.php": [
+              "<?php",
+              "namespace PHPMailer\\PHPMailer;",
+              "",
+              "class Exception extends \\Exception {",
+              "}"
+            ]
+          }
+        },
+        {
+          "titre": "HTML ou texte brut",
+          "texte": "`isHTML(true)` : le `Body` est du HTML, et `AltBody` la version texte. Les saisies vont dans le corps : `htmlspecialchars` (la vitrine) ; et `nl2br` transforme les retours à la ligne en `<br>`.",
+          "astuce": "Pas d'`isHTML(true)` : le corps est envoyé en texte brut."
+        }
+      ],
+      "exercices": [
+        {
+          "id": "u11-l4-e1",
+          "type": "parsons",
+          "notions": [
+            "phpmailer"
+          ],
+          "question": "Remets dans l'ordre l'essentiel d'un envoi avec PHPMailer.",
+          "lignes": [
+            "$mail = new PHPMailer(true);",
+            "try {",
+            "    $mail->isSMTP();",
+            "    $mail->setFrom($from_email, $from_name);",
+            "    $mail->addAddress($to_email, $to_name);",
+            "    $mail->Subject = $subject;",
+            "    $mail->Body = $body;",
+            "    $mail->send();",
+            "} catch (Exception $e) {",
+            "    echo \"Erreur : {$mail->ErrorInfo}\";",
+            "}"
+          ],
+          "distracteurs": [
+            "    $mail->send($to_email);"
+          ],
+          "explication": "Créer, configurer, adresser, remplir, envoyer ; et attraper l'alarme."
+        },
+        {
+          "id": "u11-l4-e2",
+          "type": "trous",
+          "notions": [
+            "phpmailer"
+          ],
+          "question": "Complète l'envoi du rappel de la bibliothèque (PHPMailer simulé, fichiers fournis).",
+          "fichier": "public/index.php",
+          "fichiers": {
+            "config/mail.ini": [
+              "host = \"mailpit\"",
+              "port = 1025",
+              "authentication = false",
+              "username = \"\"",
+              "password = \"\"",
+              "to_email = \"contact@mailpit.localhost\"",
+              "to_name = \"Mailpit Local SMTP\""
+            ],
+            "utils/autoloader.php": [
+              "<?php",
+              "// Charge les classes automatiquement",
+              "spl_autoload_register(function ($class) {",
+              "    // Convertit les séparateurs de namespace en séparateurs de répertoires",
+              "    $relativePath = str_replace('\\\\', '/', $class);",
+              "",
+              "    // Construit le chemin complet du fichier",
+              "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+              "",
+              "    // Vérifie si le fichier existe avant de l'inclure",
+              "    if (file_exists($file)) {",
+              "        // Inclut le fichier de classe",
+              "        require_once $file;",
+              "    }",
+              "});"
+            ],
+            "src/PHPMailer/PHPMailer/PHPMailer.php": [
+              "<?php",
+              "// VERSION SIMULÉE DE PHPMAILER, pour l'appli :",
+              "// mêmes noms que la vraie bibliothèque, mais send() n'envoie rien :",
+              "// il garde l'e-mail en mémoire (PHPMailer::$envoyes) pour que les tests le lisent.",
+              "namespace PHPMailer\\PHPMailer;",
+              "",
+              "class PHPMailer {",
+              "    const ENCRYPTION_SMTPS = 'ssl';",
+              "    const ENCRYPTION_STARTTLS = 'tls';",
+              "",
+              "    public static array $envoyes = [];",
+              "",
+              "    public $Host = 'localhost';",
+              "    public $Port = 25;",
+              "    public $SMTPAuth = false;",
+              "    public $SMTPSecure = '';",
+              "    public $Username = '';",
+              "    public $Password = '';",
+              "    public $CharSet = 'iso-8859-1';",
+              "    public $Encoding = '8bit';",
+              "    public $Subject = '';",
+              "    public $Body = '';",
+              "    public $AltBody = '';",
+              "    public $ErrorInfo = '';",
+              "",
+              "    private bool $exceptions;",
+              "    private bool $html = false;",
+              "    private array $from = [];",
+              "    private array $to = [];",
+              "",
+              "    public function __construct($exceptions = null) {",
+              "        $this->exceptions = (bool) $exceptions;",
+              "    }",
+              "",
+              "    public function isSMTP(): void {",
+              "    }",
+              "",
+              "    public function isHTML($isHtml = true): void {",
+              "        $this->html = (bool) $isHtml;",
+              "    }",
+              "",
+              "    public function setFrom($address, $name = ''): bool {",
+              "        if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {",
+              "            return $this->echec(\"Invalid address: (From): $address\");",
+              "        }",
+              "        $this->from = [$address, $name];",
+              "        return true;",
+              "    }",
+              "",
+              "    public function addAddress($address, $name = ''): bool {",
+              "        if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {",
+              "            return $this->echec(\"Invalid address: (to): $address\");",
+              "        }",
+              "        $this->to[] = [$address, $name];",
+              "        return true;",
+              "    }",
+              "",
+              "    public function addReplyTo($address, $name = ''): bool {",
+              "        return true;",
+              "    }",
+              "",
+              "    public function send(): bool {",
+              "        if (count($this->to) === 0) {",
+              "            return $this->echec('You must provide at least one recipient email address.');",
+              "        }",
+              "        $texte = $this->Body;",
+              "        if ($this->html) {",
+              "            $texte = html_entity_decode(strip_tags(preg_replace('/<br\\s*\\/?>/i', '', $texte)), ENT_QUOTES, 'UTF-8');",
+              "        }",
+              "        $lignes = array_map('trim', explode(\"\\n\", str_replace(\"\\r\\n\", \"\\n\", trim($texte))));",
+              "        self::$envoyes[] = [",
+              "            'de' => $this->from[0] ?? '', 'nom' => $this->from[1] ?? '',",
+              "            'a' => $this->to[0][0], 'sujet' => $this->Subject, 'lignes' => $lignes,",
+              "        ];",
+              "        return true;",
+              "    }",
+              "",
+              "    private function echec(string $message): bool {",
+              "        $this->ErrorInfo = $message;",
+              "        if ($this->exceptions) {",
+              "            throw new Exception($message);",
+              "        }",
+              "        return false;",
+              "    }",
+              "}"
+            ],
+            "src/PHPMailer/PHPMailer/Exception.php": [
+              "<?php",
+              "namespace PHPMailer\\PHPMailer;",
+              "",
+              "class Exception extends \\Exception {",
+              "}"
+            ]
+          },
+          "code": [
+            "<?php",
+            "require_once __DIR__ . '/../utils/autoloader.php';",
+            "",
+            "use PHPMailer\\PHPMailer\\PHPMailer;",
+            "use PHPMailer\\PHPMailer\\Exception;",
+            "",
+            "$mail = new PHPMailer(true);",
+            "",
+            "try {",
+            "    $mail->isSMTP();",
+            "    $mail->Host = \"mailpit\";",
+            "    $mail->Port = 1025;",
+            "    $mail->setFrom(\"no-reply@biblio.localhost\", \"Bibliothèque\");",
+            "    $mail->___(\"noa@example.com\", \"Noa\");",
+            "    $mail->___ = \"Rappel : Le Petit Prince\";",
+            "    $mail->Body = \"Le Petit Prince est à rendre demain.\";",
+            "    $mail->___();",
+            "    echo \"Rappel envoyé.\";",
+            "} catch (Exception $e) {",
+            "    echo \"Erreur : {$mail->ErrorInfo}\";",
+            "}",
+            ""
+          ],
+          "solution": [
+            "addAddress",
+            "Subject",
+            "send"
+          ],
+          "tests": {
+            "cas": [
+              {
+                "titre": "La page confirme",
+                "sortie": [
+                  "Rappel envoyé."
+                ]
+              },
+              {
+                "titre": "L'e-mail part",
+                "code": "return class_exists('PHPMailer\\PHPMailer\\PHPMailer', false) ? PHPMailer\\PHPMailer\\PHPMailer::$envoyes : [];",
+                "attendu": [
+                  {
+                    "de": "no-reply@biblio.localhost",
+                    "nom": "Bibliothèque",
+                    "a": "noa@example.com",
+                    "sujet": "Rappel : Le Petit Prince",
+                    "lignes": [
+                      "Le Petit Prince est à rendre demain."
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "indices": [
+            "Le premier trou ajoute un destinataire.",
+            "Le deuxième est la propriété du sujet (avec une majuscule), le troisième la méthode qui envoie."
+          ],
+          "erreursTypiques": [
+            {
+              "trous": [
+                "setFrom",
+                "Subject",
+                "send"
+              ],
+              "attendu": "echec"
+            },
+            {
+              "trous": [
+                "addAddress",
+                "subject",
+                "send"
+              ],
+              "attendu": "echec"
+            }
+          ],
+          "explication": "`addAddress` pour le destinataire, `Subject` pour le sujet, `send()` pour envoyer. Les propriétés de PHPMailer commencent par une majuscule."
+        },
+        {
+          "id": "u11-l4-e3",
+          "type": "predire",
+          "notions": [
+            "phpmailer",
+            "exceptions"
+          ],
+          "question": "Ici, on oublie le destinataire. Qu'affiche la page ?",
+          "fichier": "public/index.php",
+          "fichiers": {
+            "config/mail.ini": [
+              "host = \"mailpit\"",
+              "port = 1025",
+              "authentication = false",
+              "username = \"\"",
+              "password = \"\"",
+              "to_email = \"contact@mailpit.localhost\"",
+              "to_name = \"Mailpit Local SMTP\""
+            ],
+            "utils/autoloader.php": [
+              "<?php",
+              "// Charge les classes automatiquement",
+              "spl_autoload_register(function ($class) {",
+              "    // Convertit les séparateurs de namespace en séparateurs de répertoires",
+              "    $relativePath = str_replace('\\\\', '/', $class);",
+              "",
+              "    // Construit le chemin complet du fichier",
+              "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+              "",
+              "    // Vérifie si le fichier existe avant de l'inclure",
+              "    if (file_exists($file)) {",
+              "        // Inclut le fichier de classe",
+              "        require_once $file;",
+              "    }",
+              "});"
+            ],
+            "src/PHPMailer/PHPMailer/PHPMailer.php": [
+              "<?php",
+              "// VERSION SIMULÉE DE PHPMAILER, pour l'appli :",
+              "// mêmes noms que la vraie bibliothèque, mais send() n'envoie rien :",
+              "// il garde l'e-mail en mémoire (PHPMailer::$envoyes) pour que les tests le lisent.",
+              "namespace PHPMailer\\PHPMailer;",
+              "",
+              "class PHPMailer {",
+              "    const ENCRYPTION_SMTPS = 'ssl';",
+              "    const ENCRYPTION_STARTTLS = 'tls';",
+              "",
+              "    public static array $envoyes = [];",
+              "",
+              "    public $Host = 'localhost';",
+              "    public $Port = 25;",
+              "    public $SMTPAuth = false;",
+              "    public $SMTPSecure = '';",
+              "    public $Username = '';",
+              "    public $Password = '';",
+              "    public $CharSet = 'iso-8859-1';",
+              "    public $Encoding = '8bit';",
+              "    public $Subject = '';",
+              "    public $Body = '';",
+              "    public $AltBody = '';",
+              "    public $ErrorInfo = '';",
+              "",
+              "    private bool $exceptions;",
+              "    private bool $html = false;",
+              "    private array $from = [];",
+              "    private array $to = [];",
+              "",
+              "    public function __construct($exceptions = null) {",
+              "        $this->exceptions = (bool) $exceptions;",
+              "    }",
+              "",
+              "    public function isSMTP(): void {",
+              "    }",
+              "",
+              "    public function isHTML($isHtml = true): void {",
+              "        $this->html = (bool) $isHtml;",
+              "    }",
+              "",
+              "    public function setFrom($address, $name = ''): bool {",
+              "        if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {",
+              "            return $this->echec(\"Invalid address: (From): $address\");",
+              "        }",
+              "        $this->from = [$address, $name];",
+              "        return true;",
+              "    }",
+              "",
+              "    public function addAddress($address, $name = ''): bool {",
+              "        if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {",
+              "            return $this->echec(\"Invalid address: (to): $address\");",
+              "        }",
+              "        $this->to[] = [$address, $name];",
+              "        return true;",
+              "    }",
+              "",
+              "    public function addReplyTo($address, $name = ''): bool {",
+              "        return true;",
+              "    }",
+              "",
+              "    public function send(): bool {",
+              "        if (count($this->to) === 0) {",
+              "            return $this->echec('You must provide at least one recipient email address.');",
+              "        }",
+              "        $texte = $this->Body;",
+              "        if ($this->html) {",
+              "            $texte = html_entity_decode(strip_tags(preg_replace('/<br\\s*\\/?>/i', '', $texte)), ENT_QUOTES, 'UTF-8');",
+              "        }",
+              "        $lignes = array_map('trim', explode(\"\\n\", str_replace(\"\\r\\n\", \"\\n\", trim($texte))));",
+              "        self::$envoyes[] = [",
+              "            'de' => $this->from[0] ?? '', 'nom' => $this->from[1] ?? '',",
+              "            'a' => $this->to[0][0], 'sujet' => $this->Subject, 'lignes' => $lignes,",
+              "        ];",
+              "        return true;",
+              "    }",
+              "",
+              "    private function echec(string $message): bool {",
+              "        $this->ErrorInfo = $message;",
+              "        if ($this->exceptions) {",
+              "            throw new Exception($message);",
+              "        }",
+              "        return false;",
+              "    }",
+              "}"
+            ],
+            "src/PHPMailer/PHPMailer/Exception.php": [
+              "<?php",
+              "namespace PHPMailer\\PHPMailer;",
+              "",
+              "class Exception extends \\Exception {",
+              "}"
+            ]
+          },
+          "code": [
+            "<?php",
+            "require_once __DIR__ . '/../utils/autoloader.php';",
+            "",
+            "use PHPMailer\\PHPMailer\\PHPMailer;",
+            "use PHPMailer\\PHPMailer\\Exception;",
+            "",
+            "$mail = new PHPMailer(true);",
+            "",
+            "try {",
+            "    $mail->isSMTP();",
+            "    $mail->Host = \"mailpit\";",
+            "    $mail->Port = 1025;",
+            "    $mail->CharSet = \"UTF-8\";",
+            "",
+            "    $mail->setFrom(\"no-reply@biblio.localhost\", \"Bibliothèque\");",
+            "    ",
+            "",
+            "    $mail->Subject = \"Rappel : Le Petit Prince\";",
+            "    $mail->Body = \"Bonjour Noa,\\nLe Petit Prince est à rendre demain.\";",
+            "",
+            "    $mail->send();",
+            "    echo \"Rappel envoyé.\";",
+            "} catch (Exception $e) {",
+            "    echo \"Erreur : {$mail->ErrorInfo}\";",
+            "}"
+          ],
+          "choix": [
+            "Erreur : You must provide at least one recipient email address.",
+            "Rappel envoyé.",
+            "Une erreur fatale de PHP",
+            "Rien"
+          ],
+          "bonne": 0,
+          "explication": "`send()` déclenche l'alarme (une `Exception`), le `catch` l'attrape et affiche `ErrorInfo` : « Rappel envoyé. » n'est jamais atteint."
+        },
+        {
+          "id": "u11-l4-e4",
+          "type": "ecrire",
+          "notions": [
+            "phpmailer"
+          ],
+          "question": "Écris `buildBody(string $name, string $email, string $subject, string $message): string`, qui retourne le corps d'un message de contact sous la forme ci-dessous (avec `\\n` pour les retours à la ligne) :\n\n```\nVous avez reçu un nouveau message de [Nom] <[Adresse e-mail]>.\n\nSujet : [Sujet]\nMessage :\n[Message]\n```",
+          "depart": [
+            ""
+          ],
+          "tests": {
+            "fonction": "buildBody",
+            "cas": [
+              {
+                "args": [
+                  "Noa",
+                  "noa@example.com",
+                  "Horaires",
+                  "Êtes-vous ouverts lundi ?"
+                ],
+                "attendu": "Vous avez reçu un nouveau message de Noa <noa@example.com>.\n\nSujet : Horaires\nMessage :\nÊtes-vous ouverts lundi ?"
+              },
+              {
+                "titre": "Un message sur deux lignes",
+                "args": [
+                  "Léo",
+                  "leo@example.com",
+                  "Merci",
+                  "Super soirée.\nÀ bientôt !"
+                ],
+                "attendu": "Vous avez reçu un nouveau message de Léo <leo@example.com>.\n\nSujet : Merci\nMessage :\nSuper soirée.\nÀ bientôt !"
+              }
+            ]
+          },
+          "indices": [
+            "Une seule chaîne entre guillemets doubles, avec les variables dedans (`{$name}`).",
+            "Deux `\\n` après la première phrase (une ligne vide), puis un `\\n` entre chaque ligne.",
+            {
+              "texte": "Presque :",
+              "code": "return \"Vous avez reçu un nouveau message de {$name} <___>.\\n\\nSujet : ___\\nMessage :\\n___\";"
+            }
+          ],
+          "solution": [
+            "function buildBody(string $name, string $email, string $subject, string $message): string {",
+            "    return \"Vous avez reçu un nouveau message de {$name} <{$email}>.\\n\\nSujet : {$subject}\\nMessage :\\n{$message}\";",
+            "}"
+          ],
+          "erreursTypiques": [
+            {
+              "code": "function buildBody(string $name, string $email, string $subject, string $message): string {\n    return \"Vous avez reçu un nouveau message de {$name} <{$email}>.\\nSujet : {$subject}\\nMessage :\\n{$message}\";\n}",
+              "attendu": "echec"
+            },
+            {
+              "code": "function buildBody(string $name, string $email, string $subject, string $message): string {\n    echo \"Vous avez reçu un nouveau message de {$name} <{$email}>.\\n\\nSujet : {$subject}\\nMessage :\\n{$message}\";\n}",
+              "attendu": "erreur"
+            }
+          ],
+          "explication": "Le format exact compte : c'est ce que la personne lira dans sa boîte."
+        },
+        {
+          "id": "u11-l4-e5",
+          "type": "qcm",
+          "notions": [
+            "phpmailer",
+            "xss"
+          ],
+          "question": "`$body` vaut « Message de <Léa> », un retour à la ligne, puis « Merci ! ». Que vaut `nl2br(htmlspecialchars($body))`, mis dans `$mail->Body` ?",
+          "choix": [
+            "Message de &lt;Léa&gt;<br />\nMerci !",
+            "Message de <Léa><br />\nMerci !",
+            "Message de &lt;Léa&gt;\nMerci !",
+            "Message de Léa<br>Merci !"
+          ],
+          "bonne": 0,
+          "explication": "`htmlspecialchars` d'abord (la vitrine), puis `nl2br` ajoute `<br />` avant chaque retour à la ligne."
+        },
+        {
+          "id": "u11-l4-e6",
+          "type": "qcm",
+          "notions": [
+            "phpmailer"
+          ],
+          "question": "En production chez Infomaniak (authentification), que faut-il ajouter ?",
+          "choix": [
+            "SMTPSecure = PHPMailer::ENCRYPTION_SMTPS, Username et Password",
+            "Rien : Mailpit et Infomaniak se configurent pareil",
+            "Seulement isHTML(true)",
+            "Un deuxième addAddress"
+          ],
+          "bonne": 0,
+          "explication": "Le bloc `if ($authentication) { … }` du cours."
+        }
+      ]
+    }
+  ],
+  "jeux": [
+    {
+      "id": "u11-courrier",
+      "titre": "Le tri du courrier",
+      "description": "Questions éclair sur les e-mails en PHP.",
+      "tours": 10,
+      "questions": [
+        {
+          "id": "u11-j1",
+          "type": "qcm",
+          "notions": [
+            "protocoles-mail"
+          ],
+          "mono": true,
+          "question": "Quel protocole envoie les e-mails ?",
+          "choix": [
+            "SMTP",
+            "IMAP",
+            "POP3",
+            "FTP"
+          ],
+          "bonne": 0,
+          "explication": "Simple Mail Transfer Protocol."
+        },
+        {
+          "id": "u11-j2",
+          "type": "vf",
+          "notions": [
+            "protocoles-mail"
+          ],
+          "question": "IMAP synchronise l'état des e-mails (lu, non lu) entre appareils.",
+          "bonne": true,
+          "explication": "Les e-mails restent sur le serveur."
+        },
+        {
+          "id": "u11-j3",
+          "type": "vf",
+          "notions": [
+            "protocoles-mail"
+          ],
+          "question": "POP3 laisse toujours les e-mails sur le serveur.",
+          "bonne": false,
+          "explication": "Il les télécharge et les supprime généralement du serveur."
+        },
+        {
+          "id": "u11-j4",
+          "type": "qcm",
+          "notions": [
+            "environnements-mail"
+          ],
+          "mono": true,
+          "question": "Port SMTP de Mailpit ?",
+          "choix": [
+            "1025",
+            "8025",
+            "465",
+            "3306"
+          ],
+          "bonne": 0,
+          "explication": "1025 pour SMTP, 8025 pour l'interface web."
+        },
+        {
+          "id": "u11-j5",
+          "type": "qcm",
+          "notions": [
+            "environnements-mail"
+          ],
+          "mono": true,
+          "question": "Interface web de Mailpit ?",
+          "choix": [
+            "http://localhost:8025",
+            "http://localhost:1025",
+            "http://mailpit:465",
+            "https://mail.infomaniak.com"
+          ],
+          "bonne": 0,
+          "explication": "Le port 8025."
+        },
+        {
+          "id": "u11-j6",
+          "type": "qcm",
+          "notions": [
+            "phpmailer"
+          ],
+          "mono": true,
+          "question": "Quelle méthode envoie l'e-mail ?",
+          "choix": [
+            "send",
+            "mail",
+            "submit",
+            "post"
+          ],
+          "bonne": 0,
+          "explication": "`$mail->send();`."
+        },
+        {
+          "id": "u11-j7",
+          "type": "qcm",
+          "notions": [
+            "phpmailer"
+          ],
+          "mono": true,
+          "question": "Quelle méthode définit l'expéditeur ?",
+          "choix": [
+            "setFrom",
+            "addAddress",
+            "addFrom",
+            "From"
+          ],
+          "bonne": 0,
+          "explication": "`setFrom($email, $nom)`."
+        },
+        {
+          "id": "u11-j8",
+          "type": "vf",
+          "notions": [
+            "mail-phpmailer"
+          ],
+          "question": "La fonction `mail()` supporte nativement l'authentification SMTP.",
+          "bonne": false,
+          "explication": "C'est une des raisons d'utiliser PHPMailer."
+        },
+        {
+          "id": "u11-j9",
+          "type": "qcm",
+          "notions": [
+            "phpmailer"
+          ],
+          "question": "Que signifie le `true` de `new PHPMailer(true)` ?",
+          "choix": [
+            "Activer les exceptions",
+            "Activer le HTML",
+            "Activer l'authentification",
+            "Envoyer tout de suite"
+          ],
+          "bonne": 0,
+          "explication": "D'où le `try`/`catch`."
+        },
+        {
+          "id": "u11-j10",
+          "type": "qcm",
+          "notions": [
+            "environnements-mail"
+          ],
+          "question": "Port d'Infomaniak dans le `mail.ini` du cours ?",
+          "choix": [
+            "465",
+            "1025",
+            "8025",
+            "80"
+          ],
+          "bonne": 0,
+          "explication": "Avec authentification et chiffrement."
+        },
+        {
+          "id": "u11-j11",
+          "type": "vf",
+          "notions": [
+            "environnements-mail"
+          ],
+          "question": "Mailpit envoie réellement les e-mails aux destinataires.",
+          "bonne": false,
+          "explication": "Il les capture pour qu'on les vérifie."
+        },
+        {
+          "id": "u11-j12",
+          "type": "qcm",
+          "notions": [
+            "phpmailer"
+          ],
+          "question": "Quelle propriété contient la version texte brut d'un e-mail HTML ?",
+          "choix": [
+            "AltBody",
+            "Body",
+            "TextBody",
+            "Subject"
+          ],
+          "bonne": 0,
+          "explication": "`Body` en HTML, `AltBody` en texte."
+        }
+      ]
+    }
+  ],
+  "quiz": {
+    "titre": "Quiz : les e-mails",
+    "questions": [
+      {
+        "id": "u11-q1",
+        "type": "qcm",
+        "notions": [
+          "protocoles-mail"
+        ],
+        "question": "Que fait un serveur SMTP sortant ?",
+        "choix": [
+          "Il relaie l'e-mail vers le serveur du destinataire",
+          "Il affiche l'e-mail au destinataire",
+          "Il supprime les e-mails lus",
+          "Il héberge les pages PHP"
+        ],
+        "bonne": 0,
+        "explication": "SMTP transfère de serveur à serveur."
+      },
+      {
+        "id": "u11-q2",
+        "type": "tri",
+        "notions": [
+          "protocoles-mail"
+        ],
+        "question": "POP3 ou IMAP ?",
+        "categories": [
+          "POP3",
+          "IMAP"
+        ],
+        "items": [
+          [
+            "Télécharge sur l'appareil local",
+            0
+          ],
+          [
+            "Les e-mails restent sur le serveur",
+            1
+          ],
+          [
+            "Pas de synchronisation entre appareils",
+            0
+          ],
+          [
+            "L'état lu / non lu est le même partout",
+            1
+          ]
+        ],
+        "explication": "Tout télécharger, ou tout synchroniser."
+      },
+      {
+        "id": "u11-q3",
+        "type": "qcm",
+        "notions": [
+          "mail-phpmailer"
+        ],
+        "question": "De quoi la fonction `mail()` dépend-elle ?",
+        "choix": [
+          "D'un serveur de messagerie installé et configuré sur le serveur web",
+          "De PHPMailer",
+          "De Mailpit uniquement",
+          "D'une base de données"
+        ],
+        "bonne": 0,
+        "explication": "Elle ne gère pas SMTP directement."
+      },
+      {
+        "id": "u11-q4",
+        "type": "bug",
+        "notions": [
+          "phpmailer"
+        ],
+        "question": "Cet envoi échoue toujours. Touche la ligne fautive.",
+        "code": [
+          "$mail = new PHPMailer(true);",
+          "try {",
+          "    $mail->isSMTP();",
+          "    $mail->setFrom(\"no-reply@club.localhost\", \"Club\");",
+          "    $mail->Subject = \"Entraînement annulé\";",
+          "    $mail->Body = \"Pas d'entraînement ce soir.\";",
+          "    $mail->send();",
+          "} catch (Exception $e) {",
+          "    echo $mail->ErrorInfo;",
+          "}",
+          ""
+        ],
+        "ligne": 7,
+        "choix": [
+          "Aucun destinataire : il manque `addAddress(…)` avant `send()`",
+          "`setFrom` doit venir après `send()`",
+          "`Subject` s'écrit en minuscules",
+          "Il faut `new PHPMailer(false)`"
+        ],
+        "bonne": 0,
+        "explication": "« You must provide at least one recipient email address. »"
+      },
+      {
+        "id": "u11-q5",
+        "type": "trous",
+        "notions": [
+          "phpmailer"
+        ],
+        "question": "Le sujet d'un message de contact doit être « Nouveau message de contact : [Sujet] ». Complète.",
+        "code": [
+          "$subject = \"Horaires\";",
+          "$titre = \"Nouveau message de contact : ___\";",
+          "echo $titre;",
+          ""
+        ],
+        "solution": [
+          "{$subject}"
+        ],
+        "tests": {
+          "cas": [
+            {
+              "sortie": [
+                "Nouveau message de contact : Horaires"
+              ]
+            }
+          ]
+        },
+        "indices": [
+          "La variable, dans la chaîne entre guillemets doubles.",
+          "Avec ou sans accolades : `{$subject}` ou `$subject`."
+        ],
+        "erreursTypiques": [
+          {
+            "trous": [
+              "subject"
+            ],
+            "attendu": "echec"
+          },
+          {
+            "trous": [
+              "[Sujet]"
+            ],
+            "attendu": "echec"
+          }
+        ],
+        "explication": "Entre guillemets doubles, PHP remplace la variable par sa valeur."
+      },
+      {
+        "id": "u11-q6",
+        "type": "qcm",
+        "notions": [
+          "environnements-mail"
+        ],
+        "question": "Le même code PHP doit envoyer avec Mailpit en local et avec Infomaniak en ligne. Que change-t-on ?",
+        "choix": [
+          "Seulement le fichier config/mail.ini",
+          "Le code de PHPMailer",
+          "Le fichier index.php",
+          "Rien du tout, les paramètres sont les mêmes"
+        ],
+        "bonne": 0,
+        "explication": "Le principe du fichier de configuration."
+      },
+      {
+        "id": "u11-q7",
+        "type": "predire",
+        "notions": [
+          "phpmailer",
+          "exceptions"
+        ],
+        "question": "Que se passe-t-il ici (PHPMailer simulé) ?",
+        "fichier": "public/index.php",
+        "fichiers": {
+          "config/mail.ini": [
+            "host = \"mailpit\"",
+            "port = 1025",
+            "authentication = false",
+            "username = \"\"",
+            "password = \"\"",
+            "to_email = \"contact@mailpit.localhost\"",
+            "to_name = \"Mailpit Local SMTP\""
+          ],
+          "utils/autoloader.php": [
+            "<?php",
+            "// Charge les classes automatiquement",
+            "spl_autoload_register(function ($class) {",
+            "    // Convertit les séparateurs de namespace en séparateurs de répertoires",
+            "    $relativePath = str_replace('\\\\', '/', $class);",
+            "",
+            "    // Construit le chemin complet du fichier",
+            "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+            "",
+            "    // Vérifie si le fichier existe avant de l'inclure",
+            "    if (file_exists($file)) {",
+            "        // Inclut le fichier de classe",
+            "        require_once $file;",
+            "    }",
+            "});"
+          ],
+          "src/PHPMailer/PHPMailer/PHPMailer.php": [
+            "<?php",
+            "// VERSION SIMULÉE DE PHPMAILER, pour l'appli :",
+            "// mêmes noms que la vraie bibliothèque, mais send() n'envoie rien :",
+            "// il garde l'e-mail en mémoire (PHPMailer::$envoyes) pour que les tests le lisent.",
+            "namespace PHPMailer\\PHPMailer;",
+            "",
+            "class PHPMailer {",
+            "    const ENCRYPTION_SMTPS = 'ssl';",
+            "    const ENCRYPTION_STARTTLS = 'tls';",
+            "",
+            "    public static array $envoyes = [];",
+            "",
+            "    public $Host = 'localhost';",
+            "    public $Port = 25;",
+            "    public $SMTPAuth = false;",
+            "    public $SMTPSecure = '';",
+            "    public $Username = '';",
+            "    public $Password = '';",
+            "    public $CharSet = 'iso-8859-1';",
+            "    public $Encoding = '8bit';",
+            "    public $Subject = '';",
+            "    public $Body = '';",
+            "    public $AltBody = '';",
+            "    public $ErrorInfo = '';",
+            "",
+            "    private bool $exceptions;",
+            "    private bool $html = false;",
+            "    private array $from = [];",
+            "    private array $to = [];",
+            "",
+            "    public function __construct($exceptions = null) {",
+            "        $this->exceptions = (bool) $exceptions;",
+            "    }",
+            "",
+            "    public function isSMTP(): void {",
+            "    }",
+            "",
+            "    public function isHTML($isHtml = true): void {",
+            "        $this->html = (bool) $isHtml;",
+            "    }",
+            "",
+            "    public function setFrom($address, $name = ''): bool {",
+            "        if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {",
+            "            return $this->echec(\"Invalid address: (From): $address\");",
+            "        }",
+            "        $this->from = [$address, $name];",
+            "        return true;",
+            "    }",
+            "",
+            "    public function addAddress($address, $name = ''): bool {",
+            "        if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {",
+            "            return $this->echec(\"Invalid address: (to): $address\");",
+            "        }",
+            "        $this->to[] = [$address, $name];",
+            "        return true;",
+            "    }",
+            "",
+            "    public function addReplyTo($address, $name = ''): bool {",
+            "        return true;",
+            "    }",
+            "",
+            "    public function send(): bool {",
+            "        if (count($this->to) === 0) {",
+            "            return $this->echec('You must provide at least one recipient email address.');",
+            "        }",
+            "        $texte = $this->Body;",
+            "        if ($this->html) {",
+            "            $texte = html_entity_decode(strip_tags(preg_replace('/<br\\s*\\/?>/i', '', $texte)), ENT_QUOTES, 'UTF-8');",
+            "        }",
+            "        $lignes = array_map('trim', explode(\"\\n\", str_replace(\"\\r\\n\", \"\\n\", trim($texte))));",
+            "        self::$envoyes[] = [",
+            "            'de' => $this->from[0] ?? '', 'nom' => $this->from[1] ?? '',",
+            "            'a' => $this->to[0][0], 'sujet' => $this->Subject, 'lignes' => $lignes,",
+            "        ];",
+            "        return true;",
+            "    }",
+            "",
+            "    private function echec(string $message): bool {",
+            "        $this->ErrorInfo = $message;",
+            "        if ($this->exceptions) {",
+            "            throw new Exception($message);",
+            "        }",
+            "        return false;",
+            "    }",
+            "}"
+          ],
+          "src/PHPMailer/PHPMailer/Exception.php": [
+            "<?php",
+            "namespace PHPMailer\\PHPMailer;",
+            "",
+            "class Exception extends \\Exception {",
+            "}"
+          ]
+        },
+        "code": [
+          "<?php",
+          "require_once __DIR__ . '/../utils/autoloader.php';",
+          "",
+          "use PHPMailer\\PHPMailer\\PHPMailer;",
+          "use PHPMailer\\PHPMailer\\Exception;",
+          "",
+          "$mail = new PHPMailer(true);",
+          "try {",
+          "    $mail->setFrom(\"pas-une-adresse\", \"Club\");",
+          "    echo \"Expéditeur OK. \";",
+          "    $mail->addAddress(\"noa@example.com\");",
+          "    $mail->send();",
+          "    echo \"Envoyé.\";",
+          "} catch (Exception $e) {",
+          "    echo \"Échec : \" . $mail->ErrorInfo;",
+          "}",
+          ""
+        ],
+        "choix": [
+          "Échec : Invalid address: (From): pas-une-adresse",
+          "Expéditeur OK. Envoyé.",
+          "Expéditeur OK. Échec : Invalid address: (From): pas-une-adresse",
+          "Envoyé."
+        ],
+        "bonne": 0,
+        "explication": "`setFrom` déclenche l'alarme dès l'adresse invalide : la suite du `try` est abandonnée."
+      },
+      {
+        "id": "u11-q8",
+        "type": "vf",
+        "notions": [
+          "mail-phpmailer"
+        ],
+        "question": "Le cours installe PHPMailer avec Composer.",
+        "bonne": false,
+        "explication": "Composer est la méthode recommandée, mais pas étudiée dans ce cours : on copie les fichiers à la main."
+      },
+      {
+        "id": "u11-q9",
+        "type": "qcm",
+        "notions": [
+          "validation-nettoyage",
+          "formulaires"
+        ],
+        "question": "Révision : comment le cours vérifie-t-il qu'une adresse e-mail saisie est valide ?",
+        "choix": [
+          "filter_var($email, FILTER_VALIDATE_EMAIL)",
+          "str_contains($email, '@')",
+          "htmlspecialchars($email)",
+          "is_email($email)"
+        ],
+        "bonne": 0,
+        "explication": "`filter_var` renvoie l'adresse si elle est valide, `false` sinon."
+      },
+      {
+        "id": "u11-q10",
+        "type": "ecrire",
+        "notions": [
+          "validation-nettoyage",
+          "formulaires"
+        ],
+        "question": "Écris `contactValide(string $email, string $subject, string $message): bool` : `true` si l'adresse est valide (`filter_var`) et que le sujet et le message ne sont pas vides (espaces seuls compris).",
+        "depart": [
+          ""
+        ],
+        "tests": {
+          "fonction": "contactValide",
+          "cas": [
+            {
+              "args": [
+                "noa@example.com",
+                "Horaires",
+                "Bonjour !"
+              ],
+              "attendu": true
+            },
+            {
+              "titre": "Adresse invalide",
+              "args": [
+                "noa.example.com",
+                "Horaires",
+                "Bonjour !"
+              ],
+              "attendu": false
+            },
+            {
+              "titre": "Sujet vide",
+              "args": [
+                "noa@example.com",
+                "",
+                "Bonjour !"
+              ],
+              "attendu": false
+            },
+            {
+              "titre": "Message fait d'espaces",
+              "args": [
+                "noa@example.com",
+                "Horaires",
+                "   "
+              ],
+              "attendu": false
+            }
+          ]
+        },
+        "indices": [
+          "Trois conditions reliées par `&&`.",
+          "`filter_var($email, FILTER_VALIDATE_EMAIL) !== false`, et `trim(…) !== ''` pour les deux textes.",
+          {
+            "texte": "Presque :",
+            "code": "return filter_var($email, ___) !== false\n    && trim($subject) !== ''\n    && ___;"
+          }
+        ],
+        "solution": [
+          "function contactValide(string $email, string $subject, string $message): bool {",
+          "    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false",
+          "        && trim($subject) !== ''",
+          "        && trim($message) !== '';",
+          "}",
+          ""
+        ],
+        "erreursTypiques": [
+          {
+            "code": "function contactValide(string $email, string $subject, string $message): bool {\n    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false && $subject !== '' && $message !== '';\n}",
+            "attendu": "echec"
+          },
+          {
+            "code": "function contactValide(string $email, string $subject, string $message): bool {\n    return trim($subject) !== '' && trim($message) !== '';\n}",
+            "attendu": "echec"
+          }
+        ],
+        "explication": "Valider avant d'envoyer : une adresse fausse ou un message vide ne doivent pas partir."
+      },
+      {
+        "id": "u11-q11",
+        "type": "qcm",
+        "notions": [
+          "traits",
+          "namespaces"
+        ],
+        "question": "Révision : en examinant les fichiers de PHPMailer, que remarques-tu (séance 9) ?",
+        "choix": [
+          "Ses classes sont rangées dans le namespace PHPMailer\\PHPMailer",
+          "Il n'utilise pas de classes",
+          "Il est écrit en JavaScript",
+          "Il n'a qu'une seule fonction, mail()"
+        ],
+        "bonne": 0,
+        "explication": "D'où le `use PHPMailer\\PHPMailer\\PHPMailer;` et l'autoloader."
+      },
+      {
+        "id": "u11-q12",
+        "type": "vf",
+        "notions": [
+          "phpmailer",
+          "xss"
+        ],
+        "question": "Dans un e-mail en HTML, les saisies du formulaire doivent être échappées avec `htmlspecialchars`.",
+        "bonne": true,
+        "explication": "Comme sur une page web : la saisie reste en vitrine."
+      },
+      {
+        "id": "u11-q13",
+        "type": "qcm",
+        "notions": [
+          "sessions-cookies"
+        ],
+        "question": "Révision : où est stockée une session ?",
+        "choix": [
+          "Sur le serveur ; le navigateur n'a que l'identifiant",
+          "Dans le navigateur",
+          "Dans un e-mail",
+          "Dans mail.ini"
+        ],
+        "bonne": 0,
+        "explication": "Le dossier reste au guichet."
+      },
+      {
+        "id": "u11-q14",
+        "type": "assoc",
+        "notions": [
+          "phpmailer"
+        ],
+        "question": "Associe chaque élément de PHPMailer à son rôle.",
+        "paires": [
+          [
+            "addAddress",
+            "Ajouter un destinataire"
+          ],
+          [
+            "setFrom",
+            "Définir l'expéditeur"
+          ],
+          [
+            "Subject",
+            "Le sujet"
+          ],
+          [
+            "Body",
+            "Le corps (HTML si isHTML(true))"
+          ],
+          [
+            "ErrorInfo",
+            "Le message d'erreur en cas d'échec"
+          ]
+        ],
+        "explication": "Les pièces d'un envoi."
+      },
+      {
+        "id": "u11-q15",
+        "type": "qcm",
+        "notions": [
+          "environnements-mail"
+        ],
+        "question": "Pour Mailpit, que vaut `authentication` dans `mail.ini` ?",
+        "choix": [
+          "false",
+          "true",
+          "465",
+          "mailpit"
+        ],
+        "bonne": 0,
+        "explication": "Mailpit est local : aucune authentification."
+      }
+    ]
+  },
+  "boss": [
+    {
+      "id": "u11-b1",
+      "titre": "Le formulaire de contact",
+      "source": "Séance 10, exercice 1 : formulaire de contact avec PHPMailer",
+      "notions": [
+        "phpmailer",
+        "formulaires",
+        "validation-nettoyage",
+        "environnements-mail"
+      ],
+      "regles": [
+        "PHPMailer est simulé (fichier fourni) : `send()` garde l'e-mail pour que les tests vérifient le sujet, le corps, l'expéditeur et le destinataire.",
+        "L'adresse prédéfinie (destinataire) est dans `config/mail.ini` : `to_email` et `to_name`.",
+        "Les espaces au début et à la fin des lignes du corps ne comptent pas ; un corps en HTML (`isHTML(true)`, `nl2br`, `htmlspecialchars`) ou en texte brut sont acceptés."
+      ],
+      "enonce": "**L'exercice 1 du cours (séance 10)** : « Réalisez un formulaire de contact en PHP avec la librairie PHPMailer qui permet aux personnes d'envoyer un e-mail pour vous contacter. »\n\n« Le formulaire doit contenir les champs suivants : Nom, Adresse e-mail, Sujet, Message, un bouton \"Envoyer\". »\n\n« Lorsque le formulaire est soumis, le script PHP doit valider les entrées (par exemple, vérifier que l'adresse e-mail est valide et que les champs obligatoires ne sont pas vides) et envoyer un e-mail à une adresse prédéfinie avec les informations fournies dans le formulaire. »\n\n« Le titre du mail envoyé à l'adresse prédéfinie doit être selon la forme suivante : `Nouveau message de contact : [Sujet]` où `[Sujet]` est le sujet saisi dans le formulaire. »\n\n« Le corps du mail envoyé à l'adresse prédéfinie doit être selon la forme suivante : »\n\n``` Vous avez reçu un nouveau message de [Nom] <[Adresse e-mail]>.\n\nSujet : [Sujet] Message : [Message] ```\n\n**Ta mission ici** : la page `public/index.php` (le formulaire et son traitement). L'autoloader, PHPMailer (simulé) et `config/mail.ini` (Mailpit) sont fournis.",
+      "fichier": "public/index.php",
+      "fichiers": {
+        "config/mail.ini": [
+          "host = \"mailpit\"",
+          "port = 1025",
+          "authentication = false",
+          "username = \"\"",
+          "password = \"\"",
+          "to_email = \"contact@mailpit.localhost\"",
+          "to_name = \"Mailpit Local SMTP\""
+        ],
+        "utils/autoloader.php": [
+          "<?php",
+          "// Charge les classes automatiquement",
+          "spl_autoload_register(function ($class) {",
+          "    // Convertit les séparateurs de namespace en séparateurs de répertoires",
+          "    $relativePath = str_replace('\\\\', '/', $class);",
+          "",
+          "    // Construit le chemin complet du fichier",
+          "    $file = __DIR__ . '/../src/' . $relativePath . '.php';",
+          "",
+          "    // Vérifie si le fichier existe avant de l'inclure",
+          "    if (file_exists($file)) {",
+          "        // Inclut le fichier de classe",
+          "        require_once $file;",
+          "    }",
+          "});"
+        ],
+        "src/PHPMailer/PHPMailer/PHPMailer.php": [
+          "<?php",
+          "// VERSION SIMULÉE DE PHPMAILER, pour l'appli :",
+          "// mêmes noms que la vraie bibliothèque, mais send() n'envoie rien :",
+          "// il garde l'e-mail en mémoire (PHPMailer::$envoyes) pour que les tests le lisent.",
+          "namespace PHPMailer\\PHPMailer;",
+          "",
+          "class PHPMailer {",
+          "    const ENCRYPTION_SMTPS = 'ssl';",
+          "    const ENCRYPTION_STARTTLS = 'tls';",
+          "",
+          "    public static array $envoyes = [];",
+          "",
+          "    public $Host = 'localhost';",
+          "    public $Port = 25;",
+          "    public $SMTPAuth = false;",
+          "    public $SMTPSecure = '';",
+          "    public $Username = '';",
+          "    public $Password = '';",
+          "    public $CharSet = 'iso-8859-1';",
+          "    public $Encoding = '8bit';",
+          "    public $Subject = '';",
+          "    public $Body = '';",
+          "    public $AltBody = '';",
+          "    public $ErrorInfo = '';",
+          "",
+          "    private bool $exceptions;",
+          "    private bool $html = false;",
+          "    private array $from = [];",
+          "    private array $to = [];",
+          "",
+          "    public function __construct($exceptions = null) {",
+          "        $this->exceptions = (bool) $exceptions;",
+          "    }",
+          "",
+          "    public function isSMTP(): void {",
+          "    }",
+          "",
+          "    public function isHTML($isHtml = true): void {",
+          "        $this->html = (bool) $isHtml;",
+          "    }",
+          "",
+          "    public function setFrom($address, $name = ''): bool {",
+          "        if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {",
+          "            return $this->echec(\"Invalid address: (From): $address\");",
+          "        }",
+          "        $this->from = [$address, $name];",
+          "        return true;",
+          "    }",
+          "",
+          "    public function addAddress($address, $name = ''): bool {",
+          "        if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {",
+          "            return $this->echec(\"Invalid address: (to): $address\");",
+          "        }",
+          "        $this->to[] = [$address, $name];",
+          "        return true;",
+          "    }",
+          "",
+          "    public function addReplyTo($address, $name = ''): bool {",
+          "        return true;",
+          "    }",
+          "",
+          "    public function send(): bool {",
+          "        if (count($this->to) === 0) {",
+          "            return $this->echec('You must provide at least one recipient email address.');",
+          "        }",
+          "        $texte = $this->Body;",
+          "        if ($this->html) {",
+          "            $texte = html_entity_decode(strip_tags(preg_replace('/<br\\s*\\/?>/i', '', $texte)), ENT_QUOTES, 'UTF-8');",
+          "        }",
+          "        $lignes = array_map('trim', explode(\"\\n\", str_replace(\"\\r\\n\", \"\\n\", trim($texte))));",
+          "        self::$envoyes[] = [",
+          "            'de' => $this->from[0] ?? '', 'nom' => $this->from[1] ?? '',",
+          "            'a' => $this->to[0][0], 'sujet' => $this->Subject, 'lignes' => $lignes,",
+          "        ];",
+          "        return true;",
+          "    }",
+          "",
+          "    private function echec(string $message): bool {",
+          "        $this->ErrorInfo = $message;",
+          "        if ($this->exceptions) {",
+          "            throw new Exception($message);",
+          "        }",
+          "        return false;",
+          "    }",
+          "}"
+        ],
+        "src/PHPMailer/PHPMailer/Exception.php": [
+          "<?php",
+          "namespace PHPMailer\\PHPMailer;",
+          "",
+          "class Exception extends \\Exception {",
+          "}"
+        ]
+      },
+      "depart": [
+        "<?php",
+        ""
+      ],
+      "tests": {
+        "cas": [
+          {
+            "titre": "Le formulaire s'affiche",
+            "requete": {
+              "methode": "GET"
+            },
+            "contient": [
+              "name=\"name\"",
+              "name=\"email\"",
+              "name=\"subject\"",
+              "name=\"message\"",
+              "Envoyer"
+            ],
+            "code": "return class_exists('PHPMailer\\PHPMailer\\PHPMailer', false) ? PHPMailer\\PHPMailer\\PHPMailer::$envoyes : [];",
+            "attendu": []
+          },
+          {
+            "titre": "Un message de contact",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "Noa Martin",
+                "email": "noa@example.com",
+                "subject": "Horaires",
+                "message": "Êtes-vous ouverts lundi ?"
+              }
+            },
+            "code": "return class_exists('PHPMailer\\PHPMailer\\PHPMailer', false) ? PHPMailer\\PHPMailer\\PHPMailer::$envoyes : [];",
+            "attendu": [
+              {
+                "de": "noa@example.com",
+                "nom": "Noa Martin",
+                "a": "contact@mailpit.localhost",
+                "sujet": "Nouveau message de contact : Horaires",
+                "lignes": [
+                  "Vous avez reçu un nouveau message de Noa Martin <noa@example.com>.",
+                  "",
+                  "Sujet : Horaires",
+                  "Message :",
+                  "Êtes-vous ouverts lundi ?"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Un message sur plusieurs lignes",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "Léo",
+                "email": "leo@example.com",
+                "subject": "Merci",
+                "message": "Super soirée.\nÀ bientôt !"
+              }
+            },
+            "code": "return class_exists('PHPMailer\\PHPMailer\\PHPMailer', false) ? PHPMailer\\PHPMailer\\PHPMailer::$envoyes : [];",
+            "attendu": [
+              {
+                "de": "leo@example.com",
+                "nom": "Léo",
+                "a": "contact@mailpit.localhost",
+                "sujet": "Nouveau message de contact : Merci",
+                "lignes": [
+                  "Vous avez reçu un nouveau message de Léo <leo@example.com>.",
+                  "",
+                  "Sujet : Merci",
+                  "Message :",
+                  "Super soirée.",
+                  "À bientôt !"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Adresse e-mail invalide : rien ne part",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "Noa",
+                "email": "noa.example.com",
+                "subject": "Horaires",
+                "message": "Bonjour"
+              }
+            },
+            "code": "return class_exists('PHPMailer\\PHPMailer\\PHPMailer', false) ? PHPMailer\\PHPMailer\\PHPMailer::$envoyes : [];",
+            "attendu": [],
+            "siEchec": "Avec une adresse invalide, aucun e-mail ne doit partir : valide avec `filter_var(…, FILTER_VALIDATE_EMAIL)`."
+          },
+          {
+            "titre": "Sujet vide : rien ne part",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "Noa",
+                "email": "noa@example.com",
+                "subject": "",
+                "message": "Bonjour"
+              }
+            },
+            "code": "return class_exists('PHPMailer\\PHPMailer\\PHPMailer', false) ? PHPMailer\\PHPMailer\\PHPMailer::$envoyes : [];",
+            "attendu": []
+          },
+          {
+            "titre": "Message vide : rien ne part",
+            "requete": {
+              "methode": "POST",
+              "post": {
+                "name": "Noa",
+                "email": "noa@example.com",
+                "subject": "Horaires",
+                "message": ""
+              }
+            },
+            "code": "return class_exists('PHPMailer\\PHPMailer\\PHPMailer', false) ? PHPMailer\\PHPMailer\\PHPMailer::$envoyes : [];",
+            "attendu": []
+          }
+        ]
+      },
+      "indices": [
+        "Trois parties : les `require_once`/`use` et la lecture de `mail.ini` ; le traitement si `$_SERVER['REQUEST_METHOD'] === 'POST'` (valider, puis envoyer) ; le formulaire HTML (`method=\"post\"`, champs `name`, `email`, `subject`, `message`).",
+        "Valide avec `filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)` et `empty(…)`. Pour envoyer : `setFrom($email, $name)`, `addAddress($config['to_email'], $config['to_name'])`, `Subject = \"Nouveau message de contact : {$subject}\"`, le corps, puis `send()`, dans un `try`/`catch`.",
+        {
+          "texte": "Le corps, au bon format :",
+          "code": "$body = \"Vous avez reçu un nouveau message de {$name} <___>.\\n\\nSujet : ___\\nMessage :\\n___\";"
+        }
+      ],
+      "solution": [
+        "<?php",
+        "require_once __DIR__ . '/../utils/autoloader.php';",
+        "",
+        "use PHPMailer\\PHPMailer\\PHPMailer;",
+        "use PHPMailer\\PHPMailer\\Exception;",
+        "",
+        "const MAIL_CONFIGURATION_FILE = __DIR__ . '/../config/mail.ini';",
+        "",
+        "$error = null;",
+        "$success = null;",
+        "",
+        "if ($_SERVER['REQUEST_METHOD'] === 'POST') {",
+        "    $name = trim($_POST['name'] ?? '');",
+        "    $email = filter_var($_POST['email'] ?? '', FILTER_VALIDATE_EMAIL);",
+        "    $subject = trim($_POST['subject'] ?? '');",
+        "    $message = trim($_POST['message'] ?? '');",
+        "",
+        "    if (empty($name) || empty($email) || empty($subject) || empty($message)) {",
+        "        $error = 'Tous les champs sont obligatoires (avec une adresse e-mail valide).';",
+        "    } else {",
+        "        $config = parse_ini_file(MAIL_CONFIGURATION_FILE, true);",
+        "",
+        "        $mail = new PHPMailer(true);",
+        "",
+        "        try {",
+        "            $mail->isSMTP();",
+        "            $mail->Host = $config['host'];",
+        "            $mail->Port = filter_var($config['port'], FILTER_VALIDATE_INT);",
+        "            $mail->SMTPAuth = filter_var($config['authentication'], FILTER_VALIDATE_BOOLEAN);",
+        "            if ($mail->SMTPAuth) {",
+        "                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;",
+        "                $mail->Username = $config['username'];",
+        "                $mail->Password = $config['password'];",
+        "            }",
+        "            $mail->CharSet = \"UTF-8\";",
+        "            $mail->Encoding = \"base64\";",
+        "",
+        "            $mail->setFrom($email, $name);",
+        "            $mail->addAddress($config['to_email'], $config['to_name']);",
+        "",
+        "            $body = \"Vous avez reçu un nouveau message de {$name} <{$email}>.\\n\\nSujet : {$subject}\\nMessage :\\n{$message}\";",
+        "",
+        "            $mail->isHTML(true);",
+        "            $mail->Subject = \"Nouveau message de contact : {$subject}\";",
+        "            $mail->Body = nl2br(htmlspecialchars($body));",
+        "            $mail->AltBody = $body;",
+        "",
+        "            $mail->send();",
+        "",
+        "            $success = \"E-mail envoyé avec succès !\";",
+        "        } catch (Exception $e) {",
+        "            $error = \"Erreur lors de l'envoi de l'e-mail : {$mail->ErrorInfo}\";",
+        "        }",
+        "    }",
+        "}",
+        "?>",
+        "<!DOCTYPE html>",
+        "<html lang=\"fr\">",
+        "",
+        "<head>",
+        "    <meta charset=\"utf-8\">",
+        "    <title>Formulaire de contact</title>",
+        "</head>",
+        "",
+        "<body>",
+        "    <h1>Formulaire de contact</h1>",
+        "",
+        "    <?php if ($error) { ?>",
+        "        <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>",
+        "    <?php } else if ($success) { ?>",
+        "        <p><strong>Succès :</strong> <?= htmlspecialchars($success) ?></p>",
+        "    <?php } ?>",
+        "",
+        "    <form method=\"post\">",
+        "        <label for=\"name\">Nom</label>",
+        "        <input type=\"text\" id=\"name\" name=\"name\" required>",
+        "",
+        "        <label for=\"email\">E-mail</label>",
+        "        <input type=\"email\" id=\"email\" name=\"email\" required>",
+        "",
+        "        <label for=\"subject\">Sujet</label>",
+        "        <input type=\"text\" id=\"subject\" name=\"subject\" required>",
+        "",
+        "        <label for=\"message\">Message</label>",
+        "        <textarea id=\"message\" name=\"message\" rows=\"4\" required></textarea>",
+        "",
+        "        <button type=\"submit\">Envoyer</button>",
+        "    </form>",
+        "</body>",
+        "",
+        "</html>"
+      ],
+      "erreursTypiques": [
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../utils/autoloader.php';\n\nuse PHPMailer\\PHPMailer\\PHPMailer;\nuse PHPMailer\\PHPMailer\\Exception;\n\nconst MAIL_CONFIGURATION_FILE = __DIR__ . '/../config/mail.ini';\n\n$error = null;\n$success = null;\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $name = trim($_POST['name'] ?? '');\n    $email = filter_var($_POST['email'] ?? '', FILTER_VALIDATE_EMAIL);\n    $subject = trim($_POST['subject'] ?? '');\n    $message = trim($_POST['message'] ?? '');\n\n    if (empty($name) || empty($email) || empty($subject)) {\n        $error = 'Tous les champs sont obligatoires (avec une adresse e-mail valide).';\n    } else {\n        $config = parse_ini_file(MAIL_CONFIGURATION_FILE, true);\n\n        $mail = new PHPMailer(true);\n\n        try {\n            $mail->isSMTP();\n            $mail->Host = $config['host'];\n            $mail->Port = filter_var($config['port'], FILTER_VALIDATE_INT);\n            $mail->SMTPAuth = filter_var($config['authentication'], FILTER_VALIDATE_BOOLEAN);\n            if ($mail->SMTPAuth) {\n                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;\n                $mail->Username = $config['username'];\n                $mail->Password = $config['password'];\n            }\n            $mail->CharSet = \"UTF-8\";\n            $mail->Encoding = \"base64\";\n\n            $mail->setFrom($email, $name);\n            $mail->addAddress($config['to_email'], $config['to_name']);\n\n            $body = \"Vous avez reçu un nouveau message de {$name} <{$email}>.\\n\\nSujet : {$subject}\\nMessage :\\n{$message}\";\n\n            $mail->isHTML(true);\n            $mail->Subject = \"Nouveau message de contact : {$subject}\";\n            $mail->Body = nl2br(htmlspecialchars($body));\n            $mail->AltBody = $body;\n\n            $mail->send();\n\n            $success = \"E-mail envoyé avec succès !\";\n        } catch (Exception $e) {\n            $error = \"Erreur lors de l'envoi de l'e-mail : {$mail->ErrorInfo}\";\n        }\n    }\n}\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n\n<head>\n    <meta charset=\"utf-8\">\n    <title>Formulaire de contact</title>\n</head>\n\n<body>\n    <h1>Formulaire de contact</h1>\n\n    <?php if ($error) { ?>\n        <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>\n    <?php } else if ($success) { ?>\n        <p><strong>Succès :</strong> <?= htmlspecialchars($success) ?></p>\n    <?php } ?>\n\n    <form method=\"post\">\n        <label for=\"name\">Nom</label>\n        <input type=\"text\" id=\"name\" name=\"name\" required>\n\n        <label for=\"email\">E-mail</label>\n        <input type=\"email\" id=\"email\" name=\"email\" required>\n\n        <label for=\"subject\">Sujet</label>\n        <input type=\"text\" id=\"subject\" name=\"subject\" required>\n\n        <label for=\"message\">Message</label>\n        <textarea id=\"message\" name=\"message\" rows=\"4\" required></textarea>\n\n        <button type=\"submit\">Envoyer</button>\n    </form>\n</body>\n\n</html>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../utils/autoloader.php';\n\nuse PHPMailer\\PHPMailer\\PHPMailer;\nuse PHPMailer\\PHPMailer\\Exception;\n\nconst MAIL_CONFIGURATION_FILE = __DIR__ . '/../config/mail.ini';\n\n$error = null;\n$success = null;\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $name = trim($_POST['name'] ?? '');\n    $email = filter_var($_POST['email'] ?? '', FILTER_VALIDATE_EMAIL);\n    $subject = trim($_POST['subject'] ?? '');\n    $message = trim($_POST['message'] ?? '');\n\n    if (empty($name) || empty($email) || empty($subject) || empty($message)) {\n        $error = 'Tous les champs sont obligatoires (avec une adresse e-mail valide).';\n    } else {\n        $config = parse_ini_file(MAIL_CONFIGURATION_FILE, true);\n\n        $mail = new PHPMailer(true);\n\n        try {\n            $mail->isSMTP();\n            $mail->Host = $config['host'];\n            $mail->Port = filter_var($config['port'], FILTER_VALIDATE_INT);\n            $mail->SMTPAuth = filter_var($config['authentication'], FILTER_VALIDATE_BOOLEAN);\n            if ($mail->SMTPAuth) {\n                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;\n                $mail->Username = $config['username'];\n                $mail->Password = $config['password'];\n            }\n            $mail->CharSet = \"UTF-8\";\n            $mail->Encoding = \"base64\";\n\n            $mail->setFrom($email, $name);\n            $mail->addAddress($config['to_email'], $config['to_name']);\n\n            $body = \"Vous avez reçu un nouveau message de {$name} <{$email}>.\\n\\nSujet : {$subject}\\nMessage :\\n{$message}\";\n\n            $mail->isHTML(true);\n            $mail->Subject = $subject;\n            $mail->Body = nl2br(htmlspecialchars($body));\n            $mail->AltBody = $body;\n\n            $mail->send();\n\n            $success = \"E-mail envoyé avec succès !\";\n        } catch (Exception $e) {\n            $error = \"Erreur lors de l'envoi de l'e-mail : {$mail->ErrorInfo}\";\n        }\n    }\n}\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n\n<head>\n    <meta charset=\"utf-8\">\n    <title>Formulaire de contact</title>\n</head>\n\n<body>\n    <h1>Formulaire de contact</h1>\n\n    <?php if ($error) { ?>\n        <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>\n    <?php } else if ($success) { ?>\n        <p><strong>Succès :</strong> <?= htmlspecialchars($success) ?></p>\n    <?php } ?>\n\n    <form method=\"post\">\n        <label for=\"name\">Nom</label>\n        <input type=\"text\" id=\"name\" name=\"name\" required>\n\n        <label for=\"email\">E-mail</label>\n        <input type=\"email\" id=\"email\" name=\"email\" required>\n\n        <label for=\"subject\">Sujet</label>\n        <input type=\"text\" id=\"subject\" name=\"subject\" required>\n\n        <label for=\"message\">Message</label>\n        <textarea id=\"message\" name=\"message\" rows=\"4\" required></textarea>\n\n        <button type=\"submit\">Envoyer</button>\n    </form>\n</body>\n\n</html>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../utils/autoloader.php';\n\nuse PHPMailer\\PHPMailer\\PHPMailer;\nuse PHPMailer\\PHPMailer\\Exception;\n\nconst MAIL_CONFIGURATION_FILE = __DIR__ . '/../config/mail.ini';\n\n$error = null;\n$success = null;\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $name = trim($_POST['name'] ?? '');\n    $email = filter_var($_POST['email'] ?? '', FILTER_VALIDATE_EMAIL);\n    $subject = trim($_POST['subject'] ?? '');\n    $message = trim($_POST['message'] ?? '');\n\n    if (empty($name) || empty($email) || empty($subject) || empty($message)) {\n        $error = 'Tous les champs sont obligatoires (avec une adresse e-mail valide).';\n    } else {\n        $config = parse_ini_file(MAIL_CONFIGURATION_FILE, true);\n\n        $mail = new PHPMailer(true);\n\n        try {\n            $mail->isSMTP();\n            $mail->Host = $config['host'];\n            $mail->Port = filter_var($config['port'], FILTER_VALIDATE_INT);\n            $mail->SMTPAuth = filter_var($config['authentication'], FILTER_VALIDATE_BOOLEAN);\n            if ($mail->SMTPAuth) {\n                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;\n                $mail->Username = $config['username'];\n                $mail->Password = $config['password'];\n            }\n            $mail->CharSet = \"UTF-8\";\n            $mail->Encoding = \"base64\";\n\n            $mail->setFrom($email, $name);\n            $mail->addAddress($config['to_email'], $config['to_name']);\n\n            $body = \"Vous avez reçu un nouveau message de {$name} <{$email}>.\\nSujet : {$subject}\\nMessage :\\n{$message}\";\n\n            $mail->isHTML(true);\n            $mail->Subject = \"Nouveau message de contact : {$subject}\";\n            $mail->Body = nl2br(htmlspecialchars($body));\n            $mail->AltBody = $body;\n\n            $mail->send();\n\n            $success = \"E-mail envoyé avec succès !\";\n        } catch (Exception $e) {\n            $error = \"Erreur lors de l'envoi de l'e-mail : {$mail->ErrorInfo}\";\n        }\n    }\n}\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n\n<head>\n    <meta charset=\"utf-8\">\n    <title>Formulaire de contact</title>\n</head>\n\n<body>\n    <h1>Formulaire de contact</h1>\n\n    <?php if ($error) { ?>\n        <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>\n    <?php } else if ($success) { ?>\n        <p><strong>Succès :</strong> <?= htmlspecialchars($success) ?></p>\n    <?php } ?>\n\n    <form method=\"post\">\n        <label for=\"name\">Nom</label>\n        <input type=\"text\" id=\"name\" name=\"name\" required>\n\n        <label for=\"email\">E-mail</label>\n        <input type=\"email\" id=\"email\" name=\"email\" required>\n\n        <label for=\"subject\">Sujet</label>\n        <input type=\"text\" id=\"subject\" name=\"subject\" required>\n\n        <label for=\"message\">Message</label>\n        <textarea id=\"message\" name=\"message\" rows=\"4\" required></textarea>\n\n        <button type=\"submit\">Envoyer</button>\n    </form>\n</body>\n\n</html>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../utils/autoloader.php';\n\nuse PHPMailer\\PHPMailer\\PHPMailer;\nuse PHPMailer\\PHPMailer\\Exception;\n\nconst MAIL_CONFIGURATION_FILE = __DIR__ . '/../config/mail.ini';\n\n$error = null;\n$success = null;\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $name = trim($_POST['name'] ?? '');\n    $email = filter_var($_POST['email'] ?? '', FILTER_VALIDATE_EMAIL);\n    $subject = trim($_POST['subject'] ?? '');\n    $message = trim($_POST['message'] ?? '');\n\n    if (empty($name) || empty($email) || empty($subject) || empty($message)) {\n        $error = 'Tous les champs sont obligatoires (avec une adresse e-mail valide).';\n    } else {\n        $config = parse_ini_file(MAIL_CONFIGURATION_FILE, true);\n\n        $mail = new PHPMailer(true);\n\n        try {\n            $mail->isSMTP();\n            $mail->Host = $config['host'];\n            $mail->Port = filter_var($config['port'], FILTER_VALIDATE_INT);\n            $mail->SMTPAuth = filter_var($config['authentication'], FILTER_VALIDATE_BOOLEAN);\n            if ($mail->SMTPAuth) {\n                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;\n                $mail->Username = $config['username'];\n                $mail->Password = $config['password'];\n            }\n            $mail->CharSet = \"UTF-8\";\n            $mail->Encoding = \"base64\";\n\n            $mail->setFrom($email, $name);\n            $mail->addAddress($email, $name);\n\n            $body = \"Vous avez reçu un nouveau message de {$name} <{$email}>.\\n\\nSujet : {$subject}\\nMessage :\\n{$message}\";\n\n            $mail->isHTML(true);\n            $mail->Subject = \"Nouveau message de contact : {$subject}\";\n            $mail->Body = nl2br(htmlspecialchars($body));\n            $mail->AltBody = $body;\n\n            $mail->send();\n\n            $success = \"E-mail envoyé avec succès !\";\n        } catch (Exception $e) {\n            $error = \"Erreur lors de l'envoi de l'e-mail : {$mail->ErrorInfo}\";\n        }\n    }\n}\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n\n<head>\n    <meta charset=\"utf-8\">\n    <title>Formulaire de contact</title>\n</head>\n\n<body>\n    <h1>Formulaire de contact</h1>\n\n    <?php if ($error) { ?>\n        <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>\n    <?php } else if ($success) { ?>\n        <p><strong>Succès :</strong> <?= htmlspecialchars($success) ?></p>\n    <?php } ?>\n\n    <form method=\"post\">\n        <label for=\"name\">Nom</label>\n        <input type=\"text\" id=\"name\" name=\"name\" required>\n\n        <label for=\"email\">E-mail</label>\n        <input type=\"email\" id=\"email\" name=\"email\" required>\n\n        <label for=\"subject\">Sujet</label>\n        <input type=\"text\" id=\"subject\" name=\"subject\" required>\n\n        <label for=\"message\">Message</label>\n        <textarea id=\"message\" name=\"message\" rows=\"4\" required></textarea>\n\n        <button type=\"submit\">Envoyer</button>\n    </form>\n</body>\n\n</html>",
+          "attendu": "echec"
+        },
+        {
+          "code": "<?php\nrequire_once __DIR__ . '/../utils/autoloader.php';\n\n\nuse PHPMailer\\PHPMailer\\Exception;\n\nconst MAIL_CONFIGURATION_FILE = __DIR__ . '/../config/mail.ini';\n\n$error = null;\n$success = null;\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $name = trim($_POST['name'] ?? '');\n    $email = filter_var($_POST['email'] ?? '', FILTER_VALIDATE_EMAIL);\n    $subject = trim($_POST['subject'] ?? '');\n    $message = trim($_POST['message'] ?? '');\n\n    if (empty($name) || empty($email) || empty($subject) || empty($message)) {\n        $error = 'Tous les champs sont obligatoires (avec une adresse e-mail valide).';\n    } else {\n        $config = parse_ini_file(MAIL_CONFIGURATION_FILE, true);\n\n        $mail = new PHPMailer(true);\n\n        try {\n            $mail->isSMTP();\n            $mail->Host = $config['host'];\n            $mail->Port = filter_var($config['port'], FILTER_VALIDATE_INT);\n            $mail->SMTPAuth = filter_var($config['authentication'], FILTER_VALIDATE_BOOLEAN);\n            if ($mail->SMTPAuth) {\n                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;\n                $mail->Username = $config['username'];\n                $mail->Password = $config['password'];\n            }\n            $mail->CharSet = \"UTF-8\";\n            $mail->Encoding = \"base64\";\n\n            $mail->setFrom($email, $name);\n            $mail->addAddress($config['to_email'], $config['to_name']);\n\n            $body = \"Vous avez reçu un nouveau message de {$name} <{$email}>.\\n\\nSujet : {$subject}\\nMessage :\\n{$message}\";\n\n            $mail->isHTML(true);\n            $mail->Subject = \"Nouveau message de contact : {$subject}\";\n            $mail->Body = nl2br(htmlspecialchars($body));\n            $mail->AltBody = $body;\n\n            $mail->send();\n\n            $success = \"E-mail envoyé avec succès !\";\n        } catch (Exception $e) {\n            $error = \"Erreur lors de l'envoi de l'e-mail : {$mail->ErrorInfo}\";\n        }\n    }\n}\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n\n<head>\n    <meta charset=\"utf-8\">\n    <title>Formulaire de contact</title>\n</head>\n\n<body>\n    <h1>Formulaire de contact</h1>\n\n    <?php if ($error) { ?>\n        <p><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>\n    <?php } else if ($success) { ?>\n        <p><strong>Succès :</strong> <?= htmlspecialchars($success) ?></p>\n    <?php } ?>\n\n    <form method=\"post\">\n        <label for=\"name\">Nom</label>\n        <input type=\"text\" id=\"name\" name=\"name\" required>\n\n        <label for=\"email\">E-mail</label>\n        <input type=\"email\" id=\"email\" name=\"email\" required>\n\n        <label for=\"subject\">Sujet</label>\n        <input type=\"text\" id=\"subject\" name=\"subject\" required>\n\n        <label for=\"message\">Message</label>\n        <textarea id=\"message\" name=\"message\" rows=\"4\" required></textarea>\n\n        <button type=\"submit\">Envoyer</button>\n    </form>\n</body>\n\n</html>",
+          "attendu": "erreur",
+          "diagnostic": "classe-inconnue"
+        }
+      ],
+      "explication": "Valider d'abord, envoyer ensuite, avec le sujet et le corps exactement au format demandé, à l'adresse prédéfinie du fichier de configuration."
+    },
+    {
+      "id": "u11-b2",
+      "titre": "Le formulaire en ligne",
+      "source": "Séance 10, exercice 1 : configurer l'envoi en développement (Mailpit) puis en production (Infomaniak)",
+      "notions": [
+        "environnements-mail",
+        "protocoles-mail",
+        "configuration"
+      ],
+      "enonce": "**Le cours** : « Le support de cours explique comment installer et configurer PHPMailer pour envoyer des e-mails via SMTP avec un environnement de développement (avec Mailpit) et un environnement de production (avec Infomaniak). »\n\nTon formulaire de contact fonctionne. Tu le testes en local, puis tu le mets en ligne pour ton projet libre. Réponds aux questions de ton équipe.",
+      "questions": [
+        {
+          "id": "u11-b2-q1",
+          "type": "ordre",
+          "notions": [
+            "environnements-mail"
+          ],
+          "question": "Dans quel ordre procéder, selon le cours ?",
+          "items": [
+            "Lancer Mailpit avec Docker Compose",
+            "Envoyer un message avec le formulaire",
+            "Vérifier l'e-mail dans l'interface web de Mailpit",
+            "Acquérir un service de messagerie chez Infomaniak",
+            "Adapter config/mail.ini pour la production et tester en ligne"
+          ],
+          "explication": "Développement d'abord, production ensuite."
+        },
+        {
+          "id": "u11-b2-q2",
+          "type": "qcm",
+          "notions": [
+            "environnements-mail"
+          ],
+          "question": "Tu envoies un message en local. Où le vois-tu arriver ?",
+          "choix": [
+            "Dans l'interface web de Mailpit (http://localhost:8025)",
+            "Dans la boîte de la personne de contact",
+            "Dans le terminal de PHP",
+            "Dans phpMyAdmin"
+          ],
+          "bonne": 0,
+          "explication": "Mailpit capture l'e-mail : il ne part pas vraiment."
+        },
+        {
+          "id": "u11-b2-q3",
+          "type": "tri",
+          "notions": [
+            "environnements-mail",
+            "configuration"
+          ],
+          "question": "Range ces lignes dans le bon `mail.ini`.",
+          "categories": [
+            "Développement (Mailpit)",
+            "Production (Infomaniak)"
+          ],
+          "items": [
+            [
+              "host = \"mailpit\"",
+              0
+            ],
+            [
+              "host = \"mail.infomaniak.com\"",
+              1
+            ],
+            [
+              "port = 1025",
+              0
+            ],
+            [
+              "port = 465",
+              1
+            ],
+            [
+              "authentication = false",
+              0
+            ],
+            [
+              "authentication = true",
+              1
+            ]
+          ],
+          "explication": "Les valeurs du cours pour chaque environnement."
+        },
+        {
+          "id": "u11-b2-q4",
+          "type": "qcm",
+          "notions": [
+            "environnements-mail",
+            "phpmailer"
+          ],
+          "question": "En production, `authentication = true`. Que fait alors le code du cours en plus ?",
+          "choix": [
+            "Il active SMTPSecure (ENCRYPTION_SMTPS) et donne Username et Password",
+            "Il désactive les exceptions",
+            "Il envoie avec mail()",
+            "Rien de plus"
+          ],
+          "bonne": 0,
+          "explication": "Le bloc `if ($authentication) { … }`."
+        },
+        {
+          "id": "u11-b2-q5",
+          "type": "vf",
+          "notions": [
+            "configuration"
+          ],
+          "question": "Le `mail.ini` de production (avec le mot de passe) se committe sur GitHub pour que l'équipe l'ait.",
+          "bonne": false,
+          "explication": "Dans `.gitignore` ; on partage un `mail.ini.example` sans secret."
+        },
+        {
+          "id": "u11-b2-q6",
+          "type": "qcm",
+          "notions": [
+            "protocoles-mail"
+          ],
+          "question": "Quel protocole ton application utilise-t-elle pour envoyer le message de contact ?",
+          "choix": [
+            "SMTP",
+            "IMAP",
+            "POP3",
+            "SFTP"
+          ],
+          "bonne": 0,
+          "explication": "PHPMailer parle SMTP au serveur (Mailpit ou Infomaniak)."
+        },
+        {
+          "id": "u11-b2-q7",
+          "type": "qcm",
+          "notions": [
+            "mail-phpmailer"
+          ],
+          "question": "Une personne de l'équipe propose `mail()` pour aller plus vite. Que réponds-tu, d'après le cours ?",
+          "choix": [
+            "`mail()` dépend d'un serveur de messagerie sur le serveur web et ne supporte pas l'authentification SMTP : PHPMailer est plus fiable",
+            "`mail()` est interdit chez Infomaniak",
+            "`mail()` ne fonctionne qu'avec Mailpit",
+            "Bonne idée, c'est équivalent"
+          ],
+          "bonne": 0,
+          "explication": "Les limites de `mail()` expliquées en séance 10."
+        }
+      ]
+    }
+  ],
+  "parcours": [
+    "u11-l1",
+    "u11-l2",
+    "jeu:u11-courrier",
+    "u11-l3",
+    "u11-l4",
+    "quiz",
+    "boss:u11-b1",
+    "boss:u11-b2"
+  ]
+}
